@@ -35,9 +35,10 @@ def generar_ritmo(total, por_evento, frecuencia, horizonte):
 
 def hitos_ventas(unidades, vmes, frec, pe_pct, iv: date, horizonte=120):
     """Calcula IV, PE y FV a partir del ritmo de ventas desde la fecha de inicio (iv).
-    Devuelve (iv, pe, fv, pe_idx, fv_idx)."""
+    Punto de equilibrio según APEX: se alcanza al vender INT(unidades*pe%)+1 unidades
+    (pe% es propio de cada etapa, de C.iniciales!J). Devuelve hitos + índices."""
     serie = generar_ritmo(unidades, vmes, frec, horizonte)
-    objetivo = pe_pct * unidades
+    objetivo = int(unidades * pe_pct) + 1          # target APEX: INT(und*pe%)+1
     acum = 0; pe_idx = None; fv_idx = 0
     for m, v in enumerate(serie):
         acum += v
