@@ -16,9 +16,9 @@
     "lote_util": 11000
   },
   "etapas": [
-    {"cod": 1, "nom": "Etapa 1", "und": 80, "ventas_miles": 32000000, "vmes": 6, "frec": 1, "pe_pct": 0.60, "fecha_inicio": "2026-01-01", "sucesora": null, "desfase": 0, "ini_obra": 14, "dur_obra": 26, "entrega": 42, "origen_precio": "ejemplo"},
-    {"cod": 2, "nom": "Etapa 2", "und": 80, "ventas_miles": 44000000, "vmes": 6, "frec": 1, "pe_pct": 0.60, "sucesora": 1, "desfase": 0, "ini_obra": 38, "dur_obra": 24, "entrega": 60, "origen_precio": "ejemplo"},
-    {"cod": 3, "nom": "Etapa 3", "und": 40, "ventas_miles": 24000000, "vmes": 6, "frec": 1, "pe_pct": 0.60, "sucesora": 2, "desfase": 0, "ini_obra": 56, "dur_obra": 22, "entrega": 78, "origen_precio": "ejemplo"}
+    {"cod": 1, "nom": "Etapa 1", "und": 80, "metodo": "$/m²", "precio": 5000000, "area_und": 80, "ventas_miles": 32000000, "vmes": 6, "frec": 1, "pe_pct": 0.60, "fecha_inicio": "2026-01-01", "sucesora": null, "desfase": 0, "obra_offset": 1, "dur_obra": 26, "escrituracion": 30},
+    {"cod": 2, "nom": "Etapa 2", "und": 80, "metodo": "$/m²", "precio": 6875000, "area_und": 80, "ventas_miles": 44000000, "vmes": 6, "frec": 1, "pe_pct": 0.60, "sucesora": 1, "desfase": 0, "obra_offset": 1, "dur_obra": 24, "escrituracion": 30},
+    {"cod": 3, "nom": "Etapa 3", "und": 40, "metodo": "$/m²", "precio": 7500000, "area_und": 80, "ventas_miles": 24000000, "vmes": 6, "frec": 1, "pe_pct": 0.60, "sucesora": 2, "desfase": 0, "obra_offset": 1, "dur_obra": 22, "escrituracion": 30}
   ],
   "costos_pct": {
     "directos": 0.55,

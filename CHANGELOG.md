@@ -2,6 +2,16 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.9.0] — 2026-05-29
+### Cambiado (importante)
+- **Toda la data se ingresa EN la plataforma** — se elimina la importación de archivos
+  (Excel/JSON) como input (distorsionaba). Se conserva solo la **descarga de respaldo** (.json).
+- Nueva **primera pestaña "📝 Datos del proyecto"** con 6 secciones plegables: Datos generales,
+  Áreas y lote, Etapas/producto/ventas (tabla), Costos, Recaudo, Financiero (avanzado).
+- **Precio de venta elegible por etapa**: $/m² × área **o** $/und (columna "Método precio").
+- Sidebar: selector de proyecto + **"➕ Nuevo proyecto"** (en blanco) + descarga de respaldo.
+  Se retiran cargador de archivos y sliders sueltos (ahora en la pestaña de datos).
+
 ## [1.8.0] — 2026-05-29
 ### Añadido
 - **Editor de portafolio en la app** (pestaña ⚙️): tabla editable (`st.data_editor`) para

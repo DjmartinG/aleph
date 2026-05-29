@@ -2,7 +2,7 @@
 """
 Aplicativo de Prefactibilidad / Factibilidad — CG Constructora.
 Capa de presentación (Streamlit). NO contiene lógica financiera: usa engine/ (fuente única).
-Identidad de marca CG: teal #004854 + ámbar #F09C00. v1.1.0
+Toda la data se ingresa EN la plataforma (sin importar archivos externos). v1.9.0
 """
 import json, io, copy
 from pathlib import Path
@@ -20,7 +20,6 @@ HERE=Path(__file__).parent; PROY_DIR=HERE/"proyectos"; LOGO=HERE/"assets"/"logo_
 _icon = str(LOGO) if LOGO.exists() else "🏗️"
 st.set_page_config(page_title="Factibilidad CG", page_icon=_icon, layout="wide")
 
-# ---------------- plantilla Plotly CG ----------------
 pio.templates["cg"]=go.layout.Template(layout=dict(
     font=dict(family="Inter, sans-serif", color=INK, size=13),
     paper_bgcolor="white", plot_bgcolor="white",
@@ -28,12 +27,9 @@ pio.templates["cg"]=go.layout.Template(layout=dict(
     margin=dict(l=54, r=24, t=54, b=44),
     xaxis=dict(gridcolor="#EEF1F5", zerolinecolor=BORDER),
     yaxis=dict(gridcolor="#EEF1F5", zerolinecolor=BORDER),
-    legend=dict(orientation="h", y=-0.2),
-    title=dict(font=dict(size=15, color=TEAL)),
-))
+    legend=dict(orientation="h", y=-0.2), title=dict(font=dict(size=15, color=TEAL))))
 pio.templates.default="cg"
 
-# ---------------- CSS de marca ----------------
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -41,7 +37,7 @@ html, body, [class*="css"], .stApp { font-family:'Inter',-apple-system,sans-seri
 #MainMenu, footer, [data-testid="stToolbar"], [data-testid="stStatusWidget"] { visibility:hidden; height:0; }
 [data-testid="stHeader"] { background:transparent; }
 [data-testid="stSidebar"] { background:#F7F9FA; border-right:1px solid #E6E9EF; }
-.block-container { padding-top:1.3rem; max-width:1300px; }
+.block-container { padding-top:1.3rem; max-width:1320px; }
 h1 { color:#004854; font-weight:800; letter-spacing:-.02em; margin-bottom:.1rem; }
 h2,h3 { color:#13262B; font-weight:700; }
 .brandbar { height:4px; background:linear-gradient(90deg,#004854 0%,#F09C00 100%); border-radius:4px; margin:.4rem 0 1rem; }
@@ -52,7 +48,6 @@ h2,h3 { color:#13262B; font-weight:700; }
 .kpi .s { font-size:.74rem; font-weight:600; margin-top:3px; }
 .stTabs [data-baseweb="tab"] { font-weight:600; }
 .stTabs [aria-selected="true"] { color:#004854 !important; }
-[data-testid="stMetricValue"] { color:#004854; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -60,51 +55,44 @@ def fmt_mm(x): return f"${x/1000:,.0f} M" if x else "$0"
 def fmt_pct(x): return f"{x*100:.2f}%" if x is not None else "n/d"
 def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
-    col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>',
-                 unsafe_allow_html=True)
+    col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
 def cargar(n): return json.loads((PROY_DIR/f"{n}.json").read_text(encoding="utf-8"))
 def listar(): return sorted(p.stem for p in PROY_DIR.glob("*.json"))
 
-# ---------------- sidebar ----------------
+def nuevo_proyecto():
+    return {"meta":{"nombre":"Nuevo proyecto","ubicacion":"","zona":"","tipo":"No VIS","unidades":0,"moneda":"miles COP"},
+        "areas":{"m2_vendibles":0.0,"m2_construidos":0.0,"lote_bruta":0.0,"lote_util":0.0},
+        "etapas":[{"cod":1,"nom":"Etapa 1","und":50,"metodo":"$/m²","precio":5000000,"area_und":75.0,
+                   "ventas_miles":0,"vmes":6,"frec":1,"pe_pct":0.60,"fecha_inicio":"2026-01-01",
+                   "sucesora":None,"desfase":0,"obra_offset":1,"dur_obra":24,"escrituracion":30}],
+        "costos_pct":{"directos":0.55,"indirectos":0.18,"honorarios":0.08,"util_lote":0.045,"recon_codensa":0.002,
+                      "hon_construccion":0.035,"hon_gerencia":0.03,"hon_ventas":0.015},
+        "lote_bruto_miles":5000000,
+        "cronograma":{"dur_obra":40,"moda_pert":24,"curva":"Gauss","rel_materiales":0.8,"ea_materiales":0.06,"ea_mano_obra":0.12},
+        "financiero":{"renta":0.35,"split_cg":0.70,"pct_ci":0.30,"sep_und_miles":5000,"diferido_sep":4,
+                      "tasa_credito_ea":0.155,"cobertura_cc":0.80,"monto_cc_pct":0.80,"tir_apalancada_ref":0.20,
+                      "wacc":{"beta_us":1.29,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,"rf":0.12,
+                              "rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}}}
+
+# ---------------- sidebar: proyecto ----------------
 with st.sidebar:
     if LOGO.exists(): st.image(str(LOGO), width=150)
     st.markdown("### Proyecto")
-    up = st.file_uploader("🔒 Cargar proyecto privado (.json)", type=["json"],
-        help="Datos confidenciales: se cargan SOLO en tu sesión, no se guardan en el repositorio público.")
-    if up is not None:
-        if st.session_state.get("sel") != up.name:
-            st.session_state.par = json.load(up); st.session_state.sel = up.name
-        sel = up.name.replace(".json","")
-        st.success(f"🔒 Privado: {st.session_state.par.get('meta',{}).get('nombre', sel)}")
-    else:
-        proys = listar()
-        sel = st.selectbox("O usar un ejemplo", proys, index=0 if proys else None)
-        if "par" not in st.session_state or st.session_state.get("sel") != sel:
-            st.session_state.par = cargar(sel); st.session_state.sel = sel
+    opciones = ["➕ Nuevo proyecto"] + listar()
+    sel = st.selectbox("Seleccionar / crear", opciones, index=(1 if len(opciones) > 1 else 0))
+    if "par" not in st.session_state or st.session_state.get("sel") != sel:
+        st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
+        st.session_state.sel = sel
     par = st.session_state.par
-
-    st.caption("✏️ Edita las etapas (ventas, ritmo, %equilibrio, obra…) en la pestaña **⚙️ Editar portafolio**.")
-    st.markdown("###### Costos (% sobre ventas)")
-    c=par["costos_pct"]
-    c["directos"]   = st.slider("Directos", 0.30, 0.70, float(c["directos"]), 0.001)
-    c["indirectos"] = st.slider("Indirectos", 0.05, 0.30, float(c["indirectos"]), 0.001)
-    c["honorarios"] = st.slider("Honorarios", 0.05, 0.12, float(c["honorarios"]), 0.001)
-    par["lote_bruto_miles"] = st.number_input("Lote bruto (miles COP)",
-        value=float(par["lote_bruto_miles"]), step=500_000.0, format="%.0f")
-    st.markdown("###### Financiero")
-    f=par["financiero"]
-    f["tasa_credito_ea"] = st.slider("Tasa crédito E.A.", 0.08, 0.25, float(f["tasa_credito_ea"]), 0.005)
-    f["split_cg"] = st.slider("Reparto utilidad CG", 0.0, 1.0, float(f["split_cg"]), 0.05)
-    f["tir_apalancada_ref"] = st.number_input("TIR apalancada de referencia",
-        value=float(f.get("tir_apalancada_ref",0.20)), step=0.01, format="%.4f")
+    st.caption("📝 Ingresa todos los datos en la pestaña **Datos del proyecto**. "
+               "Las demás pestañas se calculan solas.")
 
 # ---------------- cálculo ----------------
 R = calcular(copy.deepcopy(par)); pg=R["pyg"]; fl=R["flujo"]; meta=R["meta"]
 
 # ---------------- encabezado ----------------
 hc1,hc2 = st.columns([1,9])
-if LOGO.exists():
-    hc1.image(str(LOGO), width=78)
+if LOGO.exists(): hc1.image(str(LOGO), width=78)
 hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
 hc2.caption(f"CG Constructora · {meta.get('nombre','')} · {meta.get('ubicacion','')} · {meta.get('unidades','')} unidades")
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
@@ -119,16 +107,122 @@ kpi(k[4],"VPN @WACC", fmt_mm(fl["vpn_proyecto"]))
 kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
 st.write("")
 
-tabs = st.tabs(["📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja","🎯 Escenarios",
-                "🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos","🏦 Apalancamiento","⚙️ Editar portafolio"])
+tabs = st.tabs(["📝 Datos del proyecto","📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja",
+                "🎯 Escenarios","🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos","🏦 Apalancamiento"])
 
+# ============ tabs[0] · DATOS DEL PROYECTO ============
 with tabs[0]:
+    st.markdown("### 📝 Datos del proyecto")
+    st.caption("Ingresa aquí toda la información del proyecto. **No se importan archivos** — todo se digita en la plataforma, "
+               "garantizando consistencia. Las demás pestañas se actualizan automáticamente.")
+
+    with st.expander("1 · Datos generales", expanded=True):
+        cg1=st.columns(3)
+        meta_e=par.setdefault("meta",{})
+        meta_e["nombre"]=cg1[0].text_input("Nombre del proyecto", meta_e.get("nombre",""))
+        meta_e["ubicacion"]=cg1[1].text_input("Ubicación (ciudad)", meta_e.get("ubicacion",""))
+        meta_e["zona"]=cg1[2].text_input("Zona / Barrio", meta_e.get("zona",""))
+        cg2=st.columns(3)
+        tipos=["No VIS","VIS","VIP","Mixto"]
+        meta_e["tipo"]=cg2[0].selectbox("Tipo de vivienda", tipos,
+            index=tipos.index(meta_e["tipo"]) if meta_e.get("tipo") in tipos else 0)
+        _raiz=next((e for e in par["etapas"] if not e.get("sucesora")), (par["etapas"][0] if par["etapas"] else None))
+        if _raiz is not None:
+            try: _fi=date.fromisoformat(str(_raiz.get("fecha_inicio") or "2026-01-01")[:10])
+            except Exception: _fi=date(2026,1,1)
+            _raiz["fecha_inicio"]=str(cg2[1].date_input("Fecha de inicio de ventas (etapa raíz)", value=_fi, key=f"fi_{sel}"))
+        cg2[2].metric("Unidades totales", int(meta_e.get("unidades",0)))
+
+    with st.expander("2 · Áreas y lote (m²)", expanded=True):
+        a=par.setdefault("areas",{}); ac=st.columns(4)
+        a["m2_vendibles"]=ac[0].number_input("Área vendible total", value=float(a.get("m2_vendibles",0)), step=100.0, format="%.0f")
+        a["m2_construidos"]=ac[1].number_input("Área construida total", value=float(a.get("m2_construidos",0)), step=100.0, format="%.0f")
+        a["lote_bruta"]=ac[2].number_input("Área lote (bruta)", value=float(a.get("lote_bruta",0)), step=100.0, format="%.0f")
+        a["lote_util"]=ac[3].number_input("Área lote (útil)", value=float(a.get("lote_util",0)), step=100.0, format="%.0f")
+
+    with st.expander("3 · Etapas, producto y ventas", expanded=True):
+        st.caption("Cada **etapa** abre ventas cuando su **sucesora** (cód. de la etapa anterior) llega al equilibrio. "
+                   "La etapa raíz no tiene sucesora. **Precio**: elige $/m² (× área/und) o $/und.")
+        cols=["cod","nom","und","metodo","precio","area_und","vmes","frec","pe_pct","sucesora","desfase","dur_obra","escrituracion"]
+        df_et=pd.DataFrame(par["etapas"]).reindex(columns=cols)
+        if "metodo" in df_et: df_et["metodo"]=df_et["metodo"].fillna("$/m²")
+        edited=st.data_editor(df_et, num_rows="dynamic", width="stretch", key=f"editor_{sel}",
+            column_config={
+                "cod": st.column_config.NumberColumn("Cód", format="%d", width="small"),
+                "nom": st.column_config.TextColumn("Etapa"),
+                "und": st.column_config.NumberColumn("Unidades", format="%d"),
+                "metodo": st.column_config.SelectboxColumn("Método precio", options=["$/m²","$/und"], width="small"),
+                "precio": st.column_config.NumberColumn("Precio (COP)", format="%d"),
+                "area_und": st.column_config.NumberColumn("Área/und (m²)", format="%.1f"),
+                "vmes": st.column_config.NumberColumn("Vtas/mes", format="%d"),
+                "frec": st.column_config.NumberColumn("Frec (m)", format="%d"),
+                "pe_pct": st.column_config.NumberColumn("% Equilibrio", format="%.2f", min_value=0.0, max_value=1.0),
+                "sucesora": st.column_config.NumberColumn("Sucesora", format="%d"),
+                "desfase": st.column_config.NumberColumn("Desfase (m)", format="%d"),
+                "dur_obra": st.column_config.NumberColumn("Dur. obra (m)", format="%d"),
+                "escrituracion": st.column_config.NumberColumn("Escrit. (m)", format="%d")})
+        def _i(v):
+            try: return int(v) if v is not None and not pd.isna(v) else None
+            except Exception: return None
+        def _f(v):
+            try: return float(v) if v is not None and not pd.isna(v) else None
+            except Exception: return None
+        recs=[]
+        for r in edited.to_dict("records"):
+            if (r.get("nom") in (None,"")) and not r.get("und"): continue
+            und=_i(r.get("und")) or 0; metodo=r.get("metodo") or "$/m²"
+            precio=_f(r.get("precio")) or 0; area=_f(r.get("area_und")) or 0
+            ventas_miles = und*precio*area/1000 if metodo=="$/m²" else und*precio/1000
+            recs.append({"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa","und":und,
+                "metodo":metodo,"precio":precio,"area_und":area,"ventas_miles":ventas_miles,
+                "vmes":_i(r.get("vmes")) or 6,"frec":_i(r.get("frec")) or 1,"pe_pct":_f(r.get("pe_pct")) or 0.60,
+                "sucesora":_i(r.get("sucesora")),"desfase":_i(r.get("desfase")) or 0,"obra_offset":1,
+                "dur_obra":_i(r.get("dur_obra")) or 24,"escrituracion":_i(r.get("escrituracion")) or 30})
+        for idx,r in enumerate(recs):
+            if not r["cod"]: r["cod"]=idx+1
+        if _raiz is not None:
+            for r in recs:
+                if r.get("sucesora") is None: r["fecha_inicio"]=_raiz["fecha_inicio"]
+        if recs:
+            st.session_state.par["etapas"]=recs
+            st.session_state.par.setdefault("meta",{})["unidades"]=sum(r["und"] for r in recs)
+        tv=sum(r["ventas_miles"] for r in recs)
+        st.success(f"**{len(recs)} etapas · {sum(r['und'] for r in recs)} unidades · ventas totales {tv/1000:,.0f} M**")
+
+    with st.expander("4 · Costos"):
+        c=par["costos_pct"]; cc1=st.columns(3)
+        c["directos"]=cc1[0].slider("Costo directo (% ventas)", 0.30, 0.70, float(c["directos"]), 0.001)
+        c["indirectos"]=cc1[1].slider("Costos indirectos (% ventas)", 0.05, 0.30, float(c["indirectos"]), 0.001)
+        c["honorarios"]=cc1[2].slider("Honorarios (% ventas)", 0.05, 0.12, float(c["honorarios"]), 0.001)
+        cc2=st.columns(3)
+        par["lote_bruto_miles"]=cc2[0].number_input("Costo del lote (miles COP)", value=float(par["lote_bruto_miles"]), step=500_000.0, format="%.0f")
+        cr=par.setdefault("cronograma",{})
+        cr["dur_obra"]=cc2[1].number_input("Duración de obra (meses, global)", value=int(cr.get("dur_obra",40)), step=1)
+        c["util_lote"]=cc2[2].slider("Utilidad del lote (% ventas)", 0.0, 0.10, float(c.get("util_lote",0.045)), 0.001)
+
+    with st.expander("5 · Recaudo (condiciones de venta)"):
+        f=par["financiero"]; rc1=st.columns(3)
+        f["sep_und_miles"]=rc1[0].number_input("Separación por unidad (miles COP)", value=float(f.get("sep_und_miles",5000)), step=500.0, format="%.0f")
+        f["diferido_sep"]=rc1[1].number_input("Diferido separación (meses)", value=int(f.get("diferido_sep",4)), step=1)
+        f["pct_ci"]=rc1[2].slider("% Cuota inicial", 0.10, 0.50, float(f.get("pct_ci",0.30)), 0.01)
+
+    with st.expander("6 · Financiero (avanzado — valores por defecto CG)"):
+        f=par["financiero"]; fc1=st.columns(3)
+        f["split_cg"]=fc1[0].slider("Reparto utilidad CG", 0.0, 1.0, float(f.get("split_cg",0.70)), 0.05)
+        f["tasa_credito_ea"]=fc1[1].slider("Tasa crédito constructor (E.A.)", 0.08, 0.25, float(f.get("tasa_credito_ea",0.155)), 0.005)
+        f["cobertura_cc"]=fc1[2].slider("Cobertura crédito (% obra)", 0.50, 0.90, float(f.get("cobertura_cc",0.80)), 0.05)
+        fc2=st.columns(3)
+        f["renta"]=fc2[0].slider("Provisión renta", 0.0, 0.40, float(f.get("renta",0.35)), 0.01)
+        f["tir_apalancada_ref"]=fc2[1].number_input("TIR apalancada de referencia", value=float(f.get("tir_apalancada_ref",0.20)), step=0.01, format="%.4f")
+
+# ============ tabs de resultados ============
+with tabs[1]:
     df=pd.DataFrame([
         ("Ingresos por ventas",pg["ventas"]),("(+) Reconocimiento Codensa",pg["recon_codensa"]),
         ("(-) Costo lote",-pg["costo_lote"]),("(-) Costos directos",-pg["directos"]),
         ("(-) Costos indirectos",-pg["indirectos"]),("(-) Honorarios",-pg["honorarios"]),
         ("UTILIDAD OPERATIVA",pg["util_oper"]),("(-) Provisión renta",-pg["renta"]),("UDI",pg["udi"]),
-    ],columns=["Concepto","Miles COP"]); df["% ventas"]=df["Miles COP"]/pg["ventas"]
+    ],columns=["Concepto","Miles COP"]); df["% ventas"]=df["Miles COP"]/pg["ventas"] if pg["ventas"] else 0
     st.dataframe(df.style.format({"Miles COP":"{:,.0f}","% ventas":"{:.1%}"}), width="stretch", hide_index=True)
     costo_total=pg["costo_lote"]+pg["directos"]+pg["indirectos"]
     st.markdown("**Indicadores del Estado de Resultados**")
@@ -138,13 +232,12 @@ with tabs[0]:
     kpi(e[2],"Incidencia directos",fmt_pct(pg["directos"]/costo_total if costo_total else 0))
     kpi(e[3],"Incidencia indirectos+lote",fmt_pct((pg["indirectos"]+pg["costo_lote"])/costo_total if costo_total else 0))
 
-with tabs[1]:
-    s=par["financiero"]["split_cg"]
+with tabs[2]:
     fig=go.Figure(data=[go.Pie(labels=["CG","Socio"],values=[pg["cg"],pg["socio"]],hole=.55,
                   marker_colors=[TEAL,AMBER])]); fig.update_layout(title="Distribución de resultados",height=360)
     st.plotly_chart(fig, width="stretch")
 
-with tabs[2]:
+with tabs[3]:
     d=R["distribucion"]; m=list(range(1,len(d["escalada"])+1))
     fig=go.Figure(); fig.add_bar(x=m,y=d["escalada"],name="Costo mensual",marker_color=TEAL)
     fig.add_scatter(x=m,y=d["acumulada"],name="Acumulado",yaxis="y2",line=dict(color=AMBER,width=3))
@@ -152,12 +245,12 @@ with tabs[2]:
                       yaxis2=dict(overlaying="y",side="right",showgrid=False),height=420,xaxis_title="Mes de obra")
     st.plotly_chart(fig, width="stretch")
 
-with tabs[3]:
+with tabs[4]:
     n=len([x for x in fl["flujo"] if abs(x)>1])+2; m=list(range(1,n+1))
     fig=go.Figure(); fig.add_bar(x=m,y=fl["flujo"][:n],name="Flujo mensual",marker_color=TEAL)
     fig.add_scatter(x=m,y=fl["acumulado"][:n],name="Acumulado",line=dict(color=INK,width=3))
     fig.add_scatter(x=m,y=fl["saldo_credito"][:n],name="Saldo crédito",line=dict(color=AMBER,dash="dot"))
-    fig.update_layout(title="Flujo de caja del proyecto (costos por curva PERT)",height=430,xaxis_title="Mes")
+    fig.update_layout(title="Flujo de caja del proyecto (modelo simplificado)",height=430,xaxis_title="Mes")
     st.plotly_chart(fig, width="stretch")
     cc=st.columns(4)
     kpi(cc[0],"TIR proyecto (no apal.)",fmt_pct(fl["tir_proyecto"]))
@@ -165,7 +258,7 @@ with tabs[3]:
     kpi(cc[2],"Necesidad máx de caja",fmt_mm(fl["max_caja"]))
     kpi(cc[3],"Intereses (prelim.)",fmt_mm(fl["intereses_total"]))
 
-with tabs[4]:
+with tabs[5]:
     esc=R["escenarios"]
     fig=go.Figure(data=[go.Bar(x=list(esc.keys()),y=[v["util_oper"] for v in esc.values()],
         marker_color=[TEAL,GREEN,RED],text=[fmt_pct(v["margen"]) for v in esc.values()],textposition="outside")])
@@ -173,14 +266,14 @@ with tabs[4]:
     st.plotly_chart(fig, width="stretch")
     st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo")
 
-with tabs[5]:
+with tabs[6]:
     s=R["sensibilidades"]; it=sorted(s.items(),key=lambda kv:kv[1])
     fig=go.Figure(data=[go.Bar(y=[k for k,_ in it],x=[v for _,v in it],orientation="h",
         marker_color=[GREEN if v>=0 else RED for _,v in it])])
     fig.update_layout(title="Tornado — impacto en utilidad operativa (miles COP)",height=360)
     st.plotly_chart(fig, width="stretch")
 
-with tabs[6]:
+with tabs[7]:
     u=R["urbanistico"]
     df=pd.DataFrame([
         ("Área lote bruta (m²)",u["lote_bruta"]),("Área lote útil (m²)",u["lote_util"]),
@@ -189,148 +282,78 @@ with tabs[6]:
         ("Aprovechamiento",u["aprovechamiento"]),("Densidad (und/ha)",u["densidad_und_ha"]),
         ("Precio venta /m² (COP)",u["precio_m2_vend"]),("Costo directo /m² const (COP)",u["costo_dir_m2_const"]),
     ],columns=["Indicador","Valor"])
-    st.dataframe(df.style.format({"Valor":"{:,.2f}"}), width="stretch", hide_index=True)
+    st.dataframe(df.style.format({"Valor":"{:,.2f}"}, na_rep="—"), width="stretch", hide_index=True)
 
-with tabs[7]:
-    h = R.get("hitos", {})
+with tabs[8]:
+    h=R.get("hitos",{})
     if not h:
-        st.info("Define la estructura de etapas (ritmo de ventas, % de equilibrio, sucesora) para ver el cronograma de hitos.")
+        st.info("Completa los datos de etapas (en 📝 Datos del proyecto) para ver el cronograma de hitos.")
     else:
-        rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],
-               "Inicio Ventas":h[c]["IV"],"Pto Equilibrio":h[c]["PE"],"Fin Ventas":h[c]["FV"],
-               "Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")}
-              for c in sorted(h)]
+        rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],"Inicio Ventas":h[c]["IV"],
+               "Pto Equilibrio":h[c]["PE"],"Fin Ventas":h[c]["FV"],
+               "Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")} for c in sorted(h)]
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
         fig=go.Figure()
         for c in sorted(h, reverse=True):
-            x=h[c]; y=x["nombre"]
-            fin = max(d for d in [x["FV"], x.get("FC")] if d)
-            fig.add_scatter(x=[x["IV"],fin],y=[y,y],mode="lines",
-                line=dict(color="#C8D2DE",width=5),showlegend=False,hoverinfo="skip")
+            x=h[c]; y=x["nombre"]; fin=max(d for d in [x["FV"],x.get("FC")] if d)
+            fig.add_scatter(x=[x["IV"],fin],y=[y,y],mode="lines",line=dict(color="#C8D2DE",width=5),showlegend=False,hoverinfo="skip")
             pts=[("Inicio Ventas",x["IV"],TEAL,"circle"),("Pto Equilibrio",x["PE"],AMBER,"diamond"),
                  ("Inicio Constr.",x.get("IC"),GREEN,"triangle-up"),("Fin Constr.",x.get("FC"),RED,"triangle-down"),
                  ("Fin Ventas",x["FV"],INK,"circle")]
             pts=[p for p in pts if p[1]]
             fig.add_scatter(x=[p[1] for p in pts],y=[y]*len(pts),mode="markers",
                 marker=dict(size=13,color=[p[2] for p in pts],symbol=[p[3] for p in pts]),
-                showlegend=False,text=[p[0] for p in pts],
-                hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
-        fig.update_layout(title="Cronograma por etapa — ventas y construcción (estructura APEX)",
-                          height=140+64*len(h), xaxis_title="")
+                showlegend=False,text=[p[0] for p in pts],hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
+        fig.update_layout(title="Cronograma por etapa — ventas y construcción",height=140+64*len(h),xaxis_title="")
         st.plotly_chart(fig, width="stretch")
-        st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas. Cada etapa abre ventas en el equilibrio de su sucesora; la obra arranca tras el equilibrio (pre-ventas la financian) y dura `dur_obra`.")
+        st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas.")
 
-with tabs[8]:
-    rc = R.get("recaudo", {})
+with tabs[9]:
+    rc=R.get("recaudo",{})
     if not rc or not rc.get("total"):
-        st.info("Define la estructura de etapas (ritmo, %CI, escrituración) para ver el recaudo de ingresos.")
+        st.info("Completa los datos de etapas para ver el recaudo de ingresos.")
     else:
         sepr=rc["separacion"]; cir=rc["cuota_inicial"]; subr=rc["subrogacion"]; tot=rc["total"]
-        n=max([i for i,v in enumerate(tot) if abs(v)>1], default=0)+2
-        m=list(range(1,n+1))
+        n=max([i for i,v in enumerate(tot) if abs(v)>1], default=0)+2; m=list(range(1,n+1))
         fig=go.Figure()
         fig.add_scatter(x=m,y=sepr[:n],name="Separación",stackgroup="r",line=dict(width=0.5,color=AMBER))
         fig.add_scatter(x=m,y=cir[:n],name="Cuota inicial",stackgroup="r",line=dict(width=0.5,color=TEAL))
         fig.add_scatter(x=m,y=subr[:n],name="Subrogación",stackgroup="r",line=dict(width=0.5,color=GREEN))
-        fig.update_layout(title="Recaudo mensual por componente (kernel de ingresos APEX)",height=430,xaxis_title="Mes")
+        fig.update_layout(title="Recaudo mensual por componente",height=430,xaxis_title="Mes")
         st.plotly_chart(fig, width="stretch")
         cc=st.columns(4)
-        kpi(cc[0],"Separación",fmt_mm(sum(sepr)))
-        kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
-        kpi(cc[2],"Subrogación",fmt_mm(sum(subr)))
-        kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
-        st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega). El recaudo total reconcilia con el valor de contrato.")
+        kpi(cc[0],"Separación",fmt_mm(sum(sepr))); kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
+        kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
+        st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega). Reconcilia con el valor de contrato.")
 
-with tabs[9]:
-    a = R.get("apalancamiento", {})
+with tabs[10]:
+    a=R.get("apalancamiento",{})
     if not a or not a.get("operativo"):
-        st.info("Define la estructura de etapas y financiación para ver el apalancamiento.")
+        st.info("Completa los datos del proyecto para ver el apalancamiento.")
     else:
         op=a["operativo"]; sc=a["saldo_credito"]; ac=a["acumulado"]; an=a.get("anual",{})
-        # --- flujo consolidado anual (ensamblaje del portafolio) ---
         if an:
             yrs=sorted(an); cum=[]; s=0.0
             for y in yrs: s+=an[y]; cum.append(s)
-            fig=go.Figure()
-            fig.add_bar(x=[str(y) for y in yrs],y=[an[y] for y in yrs],name="Flujo operativo",marker_color=TEAL)
+            fig=go.Figure(); fig.add_bar(x=[str(y) for y in yrs],y=[an[y] for y in yrs],name="Flujo operativo",marker_color=TEAL)
             fig.add_scatter(x=[str(y) for y in yrs],y=cum,name="Acumulado",line=dict(color=INK,width=3))
             fig.update_layout(title="Flujo de caja consolidado del portafolio (anual)",height=400)
             st.plotly_chart(fig, width="stretch")
-        # --- indicadores económicos (I.Economicos) ---
         c1=st.columns(4)
         kpi(c1[0],"TIR proyecto",fmt_pct(a.get("tir_proyecto")))
         kpi(c1[1],"VPN @WACC",fmt_mm(a["vpn_proyecto"]) if a.get("vpn_proyecto") is not None else "n/d")
         kpi(c1[2],"WACC E.A.",fmt_pct(a.get("wacc")))
         pb=a.get("payback_mes"); kpi(c1[3],"Payback (caja+)",(f"{pb} meses" if pb else "—"))
         c2=st.columns(4)
-        kpi(c2[0],"Crédito constructor máx",fmt_mm(a["credito_max"]))
-        kpi(c2[1],"Necesidad máx de caja",fmt_mm(a["max_necesidad_caja"]))
-        kpi(c2[2],"Valor financiable",fmt_mm(a["valor_financiable"]))
-        kpi(c2[3],"Intereses (prelim.)",fmt_mm(a["intereses_total"]))
-        # --- detalle mensual: caja acumulada + saldo de crédito ---
+        kpi(c2[0],"Crédito constructor máx",fmt_mm(a["credito_max"])); kpi(c2[1],"Necesidad máx de caja",fmt_mm(a["max_necesidad_caja"]))
+        kpi(c2[2],"Valor financiable",fmt_mm(a["valor_financiable"])); kpi(c2[3],"Intereses",fmt_mm(a["intereses_total"]))
         n=max([i for i,v in enumerate(op) if abs(v)>1],default=0)+2; m=list(range(1,n+1))
         fig2=go.Figure()
         fig2.add_scatter(x=m,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=2))
         fig2.add_scatter(x=m,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
-        fig2.update_layout(title="Mensual: caja acumulada y saldo de crédito constructor",height=340,xaxis_title="Mes")
+        fig2.update_layout(title="Mensual: caja acumulada y saldo de crédito",height=340,xaxis_title="Mes")
         st.plotly_chart(fig2, width="stretch")
-        st.caption("Crédito constructor financia la **cobertura (~80%) del costo de obra** a medida que se ejecuta, y se **amortiza con las subrogaciones** (créditos hipotecarios a la escrituración); el interés corre sobre el saldo del crédito. Los **aportes** (equity) cubren el resto (lote, indirectos, 20% de obra). La TIR equity puede ser menor que la del proyecto si la tasa del crédito supera el retorno del proyecto (apalancamiento dilutivo).")
-
-with tabs[10]:
-    st.markdown("### ⚙️ Editar portafolio (estructura APEX)")
-    st.caption("Edita, **agrega (➕ al final)** o **elimina** etapas. Cada etapa abre ventas cuando su "
-               "**sucesora** (código de la etapa anterior) alcanza el equilibrio; la **raíz** no tiene "
-               "sucesora y usa su fecha de inicio.")
-    raiz = next((e for e in par["etapas"] if not e.get("sucesora")), (par["etapas"][0] if par["etapas"] else None))
-    if raiz is not None:
-        try: fi_val = date.fromisoformat(str(raiz.get("fecha_inicio") or "2026-01-01")[:10])
-        except Exception: fi_val = date(2026, 1, 1)
-        raiz["fecha_inicio"] = str(st.date_input("Fecha de inicio (etapa raíz)", value=fi_val, key=f"fi_{sel}"))
-    cols=["cod","nom","und","ventas_miles","vmes","frec","pe_pct","sucesora","desfase","obra_offset","dur_obra","escrituracion"]
-    df_et = pd.DataFrame(par["etapas"]).reindex(columns=cols)
-    edited = st.data_editor(df_et, num_rows="dynamic", width="stretch", key=f"editor_{sel}",
-        column_config={
-            "cod": st.column_config.NumberColumn("Cód", format="%d", width="small"),
-            "nom": st.column_config.TextColumn("Etapa"),
-            "und": st.column_config.NumberColumn("Unidades", format="%d"),
-            "ventas_miles": st.column_config.NumberColumn("Ventas (miles COP)", format="%d"),
-            "vmes": st.column_config.NumberColumn("Vtas/mes", format="%d"),
-            "frec": st.column_config.NumberColumn("Frec (m)", format="%d"),
-            "pe_pct": st.column_config.NumberColumn("% Equilibrio", format="%.2f", min_value=0.0, max_value=1.0),
-            "sucesora": st.column_config.NumberColumn("Sucesora", format="%d"),
-            "desfase": st.column_config.NumberColumn("Desfase (m)", format="%d"),
-            "obra_offset": st.column_config.NumberColumn("Obra tras PE (m)", format="%d"),
-            "dur_obra": st.column_config.NumberColumn("Dur. obra (m)", format="%d"),
-            "escrituracion": st.column_config.NumberColumn("Escrit. (m)", format="%d"),
-        })
-    def _i(v):
-        try: return int(v) if v is not None and not pd.isna(v) else None
-        except Exception: return None
-    def _f(v):
-        try: return float(v) if v is not None and not pd.isna(v) else None
-        except Exception: return None
-    recs=[]
-    for r in edited.to_dict("records"):
-        if (r.get("nom") in (None,"") ) and not r.get("und"):    # fila vacía → ignorar
-            continue
-        recs.append({"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa",
-            "und":_i(r.get("und")) or 0,"ventas_miles":_f(r.get("ventas_miles")) or 0,
-            "vmes":_i(r.get("vmes")) or 6,"frec":_i(r.get("frec")) or 1,
-            "pe_pct":_f(r.get("pe_pct")) or 0.60,"sucesora":_i(r.get("sucesora")),
-            "desfase":_i(r.get("desfase")) or 0,"obra_offset":_i(r.get("obra_offset")) or 1,
-            "dur_obra":_i(r.get("dur_obra")) or 24,"escrituracion":_i(r.get("escrituracion")) or 30})
-    # asignar cód automático si falta, y preservar la fecha de inicio de la raíz
-    for idx,r in enumerate(recs):
-        if not r["cod"]: r["cod"]=idx+1
-    if raiz is not None:
-        for r in recs:
-            if r["cod"]==raiz.get("cod") or (r.get("sucesora") is None):
-                r["fecha_inicio"]=raiz["fecha_inicio"]
-    if recs:
-        st.session_state.par["etapas"]=recs
-    tot=sum(r["ventas_miles"] for r in recs)
-    st.success(f"Portafolio: {len(recs)} etapas · {sum(r['und'] for r in recs)} unidades · ventas {tot/1000:,.0f} M. "
-               "Los resultados se actualizan al editar. Descarga tu versión con **💾 Descargar proyecto** abajo.")
+        st.caption("Crédito constructor: cobertura (~80%) del costo de obra, amortizado con las subrogaciones; los aportes cubren el resto.")
 
 # ---------------- acciones ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
@@ -338,20 +361,17 @@ a1,a2=st.columns(2)
 with a1:
     buf=io.BytesIO()
     with pd.ExcelWriter(buf,engine="openpyxl") as xl:
-        pd.DataFrame([{"Concepto":"Ventas","Miles COP":pg["ventas"]},
-            {"Concepto":"Utilidad operativa","Miles COP":pg["util_oper"]},
+        pd.DataFrame([{"Concepto":"Ventas","Miles COP":pg["ventas"]},{"Concepto":"Utilidad operativa","Miles COP":pg["util_oper"]},
             {"Concepto":"UDI","Miles COP":pg["udi"]},{"Concepto":"CG","Miles COP":pg["cg"]},
-            {"Concepto":"Socio","Miles COP":pg["socio"]},
-            {"Concepto":"Credito max","Miles COP":fl["credito_max"]}]).to_excel(xl,sheet_name="Resumen",index=False)
-        pd.DataFrame({"Mes":range(1,len(fl["flujo"])+1),"Flujo":fl["flujo"],
-            "Acumulado":fl["acumulado"],"SaldoCredito":fl["saldo_credito"]}).to_excel(xl,sheet_name="Flujo",index=False)
-    st.download_button("📥 Exportar a Excel", buf.getvalue(),
-        file_name=f"Factibilidad_{sel}_{date.today():%Y%m%d}.xlsx",
+            {"Concepto":"Socio","Miles COP":pg["socio"]},{"Concepto":"Credito max","Miles COP":fl["credito_max"]}]).to_excel(xl,sheet_name="Resumen",index=False)
+        pd.DataFrame({"Mes":range(1,len(fl["flujo"])+1),"Flujo":fl["flujo"],"Acumulado":fl["acumulado"],"SaldoCredito":fl["saldo_credito"]}).to_excel(xl,sheet_name="Flujo",index=False)
+    st.download_button("📥 Exportar resultados a Excel", buf.getvalue(),
+        file_name=f"Factibilidad_{meta.get('nombre','proyecto')}_{date.today():%Y%m%d}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 with a2:
     par["_fecha"]=str(date.today())
-    st.download_button("💾 Descargar proyecto (.json)",
+    st.download_button("💾 Descargar proyecto (.json, respaldo)",
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
-        file_name=f"{sel}.json", mime="application/json",
-        help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.8.0 · motor v{ENGINE_V} · estructura APEX completa · editor de portafolio · CG Constructora")
+        file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
+        help="Respaldo de tu proyecto para guardarlo localmente. (No es fuente de entrada — la data se digita en la plataforma.)")
+st.caption(f"Aplicativo v1.9.0 · motor v{ENGINE_V} · data 100% en plataforma · estructura APEX · CG Constructora")
