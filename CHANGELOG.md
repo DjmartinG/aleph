@@ -2,6 +2,15 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.8.0] — 2026-05-29
+### Añadido
+- **Editor de portafolio en la app** (pestaña ⚙️): tabla editable (`st.data_editor`) para
+  agregar/editar/eliminar etapas con todos los parámetros APEX (unidades, ventas, ritmo,
+  % equilibrio, sucesora, desfase, obra, escrituración) + fecha de inicio de la etapa raíz.
+  La estructura del modelo es ahora autoservicio — sin editar JSON a mano.
+### Cambiado
+- Se retiran los inputs de ventas por etapa del sidebar (ahora se editan en el editor).
+
 ## [1.7.0] — 2026-05-29
 ### Cambiado
 - **Crédito constructor calibrado**: ahora financia la **cobertura (~80%) del costo de obra**

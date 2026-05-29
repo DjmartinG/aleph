@@ -83,11 +83,7 @@ with st.sidebar:
             st.session_state.par = cargar(sel); st.session_state.sel = sel
     par = st.session_state.par
 
-    st.markdown("###### Ventas por etapa (miles COP)")
-    _pk = st.session_state.get("sel","x")
-    for i,e in enumerate(par["etapas"]):
-        e["ventas_miles"] = st.number_input(e["nom"], value=float(e["ventas_miles"]),
-            step=1_000_000.0, format="%.0f", key=f"et_{_pk}_{i}")
+    st.caption("✏️ Edita las etapas (ventas, ritmo, %equilibrio, obra…) en la pestaña **⚙️ Editar portafolio**.")
     st.markdown("###### Costos (% sobre ventas)")
     c=par["costos_pct"]
     c["directos"]   = st.slider("Directos", 0.30, 0.70, float(c["directos"]), 0.001)
@@ -124,7 +120,7 @@ kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
 st.write("")
 
 tabs = st.tabs(["📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja","🎯 Escenarios",
-                "🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos","🏦 Apalancamiento"])
+                "🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos","🏦 Apalancamiento","⚙️ Editar portafolio"])
 
 with tabs[0]:
     df=pd.DataFrame([
@@ -280,6 +276,62 @@ with tabs[9]:
         st.plotly_chart(fig2, width="stretch")
         st.caption("Crédito constructor financia la **cobertura (~80%) del costo de obra** a medida que se ejecuta, y se **amortiza con las subrogaciones** (créditos hipotecarios a la escrituración); el interés corre sobre el saldo del crédito. Los **aportes** (equity) cubren el resto (lote, indirectos, 20% de obra). La TIR equity puede ser menor que la del proyecto si la tasa del crédito supera el retorno del proyecto (apalancamiento dilutivo).")
 
+with tabs[10]:
+    st.markdown("### ⚙️ Editar portafolio (estructura APEX)")
+    st.caption("Edita, **agrega (➕ al final)** o **elimina** etapas. Cada etapa abre ventas cuando su "
+               "**sucesora** (código de la etapa anterior) alcanza el equilibrio; la **raíz** no tiene "
+               "sucesora y usa su fecha de inicio.")
+    raiz = next((e for e in par["etapas"] if not e.get("sucesora")), (par["etapas"][0] if par["etapas"] else None))
+    if raiz is not None:
+        try: fi_val = date.fromisoformat(str(raiz.get("fecha_inicio") or "2026-01-01")[:10])
+        except Exception: fi_val = date(2026, 1, 1)
+        raiz["fecha_inicio"] = str(st.date_input("Fecha de inicio (etapa raíz)", value=fi_val, key=f"fi_{sel}"))
+    cols=["cod","nom","und","ventas_miles","vmes","frec","pe_pct","sucesora","desfase","obra_offset","dur_obra","escrituracion"]
+    df_et = pd.DataFrame(par["etapas"]).reindex(columns=cols)
+    edited = st.data_editor(df_et, num_rows="dynamic", width="stretch", key=f"editor_{sel}",
+        column_config={
+            "cod": st.column_config.NumberColumn("Cód", format="%d", width="small"),
+            "nom": st.column_config.TextColumn("Etapa"),
+            "und": st.column_config.NumberColumn("Unidades", format="%d"),
+            "ventas_miles": st.column_config.NumberColumn("Ventas (miles COP)", format="%d"),
+            "vmes": st.column_config.NumberColumn("Vtas/mes", format="%d"),
+            "frec": st.column_config.NumberColumn("Frec (m)", format="%d"),
+            "pe_pct": st.column_config.NumberColumn("% Equilibrio", format="%.2f", min_value=0.0, max_value=1.0),
+            "sucesora": st.column_config.NumberColumn("Sucesora", format="%d"),
+            "desfase": st.column_config.NumberColumn("Desfase (m)", format="%d"),
+            "obra_offset": st.column_config.NumberColumn("Obra tras PE (m)", format="%d"),
+            "dur_obra": st.column_config.NumberColumn("Dur. obra (m)", format="%d"),
+            "escrituracion": st.column_config.NumberColumn("Escrit. (m)", format="%d"),
+        })
+    def _i(v):
+        try: return int(v) if v is not None and not pd.isna(v) else None
+        except Exception: return None
+    def _f(v):
+        try: return float(v) if v is not None and not pd.isna(v) else None
+        except Exception: return None
+    recs=[]
+    for r in edited.to_dict("records"):
+        if (r.get("nom") in (None,"") ) and not r.get("und"):    # fila vacía → ignorar
+            continue
+        recs.append({"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa",
+            "und":_i(r.get("und")) or 0,"ventas_miles":_f(r.get("ventas_miles")) or 0,
+            "vmes":_i(r.get("vmes")) or 6,"frec":_i(r.get("frec")) or 1,
+            "pe_pct":_f(r.get("pe_pct")) or 0.60,"sucesora":_i(r.get("sucesora")),
+            "desfase":_i(r.get("desfase")) or 0,"obra_offset":_i(r.get("obra_offset")) or 1,
+            "dur_obra":_i(r.get("dur_obra")) or 24,"escrituracion":_i(r.get("escrituracion")) or 30})
+    # asignar cód automático si falta, y preservar la fecha de inicio de la raíz
+    for idx,r in enumerate(recs):
+        if not r["cod"]: r["cod"]=idx+1
+    if raiz is not None:
+        for r in recs:
+            if r["cod"]==raiz.get("cod") or (r.get("sucesora") is None):
+                r["fecha_inicio"]=raiz["fecha_inicio"]
+    if recs:
+        st.session_state.par["etapas"]=recs
+    tot=sum(r["ventas_miles"] for r in recs)
+    st.success(f"Portafolio: {len(recs)} etapas · {sum(r['und'] for r in recs)} unidades · ventas {tot/1000:,.0f} M. "
+               "Los resultados se actualizan al editar. Descarga tu versión con **💾 Descargar proyecto** abajo.")
+
 # ---------------- acciones ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
 a1,a2=st.columns(2)
@@ -302,4 +354,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{sel}.json", mime="application/json",
         help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.7.0 · motor v{ENGINE_V} · estructura APEX completa · crédito constructor calibrado (cobertura de obra) · CG Constructora")
+st.caption(f"Aplicativo v1.8.0 · motor v{ENGINE_V} · estructura APEX completa · editor de portafolio · CG Constructora")
