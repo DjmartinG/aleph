@@ -46,9 +46,10 @@ with st.sidebar:
     par = st.session_state.par
 
     st.subheader("Ventas por etapa (miles COP)")
-    for i,e in enumerate(par["etapas"]):
+    _pk = st.session_state.get("sel", "x")   # llave por proyecto: evita que los valores
+    for i,e in enumerate(par["etapas"]):       # de un proyecto "se peguen" al cambiar a otro
         e["ventas_miles"] = st.number_input(e["nom"], value=float(e["ventas_miles"]),
-                                             step=1_000_000.0, format="%.0f", key=f"et{i}")
+                                             step=1_000_000.0, format="%.0f", key=f"et_{_pk}_{i}")
     st.subheader("Costos (% sobre ventas)")
     c=par["costos_pct"]
     c["directos"]   = st.slider("Directos", 0.30, 0.70, float(c["directos"]), 0.001)
