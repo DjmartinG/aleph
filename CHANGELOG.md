@@ -2,6 +2,17 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.7.0] — 2026-05-29
+### Cambiado
+- **Crédito constructor calibrado**: ahora financia la **cobertura (~80%) del costo de obra**
+  (no todos los déficits) y se **amortiza con las subrogaciones**; el interés corre sobre el
+  saldo del crédito. Los aportes (equity) cubren el resto. Resultado: crédito máx e intereses
+  realistas (intereses < utilidad), TIR equity calculable. Corrige el sobredimensionamiento
+  del crédito/intereses de v1.5–1.6.
+### Nota
+- `G.Financieros` y el valor financiable del CC están vacíos/"Falta calcular" en el propio APEX;
+  la cobertura del costo de obra es la mecánica estándar de crédito constructor aplicada aquí.
+
 ## [1.6.0] — 2026-05-29
 ### Añadido
 - **Ensamblaje (Fase 5)**: vista de **flujo de caja consolidado anual** del portafolio (curva J),

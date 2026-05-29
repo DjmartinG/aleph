@@ -53,7 +53,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     ingresos_m = [rt[i] if i < len(rt) else 0.0 for i in range(N)]
 
     # ---- costos por etapa (F3): directos Gauss sobre IC..FC; indirectos/honorarios; lote ----
-    costos_m = [0.0] * N
+    costos_m = [0.0] * N; directos_m = [0.0] * N      # directos aparte (financiables por CC)
     for e in par.get("etapas", []):
         cod = e.get("cod")
         if cod not in hitos:
@@ -66,7 +66,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         serie = curvas.distribuir(pg["directos"] * share, dur, "Gauss")   # costo directo
         for k, val in enumerate(serie):
             if ic + k < N:
-                costos_m[ic + k] += val
+                costos_m[ic + k] += val; directos_m[ic + k] += val
         per = max(1, fc - iv + 1)                                          # indirectos lineal
         for m in range(iv, min(fc + 1, N)):
             costos_m[m] += pg["indirectos"] * share / per
@@ -77,23 +77,26 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     operativo = [ingresos_m[m] - costos_m[m] for m in range(N)]
     operativo[0] -= pg["costo_lote"]
 
-    # ---- waterfall: crédito constructor + aportes ----
+    # ---- waterfall: crédito constructor (cobertura del costo de obra, amortizado con subrogación) ----
+    # El crédito constructor financia COBERTURA (~80%) del costo directo a medida que se ejecuta la
+    # obra, y se amortiza con las subrogaciones (créditos hipotecarios a la escrituración). El resto
+    # (lote, indirectos, 20% de obra) lo cubren los aportes (equity, sin interés de CC).
+    cobertura = fin.get("cobertura_cc", fin.get("monto_cc_pct", 0.80))
     valor_financiable = pg["directos"] + pg["indirectos"]
-    cap = fin.get("monto_cc_pct", 0.80) * valor_financiable
+    subr = recaudo.get("subrogacion", [])
+    sub_m = [subr[i] if i < len(subr) else 0.0 for i in range(N)]
     tasa_cc = (1 + fin.get("tasa_credito_ea", 0.155)) ** (1 / 12) - 1
     saldo = 0.0; intereses = 0.0
-    saldo_serie = [0.0] * N; flujo_equity = [0.0] * N; aportes = [0.0] * N
+    saldo_serie = [0.0] * N; flujo_equity = [0.0] * N
     for m in range(N):
         interes = saldo * tasa_cc; intereses += interes
-        neto = operativo[m] - interes
-        if neto < 0:
-            deficit = -neto
-            usar = min(deficit, max(0.0, cap - saldo)); saldo += usar
-            ap = deficit - usar; aportes[m] = ap; flujo_equity[m] = -ap
-        else:
-            repago = min(neto, saldo); saldo -= repago
-            flujo_equity[m] = neto - repago
+        desembolso = cobertura * directos_m[m]                 # banco financia 80% de la obra
+        saldo += desembolso
+        amort = min(sub_m[m], saldo); saldo -= amort           # subrogaciones amortizan el CC
         saldo_serie[m] = saldo
+        # flujo al equity = operativo + crédito neto recibido − intereses
+        flujo_equity[m] = operativo[m] + desembolso - amort - interes
+    cap = cobertura * pg["directos"]
 
     acum = []; s = 0.0
     for x in operativo:
@@ -121,7 +124,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         "ingresos": ingresos_m, "costos": costos_m, "operativo": operativo,
         "acumulado": acum, "saldo_credito": saldo_serie, "flujo_equity": flujo_equity,
         "credito_max": max(saldo_serie), "intereses_total": intereses,
-        "aportes_total": sum(aportes), "max_necesidad_caja": min(acum),
+        "aportes_total": sum(-x for x in flujo_equity if x < 0), "max_necesidad_caja": min(acum),
         "valor_financiable": valor_financiable, "cap_credito": cap,
         "tir_proyecto": _tir(operativo), "tir_equity": _tir(flujo_equity),
         "vpn_proyecto": sum(f / (1 + wacc_m) ** t for t, f in enumerate(operativo)) if wacc else None,

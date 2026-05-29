@@ -278,7 +278,7 @@ with tabs[9]:
         fig2.add_scatter(x=m,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
         fig2.update_layout(title="Mensual: caja acumulada y saldo de crédito constructor",height=340,xaxis_title="Mes")
         st.plotly_chart(fig2, width="stretch")
-        st.caption("Crédito constructor **revolvente** (tope = monto% × valor financiable), activado por avance de obra y amortizado con las subrogaciones; los **aportes** cubren el residual. ⚠️ Intereses y TIR apalancada son **preliminares**: la calibración fina depende del cronograma de amortización de fiducia (siguiente paso).")
+        st.caption("Crédito constructor financia la **cobertura (~80%) del costo de obra** a medida que se ejecuta, y se **amortiza con las subrogaciones** (créditos hipotecarios a la escrituración); el interés corre sobre el saldo del crédito. Los **aportes** (equity) cubren el resto (lote, indirectos, 20% de obra). La TIR equity puede ser menor que la del proyecto si la tasa del crédito supera el retorno del proyecto (apalancamiento dilutivo).")
 
 # ---------------- acciones ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
@@ -302,4 +302,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{sel}.json", mime="application/json",
         help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.6.0 · motor v{ENGINE_V} · estructura APEX completa: portafolio · hitos · recaudo · costos · apalancamiento · ensamblaje · CG Constructora")
+st.caption(f"Aplicativo v1.7.0 · motor v{ENGINE_V} · estructura APEX completa · crédito constructor calibrado (cobertura de obra) · CG Constructora")
