@@ -30,7 +30,19 @@ def triangular(n, moda=None):
 def lineal(n):
     return [1.0/n]*n
 
-CURVAS = {"PERT":pert, "Normal":normal, "Triangular":triangular, "Lineal":lineal}
+def gauss(n, moda=None):
+    """Curva de avance de obra estilo APEX (k.Directo): Normal centrada en el punto medio
+    de la duración, con desviación = STDEV de 1..n y residuo normalizador (suma = 1)."""
+    if n <= 1:
+        return [1.0] * max(1, n)
+    mu = (n + 1) / 2.0
+    var = sum((i - mu) ** 2 for i in range(1, n + 1)) / (n - 1)
+    sg = math.sqrt(var) or 1.0
+    pdf = [math.exp(-0.5 * ((i - mu) / sg) ** 2) / (sg * math.sqrt(2 * math.pi)) for i in range(1, n + 1)]
+    resid = (1 - sum(pdf)) / n
+    return _norm([p + resid for p in pdf])
+
+CURVAS = {"PERT":pert, "Normal":normal, "Triangular":triangular, "Lineal":lineal, "Gauss":gauss}
 
 def distribuir(total, n, tipo="PERT", moda=None):
     fn = CURVAS.get(tipo, pert)

@@ -30,6 +30,7 @@ def _hitos(par):
             "unidades": e.get("und", 0), "vmes": e.get("vmes", 6), "frec": e.get("frec", 1),
             "pe_pct": e.get("pe_pct", 0.60), "fecha_inicio": fi,
             "sucesora": e.get("sucesora"), "desfase": e.get("desfase", 0),
+            "obra_offset": e.get("obra_offset", 1), "dur_obra": e.get("dur_obra", 24),
         })
     if not any(p["sucesora"] is None and p["fecha_inicio"] for p in plist):
         return {}
@@ -127,7 +128,8 @@ def pyg(par):
 def distribucion_costos(par, directos_miles):
     cr = par.get("cronograma", {})
     dur = int(cr.get("dur_obra", 40)); moda = int(cr.get("moda_pert", 24))
-    base = curvas.distribuir(directos_miles, dur, "PERT", moda=moda)
+    tipo = cr.get("curva", "Gauss")          # APEX usa curva Gauss (Normal) de avance de obra
+    base = curvas.distribuir(directos_miles, dur, tipo, moda=moda)
     esc  = curvas.escalar_mat_mo(base, rel_mat=cr.get("rel_materiales",0.8),
                                  ea_mat=cr.get("ea_materiales",0.06), ea_mo=cr.get("ea_mano_obra",0.12))
     acum=[]; s=0

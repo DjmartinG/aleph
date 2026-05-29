@@ -83,9 +83,15 @@ def calcular_portafolio(etapas):
         else:                                    # etapa raíz: fecha de inicio dada
             iv = e["fecha_inicio"]
         h = hitos_ventas(e["unidades"], e["vmes"], e["frec"], e.get("pe_pct", 0.60), iv)
+        # Construcción: arranca 'obra_offset' meses después del Punto de Equilibrio (pre-ventas
+        # financian la obra) y dura 'dur_obra' meses → IC (Inicio) y FC (Fin de Construcción).
+        obra_offset = int(e.get("obra_offset", 1))
+        dur_obra = int(e.get("dur_obra", 24))
+        ic = eomonth(h["PE"], obra_offset)
+        fc = eomonth(ic, dur_obra - 1)
         res[cod] = {"cod": cod, "nombre": e["nombre"], "unidades": e["unidades"],
-                    "IV": iv, "PE": h["PE"], "FV": h["FV"],
-                    "pe_idx": h["pe_idx"], "fv_idx": h["fv_idx"]}
+                    "IV": iv, "PE": h["PE"], "FV": h["FV"], "IC": ic, "FC": fc,
+                    "dur_obra": dur_obra, "pe_idx": h["pe_idx"], "fv_idx": h["fv_idx"]}
         return res[cod]
 
     for e in etapas:

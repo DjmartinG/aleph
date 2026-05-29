@@ -2,6 +2,16 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.4.0] — 2026-05-29
+### Añadido
+- **Kernels de costos APEX (Fase 3)**: curva **Gauss** de avance de obra (k.Directo) en el
+  motor (`engine/curvas.py`), usada para distribuir el costo directo. Aclaración: `k.Beta`
+  es el kernel WACC/CAPM (ya en el motor), no la curva de costos.
+- **Hitos de construcción IC/FC** (Inicio/Fin de Construcción) en el motor de portafolio
+  y en la pestaña Cronograma — la obra arranca tras el Punto de Equilibrio y dura `dur_obra`.
+### Cambiado
+- Distribución de costos ahora usa la curva Gauss (antes PERT), fiel a APEX.
+
 ## [1.3.0] — 2026-05-29
 ### Añadido
 - **Kernel de ingresos APEX (Fase 2)** integrado: recaudo mensual del portafolio por

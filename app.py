@@ -145,7 +145,7 @@ with tabs[2]:
     d=R["distribucion"]; m=list(range(1,len(d["escalada"])+1))
     fig=go.Figure(); fig.add_bar(x=m,y=d["escalada"],name="Costo mensual",marker_color=TEAL)
     fig.add_scatter(x=m,y=d["acumulada"],name="Acumulado",yaxis="y2",line=dict(color=AMBER,width=3))
-    fig.update_layout(title=f"Distribución del costo directo — curva PERT (pico mes {d['pico_mes']})",
+    fig.update_layout(title=f"Distribución del costo directo — curva Gauss de avance de obra (pico mes {d['pico_mes']})",
                       yaxis2=dict(overlaying="y",side="right",showgrid=False),height=420,xaxis_title="Mes de obra")
     st.plotly_chart(fig, width="stretch")
 
@@ -193,23 +193,29 @@ with tabs[7]:
     if not h:
         st.info("Define la estructura de etapas (ritmo de ventas, % de equilibrio, sucesora) para ver el cronograma de hitos.")
     else:
-        rows=[{"Etapa":h[c]["nombre"],"Unidades":h[c]["unidades"],
-               "Inicio Ventas":h[c]["IV"],"Punto Equilibrio":h[c]["PE"],"Fin Ventas":h[c]["FV"]}
+        rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],
+               "Inicio Ventas":h[c]["IV"],"Pto Equilibrio":h[c]["PE"],"Fin Ventas":h[c]["FV"],
+               "Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")}
               for c in sorted(h)]
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
         fig=go.Figure()
         for c in sorted(h, reverse=True):
-            x=h[c]
-            fig.add_scatter(x=[x["IV"],x["FV"]],y=[x["nombre"],x["nombre"]],mode="lines",
-                line=dict(color=TEAL,width=10),showlegend=False,hoverinfo="skip")
-            fig.add_scatter(x=[x["IV"],x["PE"],x["FV"]],y=[x["nombre"]]*3,mode="markers",
-                marker=dict(size=13,color=[TEAL,AMBER,INK]),showlegend=False,
-                text=["Inicio Ventas","Punto de Equilibrio","Fin Ventas"],
+            x=h[c]; y=x["nombre"]
+            fin = max(d for d in [x["FV"], x.get("FC")] if d)
+            fig.add_scatter(x=[x["IV"],fin],y=[y,y],mode="lines",
+                line=dict(color="#C8D2DE",width=5),showlegend=False,hoverinfo="skip")
+            pts=[("Inicio Ventas",x["IV"],TEAL,"circle"),("Pto Equilibrio",x["PE"],AMBER,"diamond"),
+                 ("Inicio Constr.",x.get("IC"),GREEN,"triangle-up"),("Fin Constr.",x.get("FC"),RED,"triangle-down"),
+                 ("Fin Ventas",x["FV"],INK,"circle")]
+            pts=[p for p in pts if p[1]]
+            fig.add_scatter(x=[p[1] for p in pts],y=[y]*len(pts),mode="markers",
+                marker=dict(size=13,color=[p[2] for p in pts],symbol=[p[3] for p in pts]),
+                showlegend=False,text=[p[0] for p in pts],
                 hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
-        fig.update_layout(title="Cronograma de ventas por etapa (estructura de portafolio APEX)",
-                          height=130+62*len(h), xaxis_title="")
+        fig.update_layout(title="Cronograma por etapa — ventas y construcción (estructura APEX)",
+                          height=140+64*len(h), xaxis_title="")
         st.plotly_chart(fig, width="stretch")
-        st.caption("🟢 Inicio Ventas · 🟡 Punto de Equilibrio · ⚫ Fin Ventas — cada etapa **abre ventas cuando su sucesora alcanza el equilibrio** (secuenciamiento). PE = INT(und×%eq)+1. Construcción (IC/FC): próxima fase.")
+        st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas. Cada etapa abre ventas en el equilibrio de su sucesora; la obra arranca tras el equilibrio (pre-ventas la financian) y dura `dur_obra`.")
 
 with tabs[8]:
     rc = R.get("recaudo", {})
@@ -254,4 +260,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{sel}.json", mime="application/json",
         help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.3.0 · motor v{ENGINE_V} · estructura APEX: portafolio + hitos + recaudo · CG Constructora")
+st.caption(f"Aplicativo v1.4.0 · motor v{ENGINE_V} · estructura APEX: portafolio · hitos (IV/PE/IC/FC/FV) · recaudo · costos Gauss · CG Constructora")
