@@ -123,8 +123,8 @@ kpi(k[4],"VPN @WACC", fmt_mm(fl["vpn_proyecto"]))
 kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
 st.write("")
 
-tabs = st.tabs(["📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja",
-                "🎯 Escenarios","🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma"])
+tabs = st.tabs(["📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja","🎯 Escenarios",
+                "🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos"])
 
 with tabs[0]:
     df=pd.DataFrame([
@@ -211,6 +211,27 @@ with tabs[7]:
         st.plotly_chart(fig, width="stretch")
         st.caption("🟢 Inicio Ventas · 🟡 Punto de Equilibrio · ⚫ Fin Ventas — cada etapa **abre ventas cuando su sucesora alcanza el equilibrio** (secuenciamiento). PE = INT(und×%eq)+1. Construcción (IC/FC): próxima fase.")
 
+with tabs[8]:
+    rc = R.get("recaudo", {})
+    if not rc or not rc.get("total"):
+        st.info("Define la estructura de etapas (ritmo, %CI, escrituración) para ver el recaudo de ingresos.")
+    else:
+        sepr=rc["separacion"]; cir=rc["cuota_inicial"]; subr=rc["subrogacion"]; tot=rc["total"]
+        n=max([i for i,v in enumerate(tot) if abs(v)>1], default=0)+2
+        m=list(range(1,n+1))
+        fig=go.Figure()
+        fig.add_scatter(x=m,y=sepr[:n],name="Separación",stackgroup="r",line=dict(width=0.5,color=AMBER))
+        fig.add_scatter(x=m,y=cir[:n],name="Cuota inicial",stackgroup="r",line=dict(width=0.5,color=TEAL))
+        fig.add_scatter(x=m,y=subr[:n],name="Subrogación",stackgroup="r",line=dict(width=0.5,color=GREEN))
+        fig.update_layout(title="Recaudo mensual por componente (kernel de ingresos APEX)",height=430,xaxis_title="Mes")
+        st.plotly_chart(fig, width="stretch")
+        cc=st.columns(4)
+        kpi(cc[0],"Separación",fmt_mm(sum(sepr)))
+        kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
+        kpi(cc[2],"Subrogación",fmt_mm(sum(subr)))
+        kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
+        st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega). El recaudo total reconcilia con el valor de contrato.")
+
 # ---------------- acciones ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
 a1,a2=st.columns(2)
@@ -233,4 +254,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{sel}.json", mime="application/json",
         help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.2.0 · motor v{ENGINE_V} · estructura de portafolio APEX (hitos) · CG Constructora")
+st.caption(f"Aplicativo v1.3.0 · motor v{ENGINE_V} · estructura APEX: portafolio + hitos + recaudo · CG Constructora")

@@ -8,6 +8,7 @@ prefactibilidades reales. Enfoque híbrido: TIR apalancada de referencia es un p
 from datetime import datetime
 from . import curvas
 from . import portafolio
+from . import ingresos
 try:
     from scipy import optimize
     _SCIPY = True
@@ -34,6 +35,30 @@ def _hitos(par):
         return {}
     try:
         return portafolio.calcular_portafolio(plist)
+    except Exception:
+        return {}
+
+
+def _recaudo(par, hitos):
+    """Recaudo consolidado del portafolio (separación/cuota inicial/subrogación) — Fase 2."""
+    if not hitos:
+        return {}
+    fin = par.get("financiero", {})
+    et = []
+    for i, e in enumerate(par.get("etapas", [])):
+        und = e.get("und", 0)
+        vm = e.get("ventas_miles", 0)
+        et.append({
+            "cod": e.get("cod", i + 1), "unidades": und,
+            "vmes": e.get("vmes", 6), "frec": e.get("frec", 1),
+            "precio_und": (vm / und if und else 0),
+            "sep_und": fin.get("sep_und_miles", 5000),
+            "pct_ci": fin.get("pct_ci", 0.30),
+            "diferido_sep": par.get("diferido_sep", fin.get("diferido_sep", 4)),
+            "escrituracion_offset": e.get("escrituracion", e.get("dur_obra", 24) + 6),
+        })
+    try:
+        return ingresos.recaudo_portafolio(et, hitos)
     except Exception:
         return {}
 
@@ -194,6 +219,7 @@ def calcular(par):
     if "ventas_miles" not in par:
         par["ventas_miles"] = sum(e["ventas_miles"] for e in par["etapas"])
     pg = pyg(par)
+    hitos = _hitos(par)
     return {
         "meta": par.get("meta", {}),
         "pyg": pg,
@@ -202,7 +228,8 @@ def calcular(par):
         "escenarios": escenarios(par),
         "sensibilidades": sensibilidades(par),
         "urbanistico": _urbanistico(par, pg),
-        "hitos": _hitos(par),
+        "hitos": hitos,
+        "recaudo": _recaudo(par, hitos),
     }
 
 def _urbanistico(par, pg):

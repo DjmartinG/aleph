@@ -2,6 +2,13 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.3.0] — 2026-05-29
+### Añadido
+- **Kernel de ingresos APEX (Fase 2)** integrado: recaudo mensual del portafolio por
+  componente — separación diferida, cuota inicial (venta→escrituración) y subrogación
+  (a la entrega). Reconcilia con el valor de contrato.
+- Nueva pestaña **💰 Ingresos**: recaudo mensual apilado por componente + totales.
+
 ## [1.2.0] — 2026-05-29
 ### Añadido
 - **Estructura de portafolio APEX (Fase 1)**: motor de hitos (`engine/portafolio.py`)
