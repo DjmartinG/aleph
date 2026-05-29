@@ -31,10 +31,18 @@ st.caption(f"Aplicativo v1.0.0 · motor v{ENGINE_V} · enfoque híbrido (modelo 
 # ---------------- sidebar: selección + edición ----------------
 with st.sidebar:
     st.header("Proyecto")
-    proyectos = listar_proyectos()
-    sel = st.selectbox("Seleccionar", proyectos, index=0 if proyectos else None)
-    if "par" not in st.session_state or st.session_state.get("sel") != sel:
-        st.session_state.par = cargar(sel); st.session_state.sel = sel
+    up = st.file_uploader("🔒 Cargar proyecto privado (.json)", type=["json"],
+        help="Datos confidenciales: se cargan SOLO en tu sesión, no se guardan en el repositorio público.")
+    if up is not None:
+        if st.session_state.get("sel") != up.name:
+            st.session_state.par = json.load(up); st.session_state.sel = up.name
+        sel = up.name.replace(".json", "")
+        st.success(f"🔒 Privado: {st.session_state.par.get('meta',{}).get('nombre', sel)}")
+    else:
+        proyectos = listar_proyectos()
+        sel = st.selectbox("O usar un ejemplo", proyectos, index=0 if proyectos else None)
+        if "par" not in st.session_state or st.session_state.get("sel") != sel:
+            st.session_state.par = cargar(sel); st.session_state.sel = sel
     par = st.session_state.par
 
     st.subheader("Ventas por etapa (miles COP)")
@@ -169,7 +177,8 @@ with col1:
         file_name=f"Factibilidad_{sel}_{date.today():%Y%m%d}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 with col2:
-    if st.button("💾 Guardar versión del proyecto"):
-        par["_fecha"]=str(date.today())
-        (PROY_DIR/f"{sel}.json").write_text(json.dumps(par,ensure_ascii=False,indent=2),encoding="utf-8")
-        st.success(f"Guardado {sel}.json")
+    par["_fecha"]=str(date.today())
+    st.download_button("💾 Descargar proyecto (.json)",
+        json.dumps(par, ensure_ascii=False, indent=2).encode("utf-8"),
+        file_name=f"{sel}.json", mime="application/json",
+        help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
