@@ -2,6 +2,16 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.2.0] — 2026-05-29
+### Añadido
+- **Estructura de portafolio APEX (Fase 1)**: motor de hitos (`engine/portafolio.py`)
+  integrado al modelo y a la app. Etapas secuenciales — cada etapa abre ventas cuando su
+  sucesora alcanza el Punto de Equilibrio (PE = INT(unidades×%eq)+1, %eq por etapa).
+- Nueva pestaña **🗓️ Cronograma**: tabla y línea de tiempo de hitos (Inicio Ventas /
+  Punto de Equilibrio / Fin Ventas) por etapa.
+- Esquema de proyecto ampliado con ritmo de ventas, %eq, sucesora y desfase.
+- Validado 5/5 etapas contra APEX 20250701.xlsm.
+
 ## [1.1.0] — 2026-05-28
 ### Cambiado
 - **Rediseño con identidad de marca CG**: logo en encabezado y barra lateral, favicon,

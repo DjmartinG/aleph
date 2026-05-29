@@ -5,12 +5,37 @@ Toma un dict de parámetros de proyecto y devuelve P&G, reparto, distribución d
 flujo de caja, escenarios, sensibilidades e indicadores. Metodología validada contra
 prefactibilidades reales. Enfoque híbrido: TIR apalancada de referencia es un parámetro.
 """
+from datetime import datetime
 from . import curvas
+from . import portafolio
 try:
     from scipy import optimize
     _SCIPY = True
 except Exception:
     _SCIPY = False
+
+
+def _hitos(par):
+    """Calcula los hitos del portafolio (IV/PE/FV por etapa) — estructura APEX."""
+    et = par.get("etapas", [])
+    plist = []
+    for i, e in enumerate(et):
+        fi = e.get("fecha_inicio")
+        if isinstance(fi, str):
+            try: fi = datetime.strptime(fi[:10], "%Y-%m-%d").date()
+            except Exception: fi = None
+        plist.append({
+            "cod": e.get("cod", i + 1), "nombre": e.get("nom", f"Etapa {i+1}"),
+            "unidades": e.get("und", 0), "vmes": e.get("vmes", 6), "frec": e.get("frec", 1),
+            "pe_pct": e.get("pe_pct", 0.60), "fecha_inicio": fi,
+            "sucesora": e.get("sucesora"), "desfase": e.get("desfase", 0),
+        })
+    if not any(p["sucesora"] is None and p["fecha_inicio"] for p in plist):
+        return {}
+    try:
+        return portafolio.calcular_portafolio(plist)
+    except Exception:
+        return {}
 
 
 # ----------------------------- utilidades financieras -----------------------------
@@ -177,6 +202,7 @@ def calcular(par):
         "escenarios": escenarios(par),
         "sensibilidades": sensibilidades(par),
         "urbanistico": _urbanistico(par, pg),
+        "hitos": _hitos(par),
     }
 
 def _urbanistico(par, pg):

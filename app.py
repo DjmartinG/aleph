@@ -124,7 +124,7 @@ kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
 st.write("")
 
 tabs = st.tabs(["📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja",
-                "🎯 Escenarios","🌪️ Sensibilidad","🏙️ Urbanístico"])
+                "🎯 Escenarios","🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma"])
 
 with tabs[0]:
     df=pd.DataFrame([
@@ -188,6 +188,29 @@ with tabs[6]:
     ],columns=["Indicador","Valor"])
     st.dataframe(df.style.format({"Valor":"{:,.2f}"}), width="stretch", hide_index=True)
 
+with tabs[7]:
+    h = R.get("hitos", {})
+    if not h:
+        st.info("Define la estructura de etapas (ritmo de ventas, % de equilibrio, sucesora) para ver el cronograma de hitos.")
+    else:
+        rows=[{"Etapa":h[c]["nombre"],"Unidades":h[c]["unidades"],
+               "Inicio Ventas":h[c]["IV"],"Punto Equilibrio":h[c]["PE"],"Fin Ventas":h[c]["FV"]}
+              for c in sorted(h)]
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        fig=go.Figure()
+        for c in sorted(h, reverse=True):
+            x=h[c]
+            fig.add_scatter(x=[x["IV"],x["FV"]],y=[x["nombre"],x["nombre"]],mode="lines",
+                line=dict(color=TEAL,width=10),showlegend=False,hoverinfo="skip")
+            fig.add_scatter(x=[x["IV"],x["PE"],x["FV"]],y=[x["nombre"]]*3,mode="markers",
+                marker=dict(size=13,color=[TEAL,AMBER,INK]),showlegend=False,
+                text=["Inicio Ventas","Punto de Equilibrio","Fin Ventas"],
+                hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
+        fig.update_layout(title="Cronograma de ventas por etapa (estructura de portafolio APEX)",
+                          height=130+62*len(h), xaxis_title="")
+        st.plotly_chart(fig, width="stretch")
+        st.caption("🟢 Inicio Ventas · 🟡 Punto de Equilibrio · ⚫ Fin Ventas — cada etapa **abre ventas cuando su sucesora alcanza el equilibrio** (secuenciamiento). PE = INT(und×%eq)+1. Construcción (IC/FC): próxima fase.")
+
 # ---------------- acciones ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
 a1,a2=st.columns(2)
@@ -210,4 +233,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{sel}.json", mime="application/json",
         help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.1.0 · motor v{ENGINE_V} · enfoque híbrido · CG Constructora")
+st.caption(f"Aplicativo v1.2.0 · motor v{ENGINE_V} · estructura de portafolio APEX (hitos) · CG Constructora")
