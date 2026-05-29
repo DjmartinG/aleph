@@ -134,6 +134,13 @@ with tabs[0]:
         ("UTILIDAD OPERATIVA",pg["util_oper"]),("(-) Provisión renta",-pg["renta"]),("UDI",pg["udi"]),
     ],columns=["Concepto","Miles COP"]); df["% ventas"]=df["Miles COP"]/pg["ventas"]
     st.dataframe(df.style.format({"Miles COP":"{:,.0f}","% ventas":"{:.1%}"}), width="stretch", hide_index=True)
+    costo_total=pg["costo_lote"]+pg["directos"]+pg["indirectos"]
+    st.markdown("**Indicadores del Estado de Resultados**")
+    e=st.columns(4)
+    kpi(e[0],"Margen de contribución",fmt_mm(pg["util_oper"]),fmt_pct(pg["margen_oper"])+" /ventas",GREEN)
+    kpi(e[1],"Margen sobre costo",fmt_pct(pg["util_oper"]/costo_total if costo_total else 0))
+    kpi(e[2],"Incidencia directos",fmt_pct(pg["directos"]/costo_total if costo_total else 0))
+    kpi(e[3],"Incidencia indirectos+lote",fmt_pct((pg["indirectos"]+pg["costo_lote"])/costo_total if costo_total else 0))
 
 with tabs[1]:
     s=par["financiero"]["split_cg"]
@@ -243,21 +250,35 @@ with tabs[9]:
     if not a or not a.get("operativo"):
         st.info("Define la estructura de etapas y financiación para ver el apalancamiento.")
     else:
-        op=a["operativo"]; sc=a["saldo_credito"]; ac=a["acumulado"]
-        n=max([i for i,v in enumerate(op) if abs(v)>1],default=0)+2
-        m=list(range(1,n+1))
-        fig=go.Figure()
-        fig.add_bar(x=m,y=op[:n],name="Flujo operativo",marker_color=TEAL)
-        fig.add_scatter(x=m,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=3))
-        fig.add_scatter(x=m,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
-        fig.update_layout(title="Flujo operativo y crédito constructor (waterfall APEX)",height=440,xaxis_title="Mes")
-        st.plotly_chart(fig, width="stretch")
-        cc=st.columns(4)
-        kpi(cc[0],"Crédito constructor máx",fmt_mm(a["credito_max"]))
-        kpi(cc[1],"Necesidad máx de caja",fmt_mm(a["max_necesidad_caja"]))
-        kpi(cc[2],"Valor financiable",fmt_mm(a["valor_financiable"]))
-        kpi(cc[3],"TIR proyecto",fmt_pct(a.get("tir_proyecto")))
-        st.caption("Crédito constructor **revolvente** (tope = monto% × valor financiable), activado por avance de obra y amortizado con las subrogaciones; los **aportes** cubren el residual. ⚠️ Intereses y TIR apalancada son **preliminares**: la calibración fina depende del cronograma exacto de amortización de fiducia.")
+        op=a["operativo"]; sc=a["saldo_credito"]; ac=a["acumulado"]; an=a.get("anual",{})
+        # --- flujo consolidado anual (ensamblaje del portafolio) ---
+        if an:
+            yrs=sorted(an); cum=[]; s=0.0
+            for y in yrs: s+=an[y]; cum.append(s)
+            fig=go.Figure()
+            fig.add_bar(x=[str(y) for y in yrs],y=[an[y] for y in yrs],name="Flujo operativo",marker_color=TEAL)
+            fig.add_scatter(x=[str(y) for y in yrs],y=cum,name="Acumulado",line=dict(color=INK,width=3))
+            fig.update_layout(title="Flujo de caja consolidado del portafolio (anual)",height=400)
+            st.plotly_chart(fig, width="stretch")
+        # --- indicadores económicos (I.Economicos) ---
+        c1=st.columns(4)
+        kpi(c1[0],"TIR proyecto",fmt_pct(a.get("tir_proyecto")))
+        kpi(c1[1],"VPN @WACC",fmt_mm(a["vpn_proyecto"]) if a.get("vpn_proyecto") is not None else "n/d")
+        kpi(c1[2],"WACC E.A.",fmt_pct(a.get("wacc")))
+        pb=a.get("payback_mes"); kpi(c1[3],"Payback (caja+)",(f"{pb} meses" if pb else "—"))
+        c2=st.columns(4)
+        kpi(c2[0],"Crédito constructor máx",fmt_mm(a["credito_max"]))
+        kpi(c2[1],"Necesidad máx de caja",fmt_mm(a["max_necesidad_caja"]))
+        kpi(c2[2],"Valor financiable",fmt_mm(a["valor_financiable"]))
+        kpi(c2[3],"Intereses (prelim.)",fmt_mm(a["intereses_total"]))
+        # --- detalle mensual: caja acumulada + saldo de crédito ---
+        n=max([i for i,v in enumerate(op) if abs(v)>1],default=0)+2; m=list(range(1,n+1))
+        fig2=go.Figure()
+        fig2.add_scatter(x=m,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=2))
+        fig2.add_scatter(x=m,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
+        fig2.update_layout(title="Mensual: caja acumulada y saldo de crédito constructor",height=340,xaxis_title="Mes")
+        st.plotly_chart(fig2, width="stretch")
+        st.caption("Crédito constructor **revolvente** (tope = monto% × valor financiable), activado por avance de obra y amortizado con las subrogaciones; los **aportes** cubren el residual. ⚠️ Intereses y TIR apalancada son **preliminares**: la calibración fina depende del cronograma de amortización de fiducia (siguiente paso).")
 
 # ---------------- acciones ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
@@ -281,4 +302,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{sel}.json", mime="application/json",
         help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.5.0 · motor v{ENGINE_V} · estructura APEX: portafolio · hitos · recaudo · costos Gauss · apalancamiento · CG Constructora")
+st.caption(f"Aplicativo v1.6.0 · motor v{ENGINE_V} · estructura APEX completa: portafolio · hitos · recaudo · costos · apalancamiento · ensamblaje · CG Constructora")

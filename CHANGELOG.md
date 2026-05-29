@@ -2,6 +2,14 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.6.0] — 2026-05-29
+### Añadido
+- **Ensamblaje (Fase 5)**: vista de **flujo de caja consolidado anual** del portafolio (curva J),
+  panel de **indicadores económicos** (TIR proyecto, VPN @WACC, WACC, payback) y detalle mensual
+  de caja acumulada + saldo de crédito en la pestaña Apalancamiento.
+- **Indicadores del Estado de Resultados** en P&G: margen de contribución, margen sobre costo,
+  incidencias (directos / indirectos+lote).
+
 ## [1.5.0] — 2026-05-29
 ### Añadido
 - **Apalancamiento APEX (Fase 4)** (`engine/apalancamiento.py`): ensambla el flujo operativo

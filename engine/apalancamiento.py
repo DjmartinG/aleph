@@ -102,6 +102,21 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     wacc = calcular_wacc(fin["wacc"]) if fin.get("wacc") else 0.0
     wacc_m = (1 + wacc) ** (1 / 12) - 1 if wacc else 0.0
 
+    # ---- ensamblaje: vista anual + payback ----
+    anio0 = base.year
+    anual = {}
+    for m in range(N):
+        yr = anio0 + (base.month - 1 + m) // 12
+        anual[yr] = anual.get(yr, 0.0) + operativo[m]
+    anual = {k: v for k, v in anual.items() if abs(v) > 1}
+    payback = None                              # mes en que el acumulado vuelve a ser positivo
+    toco_fondo = False
+    for i, v in enumerate(acum):
+        if v < -1:
+            toco_fondo = True
+        elif toco_fondo and v >= 0:
+            payback = i; break
+
     return {
         "ingresos": ingresos_m, "costos": costos_m, "operativo": operativo,
         "acumulado": acum, "saldo_credito": saldo_serie, "flujo_equity": flujo_equity,
@@ -110,5 +125,5 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         "valor_financiable": valor_financiable, "cap_credito": cap,
         "tir_proyecto": _tir(operativo), "tir_equity": _tir(flujo_equity),
         "vpn_proyecto": sum(f / (1 + wacc_m) ** t for t, f in enumerate(operativo)) if wacc else None,
-        "wacc": wacc,
+        "wacc": wacc, "anual": anual, "anio0": anio0, "payback_mes": payback,
     }
