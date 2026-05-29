@@ -9,6 +9,7 @@ from datetime import datetime
 from . import curvas
 from . import portafolio
 from . import ingresos
+from . import apalancamiento
 try:
     from scipy import optimize
     _SCIPY = True
@@ -222,6 +223,7 @@ def calcular(par):
         par["ventas_miles"] = sum(e["ventas_miles"] for e in par["etapas"])
     pg = pyg(par)
     hitos = _hitos(par)
+    recaudo = _recaudo(par, hitos)
     return {
         "meta": par.get("meta", {}),
         "pyg": pg,
@@ -231,7 +233,8 @@ def calcular(par):
         "sensibilidades": sensibilidades(par),
         "urbanistico": _urbanistico(par, pg),
         "hitos": hitos,
-        "recaudo": _recaudo(par, hitos),
+        "recaudo": recaudo,
+        "apalancamiento": apalancamiento.flujo_apalancado(par, pg, hitos, recaudo),
     }
 
 def _urbanistico(par, pg):

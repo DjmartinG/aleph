@@ -2,6 +2,18 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.5.0] — 2026-05-29
+### Añadido
+- **Apalancamiento APEX (Fase 4)** (`engine/apalancamiento.py`): ensambla el flujo operativo
+  consolidado del portafolio (recaudo F2 − costos F3 por etapa, directos por curva Gauss sobre
+  IC..FC) y aplica el waterfall de crédito — crédito constructor revolvente (tope = monto% ×
+  valor financiable), activado por avance de obra y amortizado con subrogaciones; aportes cubren
+  el residual. Indicadores: crédito máx, necesidad de caja, TIR proyecto.
+- Nueva pestaña **🏦 Apalancamiento**: flujo operativo + saldo de crédito + indicadores.
+### Nota
+- Intereses y TIR apalancada son preliminares (la calibración fina requiere el cronograma de
+  amortización de fiducia); la estructura del waterfall queda completa.
+
 ## [1.4.0] — 2026-05-29
 ### Añadido
 - **Kernels de costos APEX (Fase 3)**: curva **Gauss** de avance de obra (k.Directo) en el

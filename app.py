@@ -124,7 +124,7 @@ kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
 st.write("")
 
 tabs = st.tabs(["📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja","🎯 Escenarios",
-                "🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos"])
+                "🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos","🏦 Apalancamiento"])
 
 with tabs[0]:
     df=pd.DataFrame([
@@ -238,6 +238,27 @@ with tabs[8]:
         kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
         st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega). El recaudo total reconcilia con el valor de contrato.")
 
+with tabs[9]:
+    a = R.get("apalancamiento", {})
+    if not a or not a.get("operativo"):
+        st.info("Define la estructura de etapas y financiación para ver el apalancamiento.")
+    else:
+        op=a["operativo"]; sc=a["saldo_credito"]; ac=a["acumulado"]
+        n=max([i for i,v in enumerate(op) if abs(v)>1],default=0)+2
+        m=list(range(1,n+1))
+        fig=go.Figure()
+        fig.add_bar(x=m,y=op[:n],name="Flujo operativo",marker_color=TEAL)
+        fig.add_scatter(x=m,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=3))
+        fig.add_scatter(x=m,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
+        fig.update_layout(title="Flujo operativo y crédito constructor (waterfall APEX)",height=440,xaxis_title="Mes")
+        st.plotly_chart(fig, width="stretch")
+        cc=st.columns(4)
+        kpi(cc[0],"Crédito constructor máx",fmt_mm(a["credito_max"]))
+        kpi(cc[1],"Necesidad máx de caja",fmt_mm(a["max_necesidad_caja"]))
+        kpi(cc[2],"Valor financiable",fmt_mm(a["valor_financiable"]))
+        kpi(cc[3],"TIR proyecto",fmt_pct(a.get("tir_proyecto")))
+        st.caption("Crédito constructor **revolvente** (tope = monto% × valor financiable), activado por avance de obra y amortizado con las subrogaciones; los **aportes** cubren el residual. ⚠️ Intereses y TIR apalancada son **preliminares**: la calibración fina depende del cronograma exacto de amortización de fiducia.")
+
 # ---------------- acciones ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
 a1,a2=st.columns(2)
@@ -260,4 +281,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{sel}.json", mime="application/json",
         help="Guarda los parámetros editados en tu equipo (privado). No se sube al repositorio.")
-st.caption(f"Aplicativo v1.4.0 · motor v{ENGINE_V} · estructura APEX: portafolio · hitos (IV/PE/IC/FC/FV) · recaudo · costos Gauss · CG Constructora")
+st.caption(f"Aplicativo v1.5.0 · motor v{ENGINE_V} · estructura APEX: portafolio · hitos · recaudo · costos Gauss · apalancamiento · CG Constructora")
