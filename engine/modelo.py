@@ -58,6 +58,7 @@ def _recaudo(par, hitos):
             "pct_ci": fin.get("pct_ci", 0.30),
             "diferido_sep": par.get("diferido_sep", fin.get("diferido_sep", 4)),
             "escrituracion_offset": e.get("escrituracion", e.get("dur_obra", 24) + 6),
+            "emes": e.get("emes"), "efrec": e.get("efrec", 1),
         })
     try:
         return ingresos.recaudo_portafolio(et, hitos)

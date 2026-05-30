@@ -66,7 +66,7 @@ def nuevo_proyecto():
     return {"meta":{"nombre":"Nuevo proyecto","ubicacion":"","zona":"","tipo":"No VIS","unidades":0,"moneda":"miles COP"},
         "areas":{"m2_vendibles":0.0,"m2_construidos":0.0,"lote_bruta":0.0,"lote_util":0.0},
         "etapas":[{"cod":1,"nom":"Etapa 1","und":50,"metodo":"$/m²","precio":5000000,"area_und":75.0,
-                   "ventas_miles":0,"vmes":6,"frec":1,"pe_pct":0.60,"fecha_inicio":"2026-01-01",
+                   "ventas_miles":0,"vmes":6,"frec":1,"emes":20,"efrec":1,"pe_pct":0.60,"fecha_inicio":"2026-01-01",
                    "sucesora":None,"desfase":0,"obra_offset":1,"dur_obra":24,"escrituracion":30}],
         "costos_pct":{"directos":0.55,"indirectos":0.18,"honorarios":0.08,"util_lote":0.045,"recon_codensa":0.002,
                       "hon_construccion":0.035,"hon_gerencia":0.03,"hon_ventas":0.015},
@@ -224,8 +224,9 @@ if seccion=="Datos del proyecto":
         a["lote_util"]=ac[3].number_input("Área lote (útil)", value=float(a.get("lote_util",0)), step=100.0, format="%.0f")
     with st.expander("3 · Etapas, producto y ventas", expanded=True):
         st.caption("✏️ Ajusta las **unidades** de cada etapa en la columna *Unidades*. Cada etapa abre ventas cuando su "
-                   "**sucesora** llega al equilibrio; la raíz no tiene sucesora. **Precio**: $/m² (× área/und) o $/und.")
-        cols=["cod","nom","und","metodo","precio","area_und","vmes","frec","pe_pct","sucesora","desfase","dur_obra","escrituracion"]
+                   "**sucesora** llega al equilibrio; la raíz no tiene sucesora. **Precio**: $/m² (× área/und) o $/und. "
+                   "**Ritmo de ventas** (Vtas/mes·Frec) y **ritmo de entregas** (Entr/mes·Frec ent) mueven los hitos y el recaudo.")
+        cols=["cod","nom","und","metodo","precio","area_und","vmes","frec","emes","efrec","pe_pct","sucesora","desfase","dur_obra","escrituracion"]
         df_et=pd.DataFrame(par["etapas"]).reindex(columns=cols)
         if "metodo" in df_et: df_et["metodo"]=df_et["metodo"].fillna("$/m²")
         edited=st.data_editor(df_et, num_rows="dynamic", width="stretch", key=f"editor_{sel}",
@@ -236,8 +237,10 @@ if seccion=="Datos del proyecto":
                 "metodo": st.column_config.SelectboxColumn("Método precio", options=["$/m²","$/und"], width="small"),
                 "precio": st.column_config.NumberColumn("Precio (COP)", format="%d"),
                 "area_und": st.column_config.NumberColumn("Área/und (m²)", format="%.1f"),
-                "vmes": st.column_config.NumberColumn("Vtas/mes", format="%d"),
-                "frec": st.column_config.NumberColumn("Frec (m)", format="%d"),
+                "vmes": st.column_config.NumberColumn("Vtas/mes", format="%d", help="Ritmo de ventas: unidades vendidas por evento"),
+                "frec": st.column_config.NumberColumn("Frec (m)", format="%d", help="Ritmo de ventas: cada cuántos meses"),
+                "emes": st.column_config.NumberColumn("Entr/mes", format="%d", help="Ritmo de entregas: unidades entregadas por evento (desde la escrituración)"),
+                "efrec": st.column_config.NumberColumn("Frec ent (m)", format="%d", help="Ritmo de entregas: cada cuántos meses"),
                 "pe_pct": st.column_config.NumberColumn("% Equilibrio", format="%.2f", min_value=0.0, max_value=1.0),
                 "sucesora": st.column_config.NumberColumn("Sucesora", format="%d"),
                 "desfase": st.column_config.NumberColumn("Desfase (m)", format="%d"),
@@ -257,7 +260,8 @@ if seccion=="Datos del proyecto":
             ventas_miles=und*precio*area/1000 if metodo=="$/m²" else und*precio/1000
             recs.append({"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa","und":und,"metodo":metodo,
                 "precio":precio,"area_und":area,"ventas_miles":ventas_miles,"vmes":_i(r.get("vmes")) or 6,
-                "frec":_i(r.get("frec")) or 1,"pe_pct":_f(r.get("pe_pct")) or 0.60,"sucesora":_i(r.get("sucesora")),
+                "frec":_i(r.get("frec")) or 1,"emes":_i(r.get("emes")),"efrec":_i(r.get("efrec")) or 1,
+                "pe_pct":_f(r.get("pe_pct")) or 0.60,"sucesora":_i(r.get("sucesora")),
                 "desfase":_i(r.get("desfase")) or 0,"obra_offset":1,"dur_obra":_i(r.get("dur_obra")) or 24,
                 "escrituracion":_i(r.get("escrituracion")) or 30})
         for idx,r in enumerate(recs):
@@ -370,6 +374,7 @@ if seccion=="Cronograma":
     if not h:
         st.info("Completa los datos de etapas (en 📝 Datos del proyecto) para ver el cronograma.")
     else:
+        st.markdown("#### Hitos por etapa")
         rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],"Inicio Ventas":h[c]["IV"],"Pto Equilibrio":h[c]["PE"],
                "Fin Ventas":h[c]["FV"],"Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")} for c in sorted(h)]
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
@@ -385,6 +390,55 @@ if seccion=="Cronograma":
                 showlegend=False,text=[p[0] for p in pts],hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
         fig.update_layout(title="Cronograma por etapa — ventas y construcción",height=140+64*len(h),xaxis_title=""); st.plotly_chart(fig, width="stretch")
         st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas.")
+
+        # -------- Ritmo de ventas y entregas (estilo R.ventas) --------
+        st.markdown("#### Ritmo de ventas y entregas")
+        st.caption("El ritmo de ventas y de entregas **mueve los números**: de aquí salen el equilibrio, el fin de "
+                   "ventas y el recaudo. Se ajusta por etapa en 📝 Datos del proyecto.")
+        rec=[]
+        for i,e in enumerate(par.get("etapas",[])):
+            und=e.get("und",0) or 0
+            rec.append({"No.":i+1,"Proyecto / Etapa":e.get("nom","") or f"Etapa {i+1}","Und":und,
+                        "Ventas · Cant":e.get("vmes"),"Ventas · Frec":e.get("frec"),
+                        "Entregas · Cant":e.get("emes") or und,"Entregas · Frec":e.get("efrec",1)})
+        st.dataframe(pd.DataFrame(rec), width="stretch", hide_index=True)
+
+        # -------- Proyección de ventas y entregas (curva de absorción) --------
+        pe=R.get("recaudo",{}).get("por_etapa",{})
+        if pe:
+            st.markdown("#### Proyección de ventas y entregas")
+            HZ=180; base=min(h[c]["IV"] for c in h)
+            def _addm(d,n):
+                y=d.year+(d.month-1+n)//12; mo=(d.month-1+n)%12+1; return date(y,mo,1)
+            ventas_g={}; entregas_t=[0.0]*HZ; maxm=0
+            for cod,d in pe.items():
+                off=d.get("offset",0); g=[0.0]*HZ
+                for m,u in enumerate(d.get("ventas",[])):
+                    if u and 0<=off+m<HZ: g[off+m]+=u; maxm=max(maxm,off+m)
+                ventas_g[cod]=g
+                for m,u in enumerate(d.get("entregas",[])):
+                    if u and 0<=off+m<HZ: entregas_t[off+m]+=u; maxm=max(maxm,off+m)
+            n=min(HZ,maxm+2); xd=[_addm(base,i) for i in range(n)]
+            pal=[TEAL,AMBER,GREEN,"#7B61FF","#E2574C","#00A5A5"]
+            tot_sold=[sum(ventas_g[c][i] for c in ventas_g) for i in range(n)]
+            cum=[]; run=0
+            for v in tot_sold: run+=v; cum.append(run)
+            fig2=go.Figure()
+            for j,cod in enumerate(sorted(ventas_g)):
+                fig2.add_bar(x=xd,y=ventas_g[cod][:n],name=h.get(cod,{}).get("nombre",f"Etapa {cod}"),marker_color=pal[j%len(pal)])
+            fig2.add_scatter(x=xd,y=entregas_t[:n],name="Entregas/mes",mode="lines",line=dict(color=RED,width=2.5))
+            fig2.add_scatter(x=xd,y=cum,name="Acumulado vendido",mode="lines",yaxis="y2",line=dict(color=INK,width=2,dash="dot"))
+            fig2.update_layout(barmode="stack",title="Unidades vendidas por mes (por etapa) · entregas · acumulado",
+                height=440,xaxis_title="",yaxis=dict(title="Unidades / mes"),
+                yaxis2=dict(title="Acum. vendido",overlaying="y",side="right",showgrid=False),
+                legend=dict(orientation="h",y=-0.18)); st.plotly_chart(fig2, width="stretch")
+            und_tot=sum(e.get("und",0) or 0 for e in par.get("etapas",[]))
+            ve=[i for i,v in enumerate(tot_sold) if v>0]; en=[i for i,v in enumerate(entregas_t[:n]) if v>0]
+            cc=st.columns(3)
+            kpi(cc[0],"Unidades totales", f"{und_tot:,}".replace(",", "."))
+            kpi(cc[1],"Meses con ventas", str((ve[-1]-ve[0]+1) if ve else 0))
+            kpi(cc[2],"Meses con entregas", str((en[-1]-en[0]+1) if en else 0))
+            st.caption("Barras = unidades vendidas por mes y etapa · línea roja = entregas/mes · punteada = acumulado vendido (curva de absorción).")
 
 # ============ INGRESOS ============
 if seccion=="Ingresos":
@@ -451,4 +505,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.3.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.4.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

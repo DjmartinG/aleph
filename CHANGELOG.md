@@ -2,6 +2,22 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.4.0] — 2026-05-30
+### Añadido (ritmo de ventas y entregas — paridad APEX R.ventas)
+- **Cronograma** ahora muestra, además de los hitos: (1) tabla **Ritmo de ventas y entregas**
+  (estilo hoja `R.ventas` de APEX — No · Etapa · Und · Ventas Cant/Frec · Entregas Cant/Frec) y
+  (2) **Proyección de ventas y entregas**: unidades vendidas por mes por etapa (barras apiladas),
+  entregas/mes y la **curva de absorción** acumulada. Es la vista de "lo que mueve los números".
+- **Ritmo de entregas** modelado en el motor (`engine/ingresos.py`): las entregas se escalonan
+  según *Cantidad/Frecuencia* desde el mes de escrituración (antes todo en un solo mes). Las
+  **subrogaciones** (crédito hipotecario, ~70% del precio) ahora se reparten a medida que se
+  entrega cada unidad → flujo de caja y amortización del crédito más realistas. Emparejamiento
+  **venta → entrega en FIFO**; la cuota inicial corre de la venta a la entrega de esa unidad.
+- Editor de etapas (📝 Datos del proyecto): nuevas columnas **Entr/mes** y **Frec ent (m)**.
+### Nota
+- Reconciliación verificada: recaudo total = valor de contrato en los 3 proyectos. El ritmo de
+  entregas por defecto entrega todo en la escrituración (comportamiento previo) si no se define.
+
 ## [2.3.0] — 2026-05-30
 ### Cambiado (orden lógico del menú)
 - **Reordenado el menú** al flujo de evaluación del modelo. Nuevo orden:
