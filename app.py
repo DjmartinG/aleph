@@ -81,15 +81,22 @@ def nuevo_proyecto():
 with st.sidebar:
     if LOGO.exists(): st.image(str(LOGO), width=150)
     st.markdown("##### Proyecto")
-    opciones = ["➕ Nuevo proyecto"] + listar()
-    sel = st.selectbox("Seleccionar / crear", opciones, index=(1 if len(opciones) > 1 else 0), label_visibility="collapsed")
+    proys = listar()
+    nombres = {p: cargar(p).get("meta",{}).get("nombre", p) for p in proys}
+    opciones = ["➕ Nuevo proyecto"] + proys
+    if st.session_state.get("_pending_proj") in opciones:
+        st.session_state["proj_sel"] = st.session_state.pop("_pending_proj")
+    if "proj_sel" not in st.session_state:
+        st.session_state["proj_sel"] = opciones[1] if len(opciones) > 1 else opciones[0]
+    sel = st.selectbox("Seleccionar / crear", opciones, key="proj_sel", label_visibility="collapsed",
+        format_func=lambda o: o if o == "➕ Nuevo proyecto" else nombres.get(o, o))
     if "par" not in st.session_state or st.session_state.get("sel") != sel:
         st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
         st.session_state.sel = sel
     par = st.session_state.par
-    MENU=["Inicio","Datos del proyecto","P&G","Reparto","Distribución costos","Flujo de caja",
+    MENU=["Inicio","Proyectos activos","Datos del proyecto","P&G","Reparto","Distribución costos","Flujo de caja",
           "Apalancamiento","Cronograma","Ingresos","Escenarios","Sensibilidad","Urbanístico"]
-    ICONS=["house-door","pencil-square","table","pie-chart","bar-chart-line","cash-stack",
+    ICONS=["house-door","buildings","pencil-square","table","pie-chart","bar-chart-line","cash-stack",
            "bank","calendar3","cash-coin","bullseye","sliders","building"]
     seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
         styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
@@ -135,6 +142,39 @@ if seccion=="Inicio":
                "Pto Equilibrio":r[c]["PE"],"Fin Ventas":r[c]["FV"],"Inicio Constr.":r[c].get("IC"),"Fin Constr.":r[c].get("FC")} for c in sorted(r)]
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
     st.caption(f"APEX ARCHITECT® · modelo financiero CG · {len(par.get('etapas',[]))} etapas · {meta.get('unidades',0)} unidades")
+
+# ============ PROYECTOS ACTIVOS ============
+if seccion=="Proyectos activos":
+    st.markdown("### 🏢 Proyectos activos — CG Constructora")
+    st.caption("Portafolio de proyectos en evaluación. **Abre** uno para trabajarlo, o crea uno nuevo desde el selector lateral.")
+    _proys=listar()
+    if not _proys:
+        st.info("No hay proyectos. Crea uno con «➕ Nuevo proyecto» en el menú lateral.")
+    else:
+        gc=st.columns(3)
+        for i,nombre in enumerate(_proys):
+            p=cargar(nombre); mp=p.get("meta",{})
+            und=sum(e.get("und",0) or 0 for e in p.get("etapas",[]))
+            activo = (nombre==sel)
+            with gc[i%3]:
+                borde = TEAL if activo else "#E6E9EF"
+                st.markdown(f'<div class="navcard" style="border:2px solid {borde}">'
+                    f'<h4>{mp.get("nombre",nombre)} {"· abierto" if activo else ""}</h4>'
+                    f'<div style="color:#6B7280;font-size:.84rem">{mp.get("ubicacion","")} · {mp.get("zona","")} · {mp.get("tipo","")}</div>'
+                    f'<div style="margin-top:10px;font-weight:600;color:#13262B">{und} unidades · {len(p.get("etapas",[]))} etapas</div></div>',
+                    unsafe_allow_html=True)
+                if st.button("Abrir proyecto", key=f"open_{nombre}", width="stretch", disabled=activo):
+                    st.session_state["_pending_proj"]=nombre; st.rerun()
+        st.write("")
+        st.markdown("##### Resumen del portafolio")
+        rows=[]
+        for j,nombre in enumerate(_proys):
+            p=cargar(nombre); mp=p.get("meta",{})
+            rows.append({"Cód":j+1,"Proyecto":mp.get("nombre",nombre),"Ubicación":mp.get("ubicacion",""),
+                "Tipo":mp.get("tipo",""),"Unidades":sum(e.get("und",0) or 0 for e in p.get("etapas",[])),
+                "Etapas":len(p.get("etapas",[]))})
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        st.caption("Las cifras de estos proyectos son plantillas. Abre uno e ingresa/ajusta sus datos en «📝 Datos del proyecto».")
 
 # ============ DATOS DEL PROYECTO ============
 if seccion=="Datos del proyecto":
@@ -389,4 +429,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
         help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.0.0 · motor v{ENGINE_V} · navegación por menú · estructura APEX · CG Constructora")
+st.caption(f"Aplicativo v2.1.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

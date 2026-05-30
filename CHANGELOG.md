@@ -2,6 +2,14 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.1.0] — 2026-05-29
+### Añadido
+- Sección **🏢 Proyectos activos** (portafolio CG): tarjetas + tabla resumen de los proyectos,
+  con botón **Abrir** para cargar cada uno. Estilo de la hoja "Proyectos" de APEX.
+- Proyectos activos de CG (plantillas): **Navarra Apartamentos · Dominica · Torres de Campiñas**
+  (estructura y cifras ilustrativas; los datos reales se ingresan en plataforma).
+- Selector de proyecto muestra el **nombre del proyecto** (no el nombre de archivo).
+
 ## [2.0.0] — 2026-05-29
 ### Cambiado (mayor — navegación)
 - **Navegación por menú lateral (estilo APEX)** en vez de pestañas: menú vertical con iconos
