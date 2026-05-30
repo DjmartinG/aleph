@@ -2,6 +2,17 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.3.0] — 2026-05-30
+### Cambiado (orden lógico del menú)
+- **Reordenado el menú** al flujo de evaluación del modelo. Nuevo orden:
+  Inicio · Proyectos activos · Datos del proyecto · **Urbanístico** · Cronograma · Ingresos ·
+  Distribución costos · P&G · Reparto · Flujo de caja · Apalancamiento · Escenarios · Sensibilidad.
+- **Urbanístico pasa a primero** entre los resultados: define áreas e índices, la base física
+  de la que derivan los demás análisis. Luego Cronograma (tiempo) → Ingresos (recaudo) →
+  Costos → P&G/Reparto (resultado) → Flujo/Apalancamiento (financiación) → Escenarios/Sensibilidad.
+- La guía de módulos de la portada se reagrupa acorde (Portafolio · Definición · Resultados ·
+  Flujo & Análisis).
+
 ## [2.2.0] — 2026-05-30
 ### Cambiado (orden lógico / UX)
 - **Inicio = portada de bienvenida** (ya no tablero del proyecto): presenta la app, "Cómo

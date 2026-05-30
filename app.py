@@ -94,10 +94,10 @@ with st.sidebar:
         st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
         st.session_state.sel = sel
     par = st.session_state.par
-    MENU=["Inicio","Proyectos activos","Datos del proyecto","P&G","Reparto","Distribución costos","Flujo de caja",
-          "Apalancamiento","Cronograma","Ingresos","Escenarios","Sensibilidad","Urbanístico"]
-    ICONS=["house-door","buildings","pencil-square","table","pie-chart","bar-chart-line","cash-stack",
-           "bank","calendar3","cash-coin","bullseye","sliders","building"]
+    MENU=["Inicio","Proyectos activos","Datos del proyecto","Urbanístico","Cronograma","Ingresos",
+          "Distribución costos","P&G","Reparto","Flujo de caja","Apalancamiento","Escenarios","Sensibilidad"]
+    ICONS=["house-door","buildings","pencil-square","building","calendar3","cash-coin",
+           "bar-chart-line","table","pie-chart","cash-stack","bank","bullseye","sliders"]
     seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
         styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
                 "icon":{"color":TEAL,"font-size":"14px"},
@@ -155,9 +155,9 @@ if seccion=="Inicio":
     st.markdown("#### Módulos del modelo")
     g=st.columns(4)
     mods=[("🏢 Portafolio",["Proyectos activos","Datos del proyecto"]),
-          ("📊 Resultados",["P&G (Estado de Resultados)","Reparto CG / socio","Distribución de costos","Análisis urbanístico"]),
-          ("💵 Flujo & Financiación",["Cronograma de hitos","Ingresos (recaudo)","Flujo de caja","Apalancamiento (crédito)"]),
-          ("🎯 Análisis",["Escenarios (base/opt/pes)","Sensibilidad (tornado)"])]
+          ("📐 Definición",["Urbanístico (áreas e índices)","Cronograma de hitos","Ingresos (recaudo)"]),
+          ("📊 Resultados",["Distribución de costos","P&G (Estado de Resultados)","Reparto CG / socio"]),
+          ("💵 Flujo & Análisis",["Flujo de caja","Apalancamiento (crédito)","Escenarios","Sensibilidad"])]
     for i,(t,items) in enumerate(mods):
         li="".join(f"<li>{x}</li>" for x in items)
         g[i].markdown(f'<div class="navcard"><h4>{t}</h4><ul>{li}</ul></div>', unsafe_allow_html=True)
@@ -451,4 +451,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.2.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.3.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
