@@ -32,6 +32,7 @@ def _hitos(par):
             "pe_pct": e.get("pe_pct", 0.60), "fecha_inicio": fi,
             "sucesora": e.get("sucesora"), "desfase": e.get("desfase", 0),
             "obra_offset": e.get("obra_offset", 1), "dur_obra": e.get("dur_obra", 24),
+            "ic_offset": e.get("ic_offset"),
         })
     if not any(p["sucesora"] is None and p["fecha_inicio"] for p in plist):
         return {}
