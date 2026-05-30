@@ -107,41 +107,62 @@ with st.sidebar:
 # ---------------- cálculo ----------------
 R = calcular(copy.deepcopy(par)); pg=R["pyg"]; fl=R["flujo"]; meta=R["meta"]
 
-# ---------------- encabezado + KPIs (siempre) ----------------
-hc1,hc2 = st.columns([1,9])
-if LOGO.exists(): hc1.image(str(LOGO), width=78)
-hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
-hc2.caption(f"CG Constructora · {meta.get('nombre','')} · {meta.get('ubicacion','')} · {meta.get('unidades','')} unidades")
-st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
-k=st.columns(6)
-kpi(k[0],"Ventas totales", fmt_mm(pg["ventas"]))
-kpi(k[1],"Utilidad operativa", fmt_mm(pg["util_oper"]), fmt_pct(pg["margen_oper"]), GREEN)
-kpi(k[2],"UDI", fmt_mm(pg["udi"]))
-kpi(k[3],"TIR apalancada (ref)", fmt_pct(fl["tir_apalancada_ref"]), "modelo aprobado", MUTED)
-kpi(k[4],"VPN @WACC", fmt_mm(fl["vpn_proyecto"]))
-kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
-st.write("")
+# ---------------- encabezado + KPIs (solo dentro de un proyecto, no en Inicio) ----------------
+if seccion != "Inicio":
+    hc1,hc2 = st.columns([1,9])
+    if LOGO.exists(): hc1.image(str(LOGO), width=78)
+    hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
+    hc2.caption(f"CG Constructora · {meta.get('nombre','')} · {meta.get('ubicacion','')} · {meta.get('unidades','')} unidades")
+    st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
+    k=st.columns(6)
+    kpi(k[0],"Ventas totales", fmt_mm(pg["ventas"]))
+    kpi(k[1],"Utilidad operativa", fmt_mm(pg["util_oper"]), fmt_pct(pg["margen_oper"]), GREEN)
+    kpi(k[2],"UDI", fmt_mm(pg["udi"]))
+    kpi(k[3],"TIR apalancada (ref)", fmt_pct(fl["tir_apalancada_ref"]), "modelo aprobado", MUTED)
+    kpi(k[4],"VPN @WACC", fmt_mm(fl["vpn_proyecto"]))
+    kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
+    st.write("")
 
-# ============ INICIO (tablero/menú) ============
+# ============ INICIO (portada / bienvenida) ============
 if seccion=="Inicio":
-    st.markdown("## Evaluación Financiera de Proyectos")
-    st.caption("Tablero de inicio — usa el **menú lateral** para navegar. Resumen del proyecto activo:")
+    pc1,pc2 = st.columns([1,5])
+    if LOGO.exists(): pc1.image(str(LOGO), width=150)
+    with pc2:
+        st.markdown("<h1 style='font-size:2.3rem;margin:.2rem 0 0'>Evaluación Financiera de Proyectos</h1>", unsafe_allow_html=True)
+        st.markdown("<div style='color:#6B7280;font-size:1.02rem;font-weight:600'>APEX ARCHITECT® · Modelo de factibilidad inmobiliaria · CG Constructora</div>", unsafe_allow_html=True)
+    st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
+    st.markdown(
+        "Plataforma para evaluar la **prefactibilidad y factibilidad financiera** de los proyectos "
+        "inmobiliarios de CG: portafolio multi‑etapa, hitos de venta y construcción, recaudo, costos "
+        "por curva de obra, flujo de caja, apalancamiento (crédito constructor) e indicadores de "
+        "rentabilidad (**TIR · VPN · WACC**). Todos los datos se ingresan en la plataforma."
+    )
+    st.markdown("#### Cómo empezar")
+    s=st.columns(3)
+    s[0].markdown('<div class="navcard"><h4>1 · Elige el proyecto</h4><ul>'
+                  '<li>Abre <b>🏢 Proyectos activos</b></li>'
+                  '<li>Navarra · Dominica · Torres de Campiñas</li>'
+                  '<li>o crea uno nuevo desde el menú lateral</li></ul></div>', unsafe_allow_html=True)
+    s[1].markdown('<div class="navcard"><h4>2 · Ingresa los datos</h4><ul>'
+                  '<li>En <b>📝 Datos del proyecto</b></li>'
+                  '<li>Generales · áreas · etapas · costos · recaudo</li>'
+                  '<li>Todo se digita aquí (sin importar archivos)</li></ul></div>', unsafe_allow_html=True)
+    s[2].markdown('<div class="navcard"><h4>3 · Revisa resultados</h4><ul>'
+                  '<li>P&G · Flujo · Apalancamiento</li>'
+                  '<li>Cronograma · Escenarios · Sensibilidad</li>'
+                  '<li>Exporta el respaldo a Excel/JSON</li></ul></div>', unsafe_allow_html=True)
+    st.write("")
+    st.markdown("#### Módulos del modelo")
     g=st.columns(4)
-    cards=[("📝 Datos",["Datos del proyecto","Áreas y lote","Etapas, producto y ventas","Costos · Recaudo · Financiero"]),
-           ("📊 Resultados",["P&G (Estado de Resultados)","Reparto CG / socio","Distribución de costos","Análisis urbanístico"]),
-           ("💵 Flujo & Financiación",["Flujo de caja","Apalancamiento (crédito constructor)","Ingresos (recaudo)","Cronograma de hitos"]),
-           ("🎯 Análisis",["Escenarios (base/opt/pes)","Sensibilidad (tornado)"])]
-    for i,(t,items) in enumerate(cards):
+    mods=[("🏢 Portafolio",["Proyectos activos","Datos del proyecto"]),
+          ("📊 Resultados",["P&G (Estado de Resultados)","Reparto CG / socio","Distribución de costos","Análisis urbanístico"]),
+          ("💵 Flujo & Financiación",["Cronograma de hitos","Ingresos (recaudo)","Flujo de caja","Apalancamiento (crédito)"]),
+          ("🎯 Análisis",["Escenarios (base/opt/pes)","Sensibilidad (tornado)"])]
+    for i,(t,items) in enumerate(mods):
         li="".join(f"<li>{x}</li>" for x in items)
         g[i].markdown(f'<div class="navcard"><h4>{t}</h4><ul>{li}</ul></div>', unsafe_allow_html=True)
     st.write("")
-    r=R.get("hitos",{})
-    if r:
-        st.markdown("##### Cronograma del portafolio")
-        rows=[{"Etapa":r[c]["nombre"],"Unidades":r[c]["unidades"],"Inicio Ventas":r[c]["IV"],
-               "Pto Equilibrio":r[c]["PE"],"Fin Ventas":r[c]["FV"],"Inicio Constr.":r[c].get("IC"),"Fin Constr.":r[c].get("FC")} for c in sorted(r)]
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-    st.caption(f"APEX ARCHITECT® · modelo financiero CG · {len(par.get('etapas',[]))} etapas · {meta.get('unidades',0)} unidades")
+    st.caption("APEX ARCHITECT® · modelo financiero CG Constructora · estándar FAST de modelación")
 
 # ============ PROYECTOS ACTIVOS ============
 if seccion=="Proyectos activos":
@@ -410,23 +431,24 @@ if seccion=="Urbanístico":
     ],columns=["Indicador","Valor"])
     st.dataframe(df.style.format({"Valor":"{:,.2f}"}, na_rep="—"), width="stretch", hide_index=True)
 
-# ---------------- acciones (siempre) ----------------
-st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
-a1,a2=st.columns(2)
-with a1:
-    buf=io.BytesIO()
-    with pd.ExcelWriter(buf,engine="openpyxl") as xl:
-        pd.DataFrame([{"Concepto":"Ventas","Miles COP":pg["ventas"]},{"Concepto":"Utilidad operativa","Miles COP":pg["util_oper"]},
-            {"Concepto":"UDI","Miles COP":pg["udi"]},{"Concepto":"CG","Miles COP":pg["cg"]},
-            {"Concepto":"Socio","Miles COP":pg["socio"]},{"Concepto":"Credito max","Miles COP":fl["credito_max"]}]).to_excel(xl,sheet_name="Resumen",index=False)
-        pd.DataFrame({"Mes":range(1,len(fl["flujo"])+1),"Flujo":fl["flujo"],"Acumulado":fl["acumulado"],"SaldoCredito":fl["saldo_credito"]}).to_excel(xl,sheet_name="Flujo",index=False)
-    st.download_button("📥 Exportar resultados a Excel", buf.getvalue(),
-        file_name=f"Factibilidad_{meta.get('nombre','proyecto')}_{date.today():%Y%m%d}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-with a2:
-    par["_fecha"]=str(date.today())
-    st.download_button("💾 Descargar proyecto (.json, respaldo)",
-        json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
-        file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
-        help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.1.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+# ---------------- acciones (solo dentro de un proyecto, no en Inicio) ----------------
+if seccion != "Inicio":
+    st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
+    a1,a2=st.columns(2)
+    with a1:
+        buf=io.BytesIO()
+        with pd.ExcelWriter(buf,engine="openpyxl") as xl:
+            pd.DataFrame([{"Concepto":"Ventas","Miles COP":pg["ventas"]},{"Concepto":"Utilidad operativa","Miles COP":pg["util_oper"]},
+                {"Concepto":"UDI","Miles COP":pg["udi"]},{"Concepto":"CG","Miles COP":pg["cg"]},
+                {"Concepto":"Socio","Miles COP":pg["socio"]},{"Concepto":"Credito max","Miles COP":fl["credito_max"]}]).to_excel(xl,sheet_name="Resumen",index=False)
+            pd.DataFrame({"Mes":range(1,len(fl["flujo"])+1),"Flujo":fl["flujo"],"Acumulado":fl["acumulado"],"SaldoCredito":fl["saldo_credito"]}).to_excel(xl,sheet_name="Flujo",index=False)
+        st.download_button("📥 Exportar resultados a Excel", buf.getvalue(),
+            file_name=f"Factibilidad_{meta.get('nombre','proyecto')}_{date.today():%Y%m%d}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    with a2:
+        par["_fecha"]=str(date.today())
+        st.download_button("💾 Descargar proyecto (.json, respaldo)",
+            json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
+            file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
+            help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
+st.caption(f"Aplicativo v2.2.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

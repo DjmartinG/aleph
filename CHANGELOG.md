@@ -2,6 +2,18 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.2.0] — 2026-05-30
+### Cambiado (orden lógico / UX)
+- **Inicio = portada de bienvenida** (ya no tablero del proyecto): presenta la app, "Cómo
+  empezar" (3 pasos) y la guía de **módulos** del modelo. Se retira el cronograma del portafolio
+  y la tarjetas/caption del proyecto activo, que **duplicaban** la información de "Proyectos
+  activos". La portada ya no muestra datos de un proyecto concreto.
+- Los **KPIs y el encabezado del proyecto** (ventas, utilidad, TIR, VPN, crédito) y los botones
+  de **exportación** solo aparecen **dentro de un proyecto** (cualquier sección distinta de
+  Inicio), no en la portada — separa "anunciar" (Inicio) de "trabajar el proyecto".
+- "Proyectos activos" queda como **único** lugar donde se despliega el portafolio (Navarra ·
+  Dominica · Torres de Campiñas). Elimina la repetición Inicio ↔ Proyectos activos.
+
 ## [2.1.0] — 2026-05-29
 ### Añadido
 - Sección **🏢 Proyectos activos** (portafolio CG): tarjetas + tabla resumen de los proyectos,
