@@ -2,6 +2,21 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.9.0] — 2026-05-30
+### Calibrado (waterfall de crédito — Navarra, medido contra el Excel)
+- **Crédito constructor:** ahora **desembolsa cobertura% (80%) del costo de obra mensual** dentro de
+  la **ventana de construcción IC..FC** (antes desembolsaba 100% hasta el cupo y tomaba indirectos
+  desde la preventa → adelantaba y sobredimensionaba el crédito). Indirectos se asignan a la obra.
+- **Otros ingresos** (comercio + parqueaderos + recuperaciones + devolución IVA) entran a la caja
+  proporcionales al recaudo (estaban en el P&G, faltaban en el flujo).
+- **Resultado medido (Navarra) vs Excel real:** crédito máx **$50.073 M = 0.88×** ($56.827 M real;
+  venía de 2.02×), crédito prom 0.87×, **VPN proyecto $21.310 M = 1.17×** ($18.281 M), **TIR
+  proyecto 35.4% vs 38%** real (0.93×), **TIR equity 33.9%** (antes −26%). Intereses 0.71× — gap
+  explicado: el interés real incluye comisiones fiduciarias (~$1.402 M) + corrección UVR no
+  modeladas. Todas las anclas quedan en **0.71×–1.17×** del real.
+- *Pendiente:* Dominica y Torres aún en calendario greenfield-2026 (no ancladas a fechas reales),
+  por lo que su crédito/VPN siguen siendo preliminares.
+
 ## [2.8.0] — 2026-05-30
 ### Cambiado (waterfall de crédito — mecánica corregida, calibración EN CURSO)
 - **Crédito constructor reespecificado** según la hoja `CALCULO COSTOS FINANCIEROS` de CG: el

@@ -286,10 +286,10 @@ if seccion=="Proyectos activos":
                       "Crédito máx (M)":round((CONS["credito_max"] if CONS else 0)/1000)})
         st.dataframe(pd.DataFrame(filas), width="stretch", hide_index=True)
         st.caption("Cifras en **millones COP**. **Ventas, utilidad y UDI** se suman (reconciliadas con las "
-                   "prefactibilidades). **Crédito máx, VPN y TIR** salen del waterfall de crédito, **en "
-                   "calibración** → preliminares (hoy sobreestiman: Navarra crédito máx 1.4× el real). El pico de "
-                   "crédito se alinea por calendario absoluto. *Dominica y Torres usan aún calendario "
-                   "greenfield-2026.* "
+                   "prefactibilidades). **Crédito máx, VPN y TIR** salen del waterfall de crédito **calibrado**: "
+                   "Navarra queda a 0.88× del crédito real, TIR proyecto 35.4% vs 38% real (intereses 0.71× porque "
+                   "no se modelan comisiones fiduciarias ni UVR). *Dominica y Torres usan aún calendario "
+                   "greenfield-2026 → sus cifras de crédito/VPN son preliminares.* "
                    + ("Datos reales (privados)." if _proys and es_real(_proys[0]) else "Cifras ilustrativas."))
 
 # ============ DATOS DEL PROYECTO ============
@@ -600,4 +600,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.8.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.9.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

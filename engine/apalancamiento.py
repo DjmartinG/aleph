@@ -51,9 +51,21 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     # ---- ingresos consolidados (F2) ----
     rt = recaudo["total"]
     ingresos_m = [rt[i] if i < len(rt) else 0.0 for i in range(N)]
+    # otros ingresos (comercio + parqueaderos + recuperaciones + devolución IVA): están en el P&G
+    # (total_ingresos − ventas) pero no en el recaudo de unidades. Se reparten proporcionales al
+    # recaudo (entran a caja a medida que el proyecto vende/entrega).
+    otros = pg.get("total_ingresos", pg["ventas"]) - pg["ventas"]
+    tot_rec = sum(ingresos_m) or 1.0
+    if otros:
+        ingresos_m = [v + otros * (v / tot_rec) for v in ingresos_m]
 
-    # ---- costos por etapa (F3): directos Gauss sobre IC..FC; indirectos/honorarios; lote ----
-    costos_m = [0.0] * N; directos_m = [0.0] * N      # directos aparte (financiables por CC)
+    # ---- costos por etapa (F3) ----
+    #   directos:   curva Gauss sobre la ventana de OBRA (IC..FC)
+    #   indirectos: lineal sobre la ventana de OBRA (IC..FC) — financiables por el crédito (admin
+    #               de obra); en el modelo CG el crédito constructor cubre obra, no la preventa.
+    #   honorarios: lineal sobre la obra (IC..FC) — los paga el equity, no el crédito.
+    # obra_fin_m = base financiable por el crédito constructor (directos + indirectos de obra).
+    costos_m = [0.0] * N; directos_m = [0.0] * N; obra_fin_m = [0.0] * N
     for e in par.get("etapas", []):
         cod = e.get("cod")
         if cod not in hitos:
@@ -61,15 +73,14 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         share = e.get("ventas_miles", 0) / V
         ic = max(0, _offset(hitos[cod]["IC"], base))
         fc = max(ic, _offset(hitos[cod]["FC"], base))
-        iv = max(0, _offset(hitos[cod]["IV"], base))
         dur = max(1, fc - ic + 1)
         serie = curvas.distribuir(pg["directos"] * share, dur, "Gauss")   # costo directo
         for k, val in enumerate(serie):
             if ic + k < N:
-                costos_m[ic + k] += val; directos_m[ic + k] += val
-        per = max(1, fc - iv + 1)                                          # indirectos lineal
-        for m in range(iv, min(fc + 1, N)):
-            costos_m[m] += pg["indirectos"] * share / per
+                costos_m[ic + k] += val; directos_m[ic + k] += val; obra_fin_m[ic + k] += val
+        for m in range(ic, min(fc + 1, N)):                                # indirectos sobre obra
+            v = pg["indirectos"] * share / dur
+            costos_m[m] += v; obra_fin_m[m] += v
         for m in range(ic, min(fc + 1, N)):                                # honorarios sobre obra
             costos_m[m] += pg["honorarios"] * share / dur
 
@@ -90,7 +101,6 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     cobertura = fin.get("cobertura_cc", fin.get("monto_cc_pct", 0.80))
     valor_financiable = pg["directos"] + pg["indirectos"]
     cupo = cobertura * valor_financiable                       # construction-loan ceiling
-    obra_m = costos_m                                          # monthly construction cost (no lote)
     subr = recaudo.get("subrogacion", [])
     sub_m = [subr[i] if i < len(subr) else 0.0 for i in range(N)]
     tasa_cc = (1 + fin.get("tasa_credito_ea", 0.155)) ** (1 / 12) - 1
@@ -98,7 +108,8 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     saldo_serie = [0.0] * N; flujo_equity = [0.0] * N
     for m in range(N):
         interes = saldo * tasa_cc; intereses += interes
-        desembolso = min(obra_m[m], max(0.0, cupo - desemb_acum))   # disburse obra up to the cupo
+        # disburse COBERTURA% of the monthly construction cost (spread over the obra), capped at cupo
+        desembolso = min(cobertura * obra_fin_m[m], max(0.0, cupo - desemb_acum))
         desemb_acum += desembolso
         saldo += desembolso
         amort = min(sub_m[m], saldo); saldo -= amort           # subrogaciones amortizan el CC
