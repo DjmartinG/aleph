@@ -70,6 +70,55 @@ def listar():
     return priv + pub
 def es_real(n): return (PRIV_DIR/f"{n}.json").exists()
 
+def _irr_anual(flujos):
+    """TIR anualizada de un flujo mensual (bisección robusta). None si no hay cambio de signo."""
+    def vpn(r): return sum(f/(1+r)**t for t,f in enumerate(flujos))
+    lo,hi=-0.95,5.0; flo,fhi=vpn(lo),vpn(hi)
+    if flo*fhi>0:                                   # buscar cambio de signo
+        r=lo; prev=flo; found=False
+        while r<hi:
+            r2=r+0.01; cur=vpn(r2)
+            if prev*cur<0: lo,hi,flo=r,r2,prev; found=True; break
+            prev=cur; r=r2
+        if not found: return None
+    for _ in range(200):
+        mid=(lo+hi)/2; fm=vpn(mid)
+        if flo*fm<=0: hi=mid
+        else: lo=mid; flo=fm
+    m=(lo+hi)/2
+    try: return (1+m)**12-1
+    except Exception: return None
+
+@st.cache_data(show_spinner=False)
+def consolidado(_keys):
+    """Consolidado del portafolio. _keys = tuple(listar()) → invalida el caché si cambia el set."""
+    N=180; oper=[0.0]*N; equity=[0.0]*N; saldo=[0.0]*N
+    ventas=util=udi=vpn=und=0.0; n=0; filas=[]; tir_num=tir_den=0.0
+    for name in _keys:
+        try:
+            par=cargar(name); R=calcular(copy.deepcopy(par))
+        except Exception:
+            continue
+        pg=R["pyg"]; fl=R.get("flujo",{}) or {}; mt=R["meta"]
+        ventas+=pg["ventas"]; util+=pg["util_oper"]; udi+=pg["udi"]
+        if fl.get("vpn_proyecto"): vpn+=fl["vpn_proyecto"]
+        tref=fl.get("tir_apalancada_ref")
+        if tref: tir_num+=pg["ventas"]*tref; tir_den+=pg["ventas"]   # TIR ref ponderada por ventas
+        und+=sum(e.get("und",0) or 0 for e in par.get("etapas",[]))
+        o=fl.get("operativo") or []; e=fl.get("flujo_equity") or []; s=fl.get("saldo_credito") or []
+        for m in range(N):
+            if m<len(o): oper[m]+=o[m]
+            if m<len(e): equity[m]+=e[m]
+            if m<len(s): saldo[m]+=s[m]
+        filas.append({"Proyecto":mt.get("nombre",name),"Unidades":sum(x.get("und",0) or 0 for x in par.get("etapas",[])),
+                      "Ventas (M)":round(pg["ventas"]/1000),"Util. oper (M)":round(pg["util_oper"]/1000),
+                      "Margen":f"{pg['margen_oper']*100:.1f}%","Crédito máx (M)":round((fl.get('credito_max',0) or 0)/1000)})
+        n+=1
+    return {"n":n,"unidades":int(und),"ventas":ventas,"util_oper":util,"udi":udi,"vpn":vpn,
+            "margen":util/ventas if ventas else 0,
+            "tir_ref":(tir_num/tir_den if tir_den else None),
+            "credito_max":max(saldo) if saldo else 0.0,"filas":filas}
+
 def nuevo_proyecto():
     return {"meta":{"nombre":"Nuevo proyecto","ubicacion":"","zona":"","tipo":"No VIS","unidades":0,"moneda":"miles COP"},
         "areas":{"m2_vendibles":0.0,"m2_construidos":0.0,"lote_bruta":0.0,"lote_util":0.0},
@@ -115,8 +164,25 @@ with st.sidebar:
 # ---------------- cálculo ----------------
 R = calcular(copy.deepcopy(par)); pg=R["pyg"]; fl=R["flujo"]; meta=R["meta"]
 
-# ---------------- encabezado + KPIs (solo dentro de un proyecto, no en Inicio) ----------------
-if seccion != "Inicio":
+# ---------------- encabezado + KPIs ----------------
+CONS=None
+if seccion == "Proyectos activos":
+    # --- KPIs CONSOLIDADOS del portafolio (suma de los proyectos listados) ---
+    CONS = consolidado(tuple(listar()))
+    hc1,hc2 = st.columns([1,9])
+    if LOGO.exists(): hc1.image(str(LOGO), width=78)
+    hc2.markdown("<h1>Portafolio CG — Consolidado</h1>", unsafe_allow_html=True)
+    hc2.caption(f"CG Constructora · {CONS['n']} proyectos · {CONS['unidades']:,} unidades · suma del portafolio".replace(",", "."))
+    st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
+    k=st.columns(6)
+    kpi(k[0],"Ventas totales", fmt_mm(CONS["ventas"]), "reconciliado", GREEN)
+    kpi(k[1],"Utilidad operativa", fmt_mm(CONS["util_oper"]), fmt_pct(CONS["margen"]), GREEN)
+    kpi(k[2],"UDI", fmt_mm(CONS["udi"]), "reconciliado", GREEN)
+    kpi(k[3],"TIR apalancada (ref)", fmt_pct(CONS["tir_ref"]) if CONS["tir_ref"] is not None else "n/d", "ref · ponderada", MUTED)
+    kpi(k[4],"VPN @WACC (suma)", fmt_mm(CONS["vpn"]), "preliminar", AMBER)
+    kpi(k[5],"Crédito máx (pico)", fmt_mm(CONS["credito_max"]), "preliminar", AMBER)
+    st.write("")
+elif seccion != "Inicio":
     hc1,hc2 = st.columns([1,9])
     if LOGO.exists(): hc1.image(str(LOGO), width=78)
     hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
@@ -196,15 +262,19 @@ if seccion=="Proyectos activos":
                 if st.button("Abrir proyecto", key=f"open_{nombre}", width="stretch", disabled=activo):
                     st.session_state["_pending_proj"]=nombre; st.rerun()
         st.write("")
-        st.markdown("##### Resumen del portafolio")
-        rows=[]
-        for j,nombre in enumerate(_proys):
-            p=cargar(nombre); mp=p.get("meta",{})
-            rows.append({"Cód":j+1,"Proyecto":mp.get("nombre",nombre),"Ubicación":mp.get("ubicacion",""),
-                "Tipo":mp.get("tipo",""),"Unidades":sum(e.get("und",0) or 0 for e in p.get("etapas",[])),
-                "Etapas":len(p.get("etapas",[]))})
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        st.caption("Las cifras de estos proyectos son plantillas. Abre uno e ingresa/ajusta sus datos en «📝 Datos del proyecto».")
+        st.markdown("##### Resumen financiero del portafolio")
+        filas=list(CONS["filas"]) if CONS else []
+        filas.append({"Proyecto":"— TOTAL —","Unidades":CONS["unidades"] if CONS else 0,
+                      "Ventas (M)":round((CONS["ventas"] if CONS else 0)/1000),
+                      "Util. oper (M)":round((CONS["util_oper"] if CONS else 0)/1000),
+                      "Margen":f"{(CONS['margen'] if CONS else 0)*100:.1f}%",
+                      "Crédito máx (M)":round((CONS["credito_max"] if CONS else 0)/1000)})
+        st.dataframe(pd.DataFrame(filas), width="stretch", hide_index=True)
+        st.caption("Cifras en **millones COP**. **Ventas, utilidad operativa y UDI** se suman y están "
+                   "**reconciliadas** con las prefactibilidades reales. **TIR apalancada** = referencia (modelo "
+                   "aprobado) ponderada por ventas. **VPN y crédito máx** salen del módulo de flujo/apalancamiento "
+                   "**en calibración** → preliminares (el crédito tiende a sobreestimarse). "
+                   + ("Datos reales (privados)." if _proys and es_real(_proys[0]) else "Cifras ilustrativas."))
 
 # ============ DATOS DEL PROYECTO ============
 if seccion=="Datos del proyecto":
@@ -514,4 +584,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.5.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.6.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

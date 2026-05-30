@@ -2,6 +2,21 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.6.0] — 2026-05-30
+### Añadido (consolidado del portafolio)
+- En **🏢 Proyectos activos**, el encabezado muestra los **KPIs consolidados** del portafolio
+  (suma de los proyectos listados): **Ventas totales · Utilidad operativa · UDI** (sumas,
+  reconciliadas con lo real), **TIR apalancada** (referencia ponderada por ventas), **VPN @WACC**
+  (suma) y **Crédito máx** (pico de la curva de crédito *sumada*, no la suma de picos).
+- **Tabla financiera del portafolio** con ventas/utilidad/margen/crédito por proyecto + fila TOTAL.
+- Consolidación correcta por tipo de métrica (aditivas se suman; el crédito usa el pico del saldo
+  consolidado; la TIR no se promedia ingenuamente).
+### Nota (honestidad de cifras)
+- **Ventas/UO/UDI** están reconciliadas con las prefactibilidades reales (verde). **VPN y crédito
+  máx** provienen del módulo de flujo/apalancamiento **en calibración** → se marcan **preliminar**
+  (el crédito tiende a sobreestimarse porque la subrogación llega tarde). Próximo paso sugerido:
+  calibrar el waterfall de crédito antes de usar esas cifras para decisión.
+
 ## [2.5.0] — 2026-05-30
 ### Añadido (datos reales privados)
 - La app puede cargar **proyectos privados** desde `proyectos_privados/` (en `.gitignore`, no se
