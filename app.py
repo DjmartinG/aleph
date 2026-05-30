@@ -2,7 +2,7 @@
 """
 Aplicativo de Prefactibilidad / Factibilidad — CG Constructora.
 Capa de presentación (Streamlit). NO contiene lógica financiera: usa engine/ (fuente única).
-Toda la data se ingresa EN la plataforma (sin importar archivos externos). v1.9.0
+Navegación por menú lateral (estilo APEX) con tablero de Inicio. Data 100% en plataforma. v2.0.0
 """
 import json, io, copy
 from pathlib import Path
@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.io as pio
+from streamlit_option_menu import option_menu
 from engine import calcular, __version__ as ENGINE_V
 
 # ---------------- marca CG ----------------
@@ -46,8 +47,10 @@ h2,h3 { color:#13262B; font-weight:700; }
 .kpi .l { font-size:.64rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:#6B7280; min-height:1.9em; }
 .kpi .v { font-size:1.22rem; font-weight:700; color:#004854; margin-top:6px; line-height:1.15; white-space:nowrap; }
 .kpi .s { font-size:.74rem; font-weight:600; margin-top:3px; }
-.stTabs [data-baseweb="tab"] { font-weight:600; }
-.stTabs [aria-selected="true"] { color:#004854 !important; }
+.navcard { background:#fff; border:1px solid #E6E9EF; border-radius:14px; padding:16px 18px;
+           box-shadow:0 1px 2px rgba(16,24,40,.05); height:100%; }
+.navcard h4 { color:#004854; margin:0 0 8px; font-size:1rem; font-weight:700; }
+.navcard ul { margin:0; padding-left:1.05em; color:#374151; font-size:.86rem; line-height:1.75; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -74,30 +77,35 @@ def nuevo_proyecto():
                       "wacc":{"beta_us":1.29,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,"rf":0.12,
                               "rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}}}
 
-# ---------------- sidebar: proyecto ----------------
+# ---------------- sidebar: proyecto + menú ----------------
 with st.sidebar:
     if LOGO.exists(): st.image(str(LOGO), width=150)
-    st.markdown("### Proyecto")
+    st.markdown("##### Proyecto")
     opciones = ["➕ Nuevo proyecto"] + listar()
-    sel = st.selectbox("Seleccionar / crear", opciones, index=(1 if len(opciones) > 1 else 0))
+    sel = st.selectbox("Seleccionar / crear", opciones, index=(1 if len(opciones) > 1 else 0), label_visibility="collapsed")
     if "par" not in st.session_state or st.session_state.get("sel") != sel:
         st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
         st.session_state.sel = sel
     par = st.session_state.par
-    st.caption("📝 Ingresa todos los datos en la pestaña **Datos del proyecto**. "
-               "Las demás pestañas se calculan solas.")
+    MENU=["Inicio","Datos del proyecto","P&G","Reparto","Distribución costos","Flujo de caja",
+          "Apalancamiento","Cronograma","Ingresos","Escenarios","Sensibilidad","Urbanístico"]
+    ICONS=["house-door","pencil-square","table","pie-chart","bar-chart-line","cash-stack",
+           "bank","calendar3","cash-coin","bullseye","sliders","building"]
+    seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
+        styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
+                "icon":{"color":TEAL,"font-size":"14px"},
+                "nav-link":{"font-size":"13.5px","color":INK,"--hover-color":"#EAF0F2","margin":"1px 0"},
+                "nav-link-selected":{"background-color":TEAL,"color":"white","font-weight":"600"}})
 
 # ---------------- cálculo ----------------
 R = calcular(copy.deepcopy(par)); pg=R["pyg"]; fl=R["flujo"]; meta=R["meta"]
 
-# ---------------- encabezado ----------------
+# ---------------- encabezado + KPIs (siempre) ----------------
 hc1,hc2 = st.columns([1,9])
 if LOGO.exists(): hc1.image(str(LOGO), width=78)
 hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
 hc2.caption(f"CG Constructora · {meta.get('nombre','')} · {meta.get('ubicacion','')} · {meta.get('unidades','')} unidades")
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
-
-# ---------------- KPIs ----------------
 k=st.columns(6)
 kpi(k[0],"Ventas totales", fmt_mm(pg["ventas"]))
 kpi(k[1],"Utilidad operativa", fmt_mm(pg["util_oper"]), fmt_pct(pg["margen_oper"]), GREEN)
@@ -107,45 +115,55 @@ kpi(k[4],"VPN @WACC", fmt_mm(fl["vpn_proyecto"]))
 kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
 st.write("")
 
-tabs = st.tabs(["📝 Datos del proyecto","📊 P&G","🤝 Reparto","📈 Distribución costos","💵 Flujo de caja",
-                "🎯 Escenarios","🌪️ Sensibilidad","🏙️ Urbanístico","🗓️ Cronograma","💰 Ingresos","🏦 Apalancamiento"])
+# ============ INICIO (tablero/menú) ============
+if seccion=="Inicio":
+    st.markdown("## Evaluación Financiera de Proyectos")
+    st.caption("Tablero de inicio — usa el **menú lateral** para navegar. Resumen del proyecto activo:")
+    g=st.columns(4)
+    cards=[("📝 Datos",["Datos del proyecto","Áreas y lote","Etapas, producto y ventas","Costos · Recaudo · Financiero"]),
+           ("📊 Resultados",["P&G (Estado de Resultados)","Reparto CG / socio","Distribución de costos","Análisis urbanístico"]),
+           ("💵 Flujo & Financiación",["Flujo de caja","Apalancamiento (crédito constructor)","Ingresos (recaudo)","Cronograma de hitos"]),
+           ("🎯 Análisis",["Escenarios (base/opt/pes)","Sensibilidad (tornado)"])]
+    for i,(t,items) in enumerate(cards):
+        li="".join(f"<li>{x}</li>" for x in items)
+        g[i].markdown(f'<div class="navcard"><h4>{t}</h4><ul>{li}</ul></div>', unsafe_allow_html=True)
+    st.write("")
+    r=R.get("hitos",{})
+    if r:
+        st.markdown("##### Cronograma del portafolio")
+        rows=[{"Etapa":r[c]["nombre"],"Unidades":r[c]["unidades"],"Inicio Ventas":r[c]["IV"],
+               "Pto Equilibrio":r[c]["PE"],"Fin Ventas":r[c]["FV"],"Inicio Constr.":r[c].get("IC"),"Fin Constr.":r[c].get("FC")} for c in sorted(r)]
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    st.caption(f"APEX ARCHITECT® · modelo financiero CG · {len(par.get('etapas',[]))} etapas · {meta.get('unidades',0)} unidades")
 
-# ============ tabs[0] · DATOS DEL PROYECTO ============
-with tabs[0]:
+# ============ DATOS DEL PROYECTO ============
+if seccion=="Datos del proyecto":
     st.markdown("### 📝 Datos del proyecto")
-    st.caption("Ingresa aquí toda la información del proyecto. **No se importan archivos** — todo se digita en la plataforma, "
-               "garantizando consistencia. Las demás pestañas se actualizan automáticamente.")
-
+    st.caption("Ingresa aquí toda la información del proyecto. **No se importan archivos** — todo se digita en la plataforma. "
+               "Las demás secciones se calculan automáticamente.")
     with st.expander("1 · Datos generales", expanded=True):
-        cg1=st.columns(3)
-        meta_e=par.setdefault("meta",{})
+        cg1=st.columns(3); meta_e=par.setdefault("meta",{})
         meta_e["nombre"]=cg1[0].text_input("Nombre del proyecto", meta_e.get("nombre",""))
         meta_e["ubicacion"]=cg1[1].text_input("Ubicación (ciudad)", meta_e.get("ubicacion",""))
         meta_e["zona"]=cg1[2].text_input("Zona / Barrio", meta_e.get("zona",""))
-        cg2=st.columns(3)
-        tipos=["No VIS","VIS","VIP","Mixto"]
-        meta_e["tipo"]=cg2[0].selectbox("Tipo de vivienda", tipos,
-            index=tipos.index(meta_e["tipo"]) if meta_e.get("tipo") in tipos else 0)
+        cg2=st.columns(3); tipos=["No VIS","VIS","VIP","Mixto"]
+        meta_e["tipo"]=cg2[0].selectbox("Tipo de vivienda", tipos, index=tipos.index(meta_e["tipo"]) if meta_e.get("tipo") in tipos else 0)
         _raiz=next((e for e in par["etapas"] if not e.get("sucesora")), (par["etapas"][0] if par["etapas"] else None))
         if _raiz is not None:
             try: _fi=date.fromisoformat(str(_raiz.get("fecha_inicio") or "2026-01-01")[:10])
             except Exception: _fi=date(2026,1,1)
             _raiz["fecha_inicio"]=str(cg2[1].date_input("Fecha de inicio de ventas (etapa raíz)", value=_fi, key=f"fi_{sel}"))
         _tot_und=int(sum(e.get("und",0) or 0 for e in par.get("etapas",[])))
-        cg2[2].metric("Unidades totales", _tot_und,
-            help="Suma automática de las unidades por etapa. Ajusta las unidades en la sección «3 · Etapas».")
-
+        cg2[2].metric("Unidades totales", _tot_und, help="Suma automática de las unidades por etapa. Ajústalas en «3 · Etapas».")
     with st.expander("2 · Áreas y lote (m²)", expanded=True):
         a=par.setdefault("areas",{}); ac=st.columns(4)
         a["m2_vendibles"]=ac[0].number_input("Área vendible total", value=float(a.get("m2_vendibles",0)), step=100.0, format="%.0f")
         a["m2_construidos"]=ac[1].number_input("Área construida total", value=float(a.get("m2_construidos",0)), step=100.0, format="%.0f")
         a["lote_bruta"]=ac[2].number_input("Área lote (bruta)", value=float(a.get("lote_bruta",0)), step=100.0, format="%.0f")
         a["lote_util"]=ac[3].number_input("Área lote (útil)", value=float(a.get("lote_util",0)), step=100.0, format="%.0f")
-
     with st.expander("3 · Etapas, producto y ventas", expanded=True):
-        st.caption("✏️ Ajusta las **unidades** de cada etapa en la columna *Unidades* (el total se suma arriba). "
-                   "Cada etapa abre ventas cuando su **sucesora** (cód. de la etapa anterior) llega al equilibrio; "
-                   "la raíz no tiene sucesora. **Precio**: elige $/m² (× área/und) o $/und.")
+        st.caption("✏️ Ajusta las **unidades** de cada etapa en la columna *Unidades*. Cada etapa abre ventas cuando su "
+                   "**sucesora** llega al equilibrio; la raíz no tiene sucesora. **Precio**: $/m² (× área/und) o $/und.")
         cols=["cod","nom","und","metodo","precio","area_und","vmes","frec","pe_pct","sucesora","desfase","dur_obra","escrituracion"]
         df_et=pd.DataFrame(par["etapas"]).reindex(columns=cols)
         if "metodo" in df_et: df_et["metodo"]=df_et["metodo"].fillna("$/m²")
@@ -175,12 +193,12 @@ with tabs[0]:
             if (r.get("nom") in (None,"")) and not r.get("und"): continue
             und=_i(r.get("und")) or 0; metodo=r.get("metodo") or "$/m²"
             precio=_f(r.get("precio")) or 0; area=_f(r.get("area_und")) or 0
-            ventas_miles = und*precio*area/1000 if metodo=="$/m²" else und*precio/1000
-            recs.append({"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa","und":und,
-                "metodo":metodo,"precio":precio,"area_und":area,"ventas_miles":ventas_miles,
-                "vmes":_i(r.get("vmes")) or 6,"frec":_i(r.get("frec")) or 1,"pe_pct":_f(r.get("pe_pct")) or 0.60,
-                "sucesora":_i(r.get("sucesora")),"desfase":_i(r.get("desfase")) or 0,"obra_offset":1,
-                "dur_obra":_i(r.get("dur_obra")) or 24,"escrituracion":_i(r.get("escrituracion")) or 30})
+            ventas_miles=und*precio*area/1000 if metodo=="$/m²" else und*precio/1000
+            recs.append({"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa","und":und,"metodo":metodo,
+                "precio":precio,"area_und":area,"ventas_miles":ventas_miles,"vmes":_i(r.get("vmes")) or 6,
+                "frec":_i(r.get("frec")) or 1,"pe_pct":_f(r.get("pe_pct")) or 0.60,"sucesora":_i(r.get("sucesora")),
+                "desfase":_i(r.get("desfase")) or 0,"obra_offset":1,"dur_obra":_i(r.get("dur_obra")) or 24,
+                "escrituracion":_i(r.get("escrituracion")) or 30})
         for idx,r in enumerate(recs):
             if not r["cod"]: r["cod"]=idx+1
         if _raiz is not None:
@@ -191,7 +209,6 @@ with tabs[0]:
             st.session_state.par.setdefault("meta",{})["unidades"]=sum(r["und"] for r in recs)
         tv=sum(r["ventas_miles"] for r in recs)
         st.success(f"**{len(recs)} etapas · {sum(r['und'] for r in recs)} unidades · ventas totales {tv/1000:,.0f} M**")
-
     with st.expander("4 · Costos"):
         c=par["costos_pct"]; cc1=st.columns(3)
         c["directos"]=cc1[0].slider("Costo directo (% ventas)", 0.30, 0.70, float(c["directos"]), 0.001)
@@ -202,13 +219,11 @@ with tabs[0]:
         cr=par.setdefault("cronograma",{})
         cr["dur_obra"]=cc2[1].number_input("Duración de obra (meses, global)", value=int(cr.get("dur_obra",40)), step=1)
         c["util_lote"]=cc2[2].slider("Utilidad del lote (% ventas)", 0.0, 0.10, float(c.get("util_lote",0.045)), 0.001)
-
     with st.expander("5 · Recaudo (condiciones de venta)"):
         f=par["financiero"]; rc1=st.columns(3)
         f["sep_und_miles"]=rc1[0].number_input("Separación por unidad (miles COP)", value=float(f.get("sep_und_miles",5000)), step=500.0, format="%.0f")
         f["diferido_sep"]=rc1[1].number_input("Diferido separación (meses)", value=int(f.get("diferido_sep",4)), step=1)
         f["pct_ci"]=rc1[2].slider("% Cuota inicial", 0.10, 0.50, float(f.get("pct_ci",0.30)), 0.01)
-
     with st.expander("6 · Financiero (avanzado — valores por defecto CG)"):
         f=par["financiero"]; fc1=st.columns(3)
         f["split_cg"]=fc1[0].slider("Reparto utilidad CG", 0.0, 1.0, float(f.get("split_cg",0.70)), 0.05)
@@ -218,8 +233,8 @@ with tabs[0]:
         f["renta"]=fc2[0].slider("Provisión renta", 0.0, 0.40, float(f.get("renta",0.35)), 0.01)
         f["tir_apalancada_ref"]=fc2[1].number_input("TIR apalancada de referencia", value=float(f.get("tir_apalancada_ref",0.20)), step=0.01, format="%.4f")
 
-# ============ tabs de resultados ============
-with tabs[1]:
+# ============ P&G ============
+if seccion=="P&G":
     df=pd.DataFrame([
         ("Ingresos por ventas",pg["ventas"]),("(+) Reconocimiento Codensa",pg["recon_codensa"]),
         ("(-) Costo lote",-pg["costo_lote"]),("(-) Costos directos",-pg["directos"]),
@@ -235,101 +250,34 @@ with tabs[1]:
     kpi(e[2],"Incidencia directos",fmt_pct(pg["directos"]/costo_total if costo_total else 0))
     kpi(e[3],"Incidencia indirectos+lote",fmt_pct((pg["indirectos"]+pg["costo_lote"])/costo_total if costo_total else 0))
 
-with tabs[2]:
-    fig=go.Figure(data=[go.Pie(labels=["CG","Socio"],values=[pg["cg"],pg["socio"]],hole=.55,
-                  marker_colors=[TEAL,AMBER])]); fig.update_layout(title="Distribución de resultados",height=360)
-    st.plotly_chart(fig, width="stretch")
+# ============ REPARTO ============
+if seccion=="Reparto":
+    fig=go.Figure(data=[go.Pie(labels=["CG","Socio"],values=[pg["cg"],pg["socio"]],hole=.55,marker_colors=[TEAL,AMBER])])
+    fig.update_layout(title="Distribución de resultados",height=380); st.plotly_chart(fig, width="stretch")
 
-with tabs[3]:
+# ============ DISTRIBUCIÓN COSTOS ============
+if seccion=="Distribución costos":
     d=R["distribucion"]; m=list(range(1,len(d["escalada"])+1))
     fig=go.Figure(); fig.add_bar(x=m,y=d["escalada"],name="Costo mensual",marker_color=TEAL)
     fig.add_scatter(x=m,y=d["acumulada"],name="Acumulado",yaxis="y2",line=dict(color=AMBER,width=3))
     fig.update_layout(title=f"Distribución del costo directo — curva Gauss de avance de obra (pico mes {d['pico_mes']})",
-                      yaxis2=dict(overlaying="y",side="right",showgrid=False),height=420,xaxis_title="Mes de obra")
+                      yaxis2=dict(overlaying="y",side="right",showgrid=False),height=440,xaxis_title="Mes de obra")
     st.plotly_chart(fig, width="stretch")
 
-with tabs[4]:
+# ============ FLUJO DE CAJA ============
+if seccion=="Flujo de caja":
     n=len([x for x in fl["flujo"] if abs(x)>1])+2; m=list(range(1,n+1))
     fig=go.Figure(); fig.add_bar(x=m,y=fl["flujo"][:n],name="Flujo mensual",marker_color=TEAL)
     fig.add_scatter(x=m,y=fl["acumulado"][:n],name="Acumulado",line=dict(color=INK,width=3))
     fig.add_scatter(x=m,y=fl["saldo_credito"][:n],name="Saldo crédito",line=dict(color=AMBER,dash="dot"))
-    fig.update_layout(title="Flujo de caja del proyecto (modelo simplificado)",height=430,xaxis_title="Mes")
+    fig.update_layout(title="Flujo de caja del proyecto (modelo simplificado)",height=440,xaxis_title="Mes")
     st.plotly_chart(fig, width="stretch")
     cc=st.columns(4)
-    kpi(cc[0],"TIR proyecto (no apal.)",fmt_pct(fl["tir_proyecto"]))
-    kpi(cc[1],"Crédito constructor máx",fmt_mm(fl["credito_max"]))
-    kpi(cc[2],"Necesidad máx de caja",fmt_mm(fl["max_caja"]))
-    kpi(cc[3],"Intereses (prelim.)",fmt_mm(fl["intereses_total"]))
+    kpi(cc[0],"TIR proyecto (no apal.)",fmt_pct(fl["tir_proyecto"])); kpi(cc[1],"Crédito constructor máx",fmt_mm(fl["credito_max"]))
+    kpi(cc[2],"Necesidad máx de caja",fmt_mm(fl["max_caja"])); kpi(cc[3],"Intereses (prelim.)",fmt_mm(fl["intereses_total"]))
 
-with tabs[5]:
-    esc=R["escenarios"]
-    fig=go.Figure(data=[go.Bar(x=list(esc.keys()),y=[v["util_oper"] for v in esc.values()],
-        marker_color=[TEAL,GREEN,RED],text=[fmt_pct(v["margen"]) for v in esc.values()],textposition="outside")])
-    fig.update_layout(title="Utilidad operativa por escenario",height=400)
-    st.plotly_chart(fig, width="stretch")
-    st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo")
-
-with tabs[6]:
-    s=R["sensibilidades"]; it=sorted(s.items(),key=lambda kv:kv[1])
-    fig=go.Figure(data=[go.Bar(y=[k for k,_ in it],x=[v for _,v in it],orientation="h",
-        marker_color=[GREEN if v>=0 else RED for _,v in it])])
-    fig.update_layout(title="Tornado — impacto en utilidad operativa (miles COP)",height=360)
-    st.plotly_chart(fig, width="stretch")
-
-with tabs[7]:
-    u=R["urbanistico"]
-    df=pd.DataFrame([
-        ("Área lote bruta (m²)",u["lote_bruta"]),("Área lote útil (m²)",u["lote_util"]),
-        ("Ratio bruta/útil",u["ratio_bruta_util"]),("Área construida (m²)",u["area_construida"]),
-        ("Área vendible (m²)",u["area_vendible"]),("Índice de construcción",u["indice_construccion"]),
-        ("Aprovechamiento",u["aprovechamiento"]),("Densidad (und/ha)",u["densidad_und_ha"]),
-        ("Precio venta /m² (COP)",u["precio_m2_vend"]),("Costo directo /m² const (COP)",u["costo_dir_m2_const"]),
-    ],columns=["Indicador","Valor"])
-    st.dataframe(df.style.format({"Valor":"{:,.2f}"}, na_rep="—"), width="stretch", hide_index=True)
-
-with tabs[8]:
-    h=R.get("hitos",{})
-    if not h:
-        st.info("Completa los datos de etapas (en 📝 Datos del proyecto) para ver el cronograma de hitos.")
-    else:
-        rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],"Inicio Ventas":h[c]["IV"],
-               "Pto Equilibrio":h[c]["PE"],"Fin Ventas":h[c]["FV"],
-               "Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")} for c in sorted(h)]
-        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        fig=go.Figure()
-        for c in sorted(h, reverse=True):
-            x=h[c]; y=x["nombre"]; fin=max(d for d in [x["FV"],x.get("FC")] if d)
-            fig.add_scatter(x=[x["IV"],fin],y=[y,y],mode="lines",line=dict(color="#C8D2DE",width=5),showlegend=False,hoverinfo="skip")
-            pts=[("Inicio Ventas",x["IV"],TEAL,"circle"),("Pto Equilibrio",x["PE"],AMBER,"diamond"),
-                 ("Inicio Constr.",x.get("IC"),GREEN,"triangle-up"),("Fin Constr.",x.get("FC"),RED,"triangle-down"),
-                 ("Fin Ventas",x["FV"],INK,"circle")]
-            pts=[p for p in pts if p[1]]
-            fig.add_scatter(x=[p[1] for p in pts],y=[y]*len(pts),mode="markers",
-                marker=dict(size=13,color=[p[2] for p in pts],symbol=[p[3] for p in pts]),
-                showlegend=False,text=[p[0] for p in pts],hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
-        fig.update_layout(title="Cronograma por etapa — ventas y construcción",height=140+64*len(h),xaxis_title="")
-        st.plotly_chart(fig, width="stretch")
-        st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas.")
-
-with tabs[9]:
-    rc=R.get("recaudo",{})
-    if not rc or not rc.get("total"):
-        st.info("Completa los datos de etapas para ver el recaudo de ingresos.")
-    else:
-        sepr=rc["separacion"]; cir=rc["cuota_inicial"]; subr=rc["subrogacion"]; tot=rc["total"]
-        n=max([i for i,v in enumerate(tot) if abs(v)>1], default=0)+2; m=list(range(1,n+1))
-        fig=go.Figure()
-        fig.add_scatter(x=m,y=sepr[:n],name="Separación",stackgroup="r",line=dict(width=0.5,color=AMBER))
-        fig.add_scatter(x=m,y=cir[:n],name="Cuota inicial",stackgroup="r",line=dict(width=0.5,color=TEAL))
-        fig.add_scatter(x=m,y=subr[:n],name="Subrogación",stackgroup="r",line=dict(width=0.5,color=GREEN))
-        fig.update_layout(title="Recaudo mensual por componente",height=430,xaxis_title="Mes")
-        st.plotly_chart(fig, width="stretch")
-        cc=st.columns(4)
-        kpi(cc[0],"Separación",fmt_mm(sum(sepr))); kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
-        kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
-        st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega). Reconcilia con el valor de contrato.")
-
-with tabs[10]:
+# ============ APALANCAMIENTO ============
+if seccion=="Apalancamiento":
     a=R.get("apalancamiento",{})
     if not a or not a.get("operativo"):
         st.info("Completa los datos del proyecto para ver el apalancamiento.")
@@ -340,8 +288,7 @@ with tabs[10]:
             for y in yrs: s+=an[y]; cum.append(s)
             fig=go.Figure(); fig.add_bar(x=[str(y) for y in yrs],y=[an[y] for y in yrs],name="Flujo operativo",marker_color=TEAL)
             fig.add_scatter(x=[str(y) for y in yrs],y=cum,name="Acumulado",line=dict(color=INK,width=3))
-            fig.update_layout(title="Flujo de caja consolidado del portafolio (anual)",height=400)
-            st.plotly_chart(fig, width="stretch")
+            fig.update_layout(title="Flujo de caja consolidado del portafolio (anual)",height=400); st.plotly_chart(fig, width="stretch")
         c1=st.columns(4)
         kpi(c1[0],"TIR proyecto",fmt_pct(a.get("tir_proyecto")))
         kpi(c1[1],"VPN @WACC",fmt_mm(a["vpn_proyecto"]) if a.get("vpn_proyecto") is not None else "n/d")
@@ -351,14 +298,79 @@ with tabs[10]:
         kpi(c2[0],"Crédito constructor máx",fmt_mm(a["credito_max"])); kpi(c2[1],"Necesidad máx de caja",fmt_mm(a["max_necesidad_caja"]))
         kpi(c2[2],"Valor financiable",fmt_mm(a["valor_financiable"])); kpi(c2[3],"Intereses",fmt_mm(a["intereses_total"]))
         n=max([i for i,v in enumerate(op) if abs(v)>1],default=0)+2; m=list(range(1,n+1))
-        fig2=go.Figure()
-        fig2.add_scatter(x=m,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=2))
+        fig2=go.Figure(); fig2.add_scatter(x=m,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=2))
         fig2.add_scatter(x=m,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
-        fig2.update_layout(title="Mensual: caja acumulada y saldo de crédito",height=340,xaxis_title="Mes")
-        st.plotly_chart(fig2, width="stretch")
+        fig2.update_layout(title="Mensual: caja acumulada y saldo de crédito",height=340,xaxis_title="Mes"); st.plotly_chart(fig2, width="stretch")
         st.caption("Crédito constructor: cobertura (~80%) del costo de obra, amortizado con las subrogaciones; los aportes cubren el resto.")
 
-# ---------------- acciones ----------------
+# ============ CRONOGRAMA ============
+if seccion=="Cronograma":
+    h=R.get("hitos",{})
+    if not h:
+        st.info("Completa los datos de etapas (en 📝 Datos del proyecto) para ver el cronograma.")
+    else:
+        rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],"Inicio Ventas":h[c]["IV"],"Pto Equilibrio":h[c]["PE"],
+               "Fin Ventas":h[c]["FV"],"Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")} for c in sorted(h)]
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        fig=go.Figure()
+        for c in sorted(h, reverse=True):
+            x=h[c]; y=x["nombre"]; fin=max(d for d in [x["FV"],x.get("FC")] if d)
+            fig.add_scatter(x=[x["IV"],fin],y=[y,y],mode="lines",line=dict(color="#C8D2DE",width=5),showlegend=False,hoverinfo="skip")
+            pts=[("Inicio Ventas",x["IV"],TEAL,"circle"),("Pto Equilibrio",x["PE"],AMBER,"diamond"),
+                 ("Inicio Constr.",x.get("IC"),GREEN,"triangle-up"),("Fin Constr.",x.get("FC"),RED,"triangle-down"),
+                 ("Fin Ventas",x["FV"],INK,"circle")]; pts=[p for p in pts if p[1]]
+            fig.add_scatter(x=[p[1] for p in pts],y=[y]*len(pts),mode="markers",
+                marker=dict(size=13,color=[p[2] for p in pts],symbol=[p[3] for p in pts]),
+                showlegend=False,text=[p[0] for p in pts],hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
+        fig.update_layout(title="Cronograma por etapa — ventas y construcción",height=140+64*len(h),xaxis_title=""); st.plotly_chart(fig, width="stretch")
+        st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas.")
+
+# ============ INGRESOS ============
+if seccion=="Ingresos":
+    rc=R.get("recaudo",{})
+    if not rc or not rc.get("total"):
+        st.info("Completa los datos de etapas para ver el recaudo de ingresos.")
+    else:
+        sepr=rc["separacion"]; cir=rc["cuota_inicial"]; subr=rc["subrogacion"]; tot=rc["total"]
+        n=max([i for i,v in enumerate(tot) if abs(v)>1], default=0)+2; m=list(range(1,n+1))
+        fig=go.Figure()
+        fig.add_scatter(x=m,y=sepr[:n],name="Separación",stackgroup="r",line=dict(width=0.5,color=AMBER))
+        fig.add_scatter(x=m,y=cir[:n],name="Cuota inicial",stackgroup="r",line=dict(width=0.5,color=TEAL))
+        fig.add_scatter(x=m,y=subr[:n],name="Subrogación",stackgroup="r",line=dict(width=0.5,color=GREEN))
+        fig.update_layout(title="Recaudo mensual por componente",height=440,xaxis_title="Mes"); st.plotly_chart(fig, width="stretch")
+        cc=st.columns(4)
+        kpi(cc[0],"Separación",fmt_mm(sum(sepr))); kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
+        kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
+        st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega).")
+
+# ============ ESCENARIOS ============
+if seccion=="Escenarios":
+    esc=R["escenarios"]
+    fig=go.Figure(data=[go.Bar(x=list(esc.keys()),y=[v["util_oper"] for v in esc.values()],
+        marker_color=[TEAL,GREEN,RED],text=[fmt_pct(v["margen"]) for v in esc.values()],textposition="outside")])
+    fig.update_layout(title="Utilidad operativa por escenario",height=420); st.plotly_chart(fig, width="stretch")
+    st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo")
+
+# ============ SENSIBILIDAD ============
+if seccion=="Sensibilidad":
+    s=R["sensibilidades"]; it=sorted(s.items(),key=lambda kv:kv[1])
+    fig=go.Figure(data=[go.Bar(y=[k for k,_ in it],x=[v for _,v in it],orientation="h",
+        marker_color=[GREEN if v>=0 else RED for _,v in it])])
+    fig.update_layout(title="Tornado — impacto en utilidad operativa (miles COP)",height=380); st.plotly_chart(fig, width="stretch")
+
+# ============ URBANÍSTICO ============
+if seccion=="Urbanístico":
+    u=R["urbanistico"]
+    df=pd.DataFrame([
+        ("Área lote bruta (m²)",u["lote_bruta"]),("Área lote útil (m²)",u["lote_util"]),
+        ("Ratio bruta/útil",u["ratio_bruta_util"]),("Área construida (m²)",u["area_construida"]),
+        ("Área vendible (m²)",u["area_vendible"]),("Índice de construcción",u["indice_construccion"]),
+        ("Aprovechamiento",u["aprovechamiento"]),("Densidad (und/ha)",u["densidad_und_ha"]),
+        ("Precio venta /m² (COP)",u["precio_m2_vend"]),("Costo directo /m² const (COP)",u["costo_dir_m2_const"]),
+    ],columns=["Indicador","Valor"])
+    st.dataframe(df.style.format({"Valor":"{:,.2f}"}, na_rep="—"), width="stretch", hide_index=True)
+
+# ---------------- acciones (siempre) ----------------
 st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
 a1,a2=st.columns(2)
 with a1:
@@ -376,5 +388,5 @@ with a2:
     st.download_button("💾 Descargar proyecto (.json, respaldo)",
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
-        help="Respaldo de tu proyecto para guardarlo localmente. (No es fuente de entrada — la data se digita en la plataforma.)")
-st.caption(f"Aplicativo v1.9.1 · motor v{ENGINE_V} · data 100% en plataforma · estructura APEX · CG Constructora")
+        help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
+st.caption(f"Aplicativo v2.0.0 · motor v{ENGINE_V} · navegación por menú · estructura APEX · CG Constructora")

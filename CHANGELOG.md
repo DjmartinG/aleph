@@ -2,6 +2,17 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.0.0] — 2026-05-29
+### Cambiado (mayor — navegación)
+- **Navegación por menú lateral (estilo APEX)** en vez de pestañas: menú vertical con iconos
+  (Inicio · Datos · P&G · Reparto · Distribución · Flujo · Apalancamiento · Cronograma ·
+  Ingresos · Escenarios · Sensibilidad · Urbanístico). Elimina el scroll horizontal.
+- Nuevo **tablero de Inicio** ("Evaluación Financiera de Proyectos") con tarjetas agrupadas
+  (Datos · Resultados · Flujo & Financiación · Análisis) + cronograma del portafolio — réplica
+  del INICIO de APEX.
+- Header + KPIs visibles en todas las secciones.
+- Dependencia: `streamlit-option-menu`.
+
 ## [1.9.1] — 2026-05-29
 ### Corregido
 - "Unidades totales" en Datos generales ya es un **conteo en vivo** (suma de las unidades por
