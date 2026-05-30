@@ -584,4 +584,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.6.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.7.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

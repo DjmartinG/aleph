@@ -2,6 +2,15 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.7.0] — 2026-05-30
+### Añadido (motor — calendario real por etapa)
+- `engine/portafolio.py`: nueva opción **`ic_offset`** por etapa (meses desde el Inicio de Ventas
+  hasta el Inicio de Obra). Permite fijar la **fecha real de inicio de construcción** en proyectos
+  en ejecución donde la pre-venta antecede a la obra por años (p. ej. Navarra: Etapa 1 vendida
+  2022-23, construida 2025-26). Por defecto (sin `ic_offset`) se mantiene la lógica anterior
+  (obra arranca tras el Punto de Equilibrio). Combinable con `fecha_inicio` y `escrituracion`
+  por etapa para modelar el calendario fiel de un proyecto en curso.
+
 ## [2.6.0] — 2026-05-30
 ### Añadido (consolidado del portafolio)
 - En **🏢 Proyectos activos**, el encabezado muestra los **KPIs consolidados** del portafolio
