@@ -2,6 +2,18 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.5.0] — 2026-05-30
+### Añadido (datos reales privados)
+- La app puede cargar **proyectos privados** desde `proyectos_privados/` (en `.gitignore`, no se
+  publica). Tienen prioridad sobre los ilustrativos del mismo proyecto (que se ocultan localmente);
+  el deploy público —sin esa carpeta— sigue mostrando solo cifras ilustrativas.
+- Sello en el encabezado: **🔒 datos reales** vs *cifras ilustrativas*.
+### Datos
+- Cargadas las prefactibilidades **reales** de Navarra, Dominica y Torres de Campiñas (extraídas de
+  los Excel con `execution/extraer_prefactibilidad.py` + `cargar_reales.py`). El motor **reconcilia
+  exacto la utilidad operativa real** de los tres (otros ingresos —comercio/parqueaderos/IVA/
+  recuperaciones— absorbidos para cerrar el P&G). Los datos reales NO están en el repo público.
+
 ## [2.4.0] — 2026-05-30
 ### Añadido (ritmo de ventas y entregas — paridad APEX R.ventas)
 - **Cronograma** ahora muestra, además de los hitos: (1) tabla **Ritmo de ventas y entregas**

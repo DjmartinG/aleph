@@ -17,7 +17,7 @@ from engine import calcular, __version__ as ENGINE_V
 # ---------------- marca CG ----------------
 TEAL="#004854"; AMBER="#F09C00"; INK="#13262B"; MUTED="#6B7280"
 GREEN="#1E874B"; RED="#C0392B"; BORDER="#E6E9EF"
-HERE=Path(__file__).parent; PROY_DIR=HERE/"proyectos"; LOGO=HERE/"assets"/"logo_cg.png"
+HERE=Path(__file__).parent; PROY_DIR=HERE/"proyectos"; PRIV_DIR=HERE/"proyectos_privados"; LOGO=HERE/"assets"/"logo_cg.png"
 _icon = str(LOGO) if LOGO.exists() else "🏗️"
 st.set_page_config(page_title="Factibilidad CG", page_icon=_icon, layout="wide")
 
@@ -59,8 +59,16 @@ def fmt_pct(x): return f"{x*100:.2f}%" if x is not None else "n/d"
 def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
-def cargar(n): return json.loads((PROY_DIR/f"{n}.json").read_text(encoding="utf-8"))
-def listar(): return sorted(p.stem for p in PROY_DIR.glob("*.json"))
+def cargar(n):
+    p = PRIV_DIR/f"{n}.json"                                  # privado (datos reales) tiene prioridad
+    if not p.exists(): p = PROY_DIR/f"{n}.json"
+    return json.loads(p.read_text(encoding="utf-8"))
+def listar():
+    priv = sorted(p.stem for p in PRIV_DIR.glob("*.json")) if PRIV_DIR.exists() else []
+    cubiertas = {s[:-5] for s in priv if s.endswith("_REAL")}  # "1_navarra_REAL" oculta "1_navarra"
+    pub = sorted(p.stem for p in PROY_DIR.glob("*.json") if p.stem not in cubiertas)
+    return priv + pub
+def es_real(n): return (PRIV_DIR/f"{n}.json").exists()
 
 def nuevo_proyecto():
     return {"meta":{"nombre":"Nuevo proyecto","ubicacion":"","zona":"","tipo":"No VIS","unidades":0,"moneda":"miles COP"},
@@ -112,7 +120,8 @@ if seccion != "Inicio":
     hc1,hc2 = st.columns([1,9])
     if LOGO.exists(): hc1.image(str(LOGO), width=78)
     hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
-    hc2.caption(f"CG Constructora · {meta.get('nombre','')} · {meta.get('ubicacion','')} · {meta.get('unidades','')} unidades")
+    _badge = " · 🔒 datos reales" if es_real(sel) else " · cifras ilustrativas"
+    hc2.caption(f"CG Constructora · {meta.get('nombre','')} · {meta.get('ubicacion','')} · {meta.get('unidades','')} unidades{_badge}")
     st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
     k=st.columns(6)
     kpi(k[0],"Ventas totales", fmt_mm(pg["ventas"]))
@@ -505,4 +514,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.4.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.5.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
