@@ -131,7 +131,9 @@ with tabs[0]:
             try: _fi=date.fromisoformat(str(_raiz.get("fecha_inicio") or "2026-01-01")[:10])
             except Exception: _fi=date(2026,1,1)
             _raiz["fecha_inicio"]=str(cg2[1].date_input("Fecha de inicio de ventas (etapa raíz)", value=_fi, key=f"fi_{sel}"))
-        cg2[2].metric("Unidades totales", int(meta_e.get("unidades",0)))
+        _tot_und=int(sum(e.get("und",0) or 0 for e in par.get("etapas",[])))
+        cg2[2].metric("Unidades totales", _tot_und,
+            help="Suma automática de las unidades por etapa. Ajusta las unidades en la sección «3 · Etapas».")
 
     with st.expander("2 · Áreas y lote (m²)", expanded=True):
         a=par.setdefault("areas",{}); ac=st.columns(4)
@@ -141,8 +143,9 @@ with tabs[0]:
         a["lote_util"]=ac[3].number_input("Área lote (útil)", value=float(a.get("lote_util",0)), step=100.0, format="%.0f")
 
     with st.expander("3 · Etapas, producto y ventas", expanded=True):
-        st.caption("Cada **etapa** abre ventas cuando su **sucesora** (cód. de la etapa anterior) llega al equilibrio. "
-                   "La etapa raíz no tiene sucesora. **Precio**: elige $/m² (× área/und) o $/und.")
+        st.caption("✏️ Ajusta las **unidades** de cada etapa en la columna *Unidades* (el total se suma arriba). "
+                   "Cada etapa abre ventas cuando su **sucesora** (cód. de la etapa anterior) llega al equilibrio; "
+                   "la raíz no tiene sucesora. **Precio**: elige $/m² (× área/und) o $/und.")
         cols=["cod","nom","und","metodo","precio","area_und","vmes","frec","pe_pct","sucesora","desfase","dur_obra","escrituracion"]
         df_et=pd.DataFrame(par["etapas"]).reindex(columns=cols)
         if "metodo" in df_et: df_et["metodo"]=df_et["metodo"].fillna("$/m²")
@@ -374,4 +377,4 @@ with a2:
         json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
         file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
         help="Respaldo de tu proyecto para guardarlo localmente. (No es fuente de entrada — la data se digita en la plataforma.)")
-st.caption(f"Aplicativo v1.9.0 · motor v{ENGINE_V} · data 100% en plataforma · estructura APEX · CG Constructora")
+st.caption(f"Aplicativo v1.9.1 · motor v{ENGINE_V} · data 100% en plataforma · estructura APEX · CG Constructora")

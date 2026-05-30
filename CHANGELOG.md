@@ -2,6 +2,11 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [1.9.1] — 2026-05-29
+### Corregido
+- "Unidades totales" en Datos generales ya es un **conteo en vivo** (suma de las unidades por
+  etapa) con guía clara. Las unidades se ajustan en la columna *Unidades* de la tabla de etapas.
+
 ## [1.9.0] — 2026-05-29
 ### Cambiado (importante)
 - **Toda la data se ingresa EN la plataforma** — se elimina la importación de archivos
