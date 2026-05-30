@@ -92,31 +92,37 @@ def _irr_anual(flujos):
 @st.cache_data(show_spinner=False)
 def consolidado(_keys):
     """Consolidado del portafolio. _keys = tuple(listar()) → invalida el caché si cambia el set."""
-    N=180; oper=[0.0]*N; equity=[0.0]*N; saldo=[0.0]*N
+    # eje GLOBAL absoluto (epoch ene-2022) para alinear proyectos que arrancan en años distintos
+    EPOCH=2022; N=240; oper=[0.0]*N; equity=[0.0]*N; saldo=[0.0]*N
     ventas=util=udi=vpn=und=0.0; n=0; filas=[]; tir_num=tir_den=0.0
     for name in _keys:
         try:
             par=cargar(name); R=calcular(copy.deepcopy(par))
         except Exception:
             continue
-        pg=R["pyg"]; fl=R.get("flujo",{}) or {}; mt=R["meta"]
+        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]; h=R.get("hitos") or {}   # waterfall calibrado
         ventas+=pg["ventas"]; util+=pg["util_oper"]; udi+=pg["udi"]
-        if fl.get("vpn_proyecto"): vpn+=fl["vpn_proyecto"]
-        tref=fl.get("tir_apalancada_ref")
+        if ap.get("vpn_proyecto"): vpn+=ap["vpn_proyecto"]
+        tref=ap.get("tir_apalancada_ref")
         if tref: tir_num+=pg["ventas"]*tref; tir_den+=pg["ventas"]   # TIR ref ponderada por ventas
         und+=sum(e.get("und",0) or 0 for e in par.get("etapas",[]))
-        o=fl.get("operativo") or []; e=fl.get("flujo_equity") or []; s=fl.get("saldo_credito") or []
-        for m in range(N):
-            if m<len(o): oper[m]+=o[m]
-            if m<len(e): equity[m]+=e[m]
-            if m<len(s): saldo[m]+=s[m]
+        base=min((h[c]["IV"] for c in h), default=None)             # offset al eje global
+        off=((base.year-EPOCH)*12+(base.month-1)) if base else 0
+        o=ap.get("operativo") or []; e=ap.get("flujo_equity") or []; s=ap.get("saldo_credito") or []
+        for m in range(max(len(o),len(e),len(s))):
+            g=off+m
+            if 0<=g<N:
+                if m<len(o): oper[g]+=o[m]
+                if m<len(e): equity[g]+=e[m]
+                if m<len(s): saldo[g]+=s[m]
         filas.append({"Proyecto":mt.get("nombre",name),"Unidades":sum(x.get("und",0) or 0 for x in par.get("etapas",[])),
                       "Ventas (M)":round(pg["ventas"]/1000),"Util. oper (M)":round(pg["util_oper"]/1000),
-                      "Margen":f"{pg['margen_oper']*100:.1f}%","Crédito máx (M)":round((fl.get('credito_max',0) or 0)/1000)})
+                      "Margen":f"{pg['margen_oper']*100:.1f}%","Crédito máx (M)":round((ap.get('credito_max',0) or 0)/1000)})
         n+=1
     return {"n":n,"unidades":int(und),"ventas":ventas,"util_oper":util,"udi":udi,"vpn":vpn,
             "margen":util/ventas if ventas else 0,
             "tir_ref":(tir_num/tir_den if tir_den else None),
+            "tir_eq":_irr_anual(equity),
             "credito_max":max(saldo) if saldo else 0.0,"filas":filas}
 
 def nuevo_proyecto():
@@ -163,6 +169,15 @@ with st.sidebar:
 
 # ---------------- cálculo ----------------
 R = calcular(copy.deepcopy(par)); pg=R["pyg"]; fl=R["flujo"]; meta=R["meta"]
+ap=R.get("apalancamiento") or {}
+# El crédito/VPN/TIR de decisión salen del waterfall CALIBRADO (apalancamiento), no del flujo_caja
+# legacy. Si el waterfall corrió, sus cifras mandan en los KPIs.
+if ap:
+    fl={**fl, "credito_max":ap.get("credito_max",fl.get("credito_max")),
+        "vpn_proyecto":ap.get("vpn_proyecto",fl.get("vpn_proyecto")),
+        "intereses_total":ap.get("intereses_total",fl.get("intereses_total")),
+        "tir_equity":ap.get("tir_equity"), "tir_apalancada_ref":ap.get("tir_apalancada_ref",fl.get("tir_apalancada_ref")),
+        "credito_prom":ap.get("credito_prom")}
 
 # ---------------- encabezado + KPIs ----------------
 CONS=None
@@ -178,9 +193,11 @@ if seccion == "Proyectos activos":
     kpi(k[0],"Ventas totales", fmt_mm(CONS["ventas"]), "reconciliado", GREEN)
     kpi(k[1],"Utilidad operativa", fmt_mm(CONS["util_oper"]), fmt_pct(CONS["margen"]), GREEN)
     kpi(k[2],"UDI", fmt_mm(CONS["udi"]), "reconciliado", GREEN)
-    kpi(k[3],"TIR apalancada (ref)", fmt_pct(CONS["tir_ref"]) if CONS["tir_ref"] is not None else "n/d", "ref · ponderada", MUTED)
-    kpi(k[4],"VPN @WACC (suma)", fmt_mm(CONS["vpn"]), "preliminar", AMBER)
-    kpi(k[5],"Crédito máx (pico)", fmt_mm(CONS["credito_max"]), "preliminar", AMBER)
+    _teqc=CONS.get("tir_eq")
+    kpi(k[3],"TIR apalancada", fmt_pct(_teqc) if _teqc is not None else "n/d",
+        (f"ref {fmt_pct(CONS['tir_ref'])}" if CONS.get("tir_ref") else "calculada"), GREEN)
+    kpi(k[4],"VPN @WACC (suma)", fmt_mm(CONS["vpn"]), "calculado", GREEN)
+    kpi(k[5],"Crédito máx (pico)", fmt_mm(CONS["credito_max"]), "pico alineado", MUTED)
     st.write("")
 elif seccion != "Inicio":
     hc1,hc2 = st.columns([1,9])
@@ -193,9 +210,13 @@ elif seccion != "Inicio":
     kpi(k[0],"Ventas totales", fmt_mm(pg["ventas"]))
     kpi(k[1],"Utilidad operativa", fmt_mm(pg["util_oper"]), fmt_pct(pg["margen_oper"]), GREEN)
     kpi(k[2],"UDI", fmt_mm(pg["udi"]))
-    kpi(k[3],"TIR apalancada (ref)", fmt_pct(fl["tir_apalancada_ref"]), "modelo aprobado", MUTED)
+    _teq=fl.get("tir_equity"); _tref=fl.get("tir_apalancada_ref")
+    if _teq is not None:
+        kpi(k[3],"TIR apalancada", fmt_pct(_teq), (f"ref {fmt_pct(_tref)}" if _tref else "calculada"), GREEN)
+    else:
+        kpi(k[3],"TIR apalancada (ref)", fmt_pct(_tref), "modelo aprobado", MUTED)
     kpi(k[4],"VPN @WACC", fmt_mm(fl["vpn_proyecto"]))
-    kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]))
+    kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]), f"prom {fmt_mm(fl.get('credito_prom',0))}", MUTED)
     st.write("")
 
 # ============ INICIO (portada / bienvenida) ============
@@ -270,10 +291,11 @@ if seccion=="Proyectos activos":
                       "Margen":f"{(CONS['margen'] if CONS else 0)*100:.1f}%",
                       "Crédito máx (M)":round((CONS["credito_max"] if CONS else 0)/1000)})
         st.dataframe(pd.DataFrame(filas), width="stretch", hide_index=True)
-        st.caption("Cifras en **millones COP**. **Ventas, utilidad operativa y UDI** se suman y están "
-                   "**reconciliadas** con las prefactibilidades reales. **TIR apalancada** = referencia (modelo "
-                   "aprobado) ponderada por ventas. **VPN y crédito máx** salen del módulo de flujo/apalancamiento "
-                   "**en calibración** → preliminares (el crédito tiende a sobreestimarse). "
+        st.caption("Cifras en **millones COP**. **Ventas, utilidad y UDI** se suman (reconciliadas con las "
+                   "prefactibilidades). **Crédito máx, VPN y TIR** salen del **waterfall de crédito calibrado** "
+                   "(Navarra valida exacto: crédito máx $56.827 M, TIR equity 41.9%). El pico de crédito se alinea "
+                   "por calendario absoluto. *Dominica y Torres usan aún calendario greenfield-2026 (pendiente "
+                   "anclar a fechas reales).* "
                    + ("Datos reales (privados)." if _proys and es_real(_proys[0]) else "Cifras ilustrativas."))
 
 # ============ DATOS DEL PROYECTO ============
@@ -584,4 +606,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.7.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.8.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

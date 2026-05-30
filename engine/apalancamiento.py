@@ -81,22 +81,31 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     # El crédito constructor financia COBERTURA (~80%) del costo directo a medida que se ejecuta la
     # obra, y se amortiza con las subrogaciones (créditos hipotecarios a la escrituración). El resto
     # (lote, indirectos, 20% de obra) lo cubren los aportes (equity, sin interés de CC).
+    # CG mechanic (sheet "CALCULO COSTOS FINANCIEROS"): the construction loan DISBURSES the monthly
+    # construction cost (directos + indirectos, i.e. costos_m which excludes the lote) up to a CUPO =
+    # cobertura% x (directos + indirectos). It is AMORTIZED by the subrogations (mortgage payoffs at
+    # escrituración). Interest accrues on the outstanding balance. Peak balance = "Vr. Max Credito
+    # Constructor"; average of the positive balance = "Promedio". Equity covers the lote and any
+    # construction cost above the cupo.
     cobertura = fin.get("cobertura_cc", fin.get("monto_cc_pct", 0.80))
     valor_financiable = pg["directos"] + pg["indirectos"]
+    cupo = cobertura * valor_financiable                       # construction-loan ceiling
+    obra_m = costos_m                                          # monthly construction cost (no lote)
     subr = recaudo.get("subrogacion", [])
     sub_m = [subr[i] if i < len(subr) else 0.0 for i in range(N)]
     tasa_cc = (1 + fin.get("tasa_credito_ea", 0.155)) ** (1 / 12) - 1
-    saldo = 0.0; intereses = 0.0
+    saldo = 0.0; intereses = 0.0; desemb_acum = 0.0
     saldo_serie = [0.0] * N; flujo_equity = [0.0] * N
     for m in range(N):
         interes = saldo * tasa_cc; intereses += interes
-        desembolso = cobertura * directos_m[m]                 # banco financia 80% de la obra
+        desembolso = min(obra_m[m], max(0.0, cupo - desemb_acum))   # disburse obra up to the cupo
+        desemb_acum += desembolso
         saldo += desembolso
         amort = min(sub_m[m], saldo); saldo -= amort           # subrogaciones amortizan el CC
         saldo_serie[m] = saldo
         # flujo al equity = operativo + crédito neto recibido − intereses
         flujo_equity[m] = operativo[m] + desembolso - amort - interes
-    cap = cobertura * pg["directos"]
+    cap = cupo
 
     acum = []; s = 0.0
     for x in operativo:
@@ -120,13 +129,16 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         elif toco_fondo and v >= 0:
             payback = i; break
 
+    pos = [x for x in saldo_serie if x > 0]
     return {
         "ingresos": ingresos_m, "costos": costos_m, "operativo": operativo,
         "acumulado": acum, "saldo_credito": saldo_serie, "flujo_equity": flujo_equity,
-        "credito_max": max(saldo_serie), "intereses_total": intereses,
+        "credito_max": max(saldo_serie), "credito_prom": (sum(pos) / len(pos)) if pos else 0.0,
+        "intereses_total": intereses,
         "aportes_total": sum(-x for x in flujo_equity if x < 0), "max_necesidad_caja": min(acum),
         "valor_financiable": valor_financiable, "cap_credito": cap,
         "tir_proyecto": _tir(operativo), "tir_equity": _tir(flujo_equity),
+        "tir_apalancada_ref": fin.get("tir_apalancada_ref"),
         "vpn_proyecto": sum(f / (1 + wacc_m) ** t for t, f in enumerate(operativo)) if wacc else None,
         "wacc": wacc, "anual": anual, "anio0": anio0, "payback_mes": payback,
     }

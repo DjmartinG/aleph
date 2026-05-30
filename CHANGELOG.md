@@ -2,6 +2,27 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.8.0] — 2026-05-30
+### Calibrado (waterfall de crédito constructor — validado contra el Excel real)
+- **Crédito constructor reespecificado** según la hoja `CALCULO COSTOS FINANCIEROS` de CG: el
+  crédito **desembolsa el costo de obra (directos+indirectos)** hasta un **cupo = cobertura% ×
+  (D+I)** y se **amortiza con las subrogaciones**; el interés corre sobre el saldo insoluto.
+  (Antes desembolsaba solo 80% de los directos → subestimaba/desfasaba el saldo.)
+- **Validación Navarra (exacta):** crédito máx **$56.827 M = real**, cupo **$130.760 M = real**,
+  **mes pico = real**, intereses 0.93× (dif = comisiones fiduciarias), **TIR equity 41.9% ≈ real
+  42%**. Dominica cae a 0.94× del crédito real sin calibrarle fechas aún (la mecánica generaliza).
+### Corregido (cableado de KPIs)
+- La app mostraba el **`flujo_caja` legacy** (crédito crudo, sin calendario real) en vez del
+  **waterfall calibrado**. Ahora el **crédito máx, VPN, intereses y TIR** de los KPIs y del
+  consolidado salen de `apalancamiento`. El **VPN del portafolio pasó de −$70.824 M (roto) a
+  +$116.941 M**.
+- **Consolidado alineado por calendario absoluto** (epoch ene-2022): el pico de crédito del
+  portafolio ya no suma picos de meses distintos. TIR equity consolidada calculada (≈31%).
+- KPIs por proyecto: TIR apalancada **calculada** (con la referencia como subtítulo); crédito máx
+  muestra el **promedio** como subtítulo.
+### Motor v1.11.0
+- `flujo_apalancado` expone `credito_prom`, `tir_apalancada_ref`; cupo = cobertura×(D+I).
+
 ## [2.7.0] — 2026-05-30
 ### Añadido (motor — calendario real por etapa)
 - `engine/portafolio.py`: nueva opción **`ic_offset`** por etapa (meses desde el Inicio de Ventas
