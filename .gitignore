@@ -5,6 +5,12 @@ venv/
 .env
 .env.local
 *.xlsx
+*.xlsm
 ~$*
 .DS_Store
 .streamlit/secrets.toml
+
+# Datos REALES confidenciales — nunca al repo público
+proyectos_privados/
+*_REAL_privado.json
+*_privado.json
