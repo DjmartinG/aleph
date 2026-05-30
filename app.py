@@ -193,11 +193,9 @@ if seccion == "Proyectos activos":
     kpi(k[0],"Ventas totales", fmt_mm(CONS["ventas"]), "reconciliado", GREEN)
     kpi(k[1],"Utilidad operativa", fmt_mm(CONS["util_oper"]), fmt_pct(CONS["margen"]), GREEN)
     kpi(k[2],"UDI", fmt_mm(CONS["udi"]), "reconciliado", GREEN)
-    _teqc=CONS.get("tir_eq")
-    kpi(k[3],"TIR apalancada", fmt_pct(_teqc) if _teqc is not None else "n/d",
-        (f"ref {fmt_pct(CONS['tir_ref'])}" if CONS.get("tir_ref") else "calculada"), GREEN)
-    kpi(k[4],"VPN @WACC (suma)", fmt_mm(CONS["vpn"]), "calculado", GREEN)
-    kpi(k[5],"Crédito máx (pico)", fmt_mm(CONS["credito_max"]), "pico alineado", MUTED)
+    kpi(k[3],"TIR apalancada (ref)", fmt_pct(CONS["tir_ref"]) if CONS["tir_ref"] is not None else "n/d", "ref · ponderada", MUTED)
+    kpi(k[4],"VPN @WACC (suma)", fmt_mm(CONS["vpn"]), "preliminar", AMBER)
+    kpi(k[5],"Crédito máx (pico)", fmt_mm(CONS["credito_max"]), "preliminar", AMBER)
     st.write("")
 elif seccion != "Inicio":
     hc1,hc2 = st.columns([1,9])
@@ -210,13 +208,9 @@ elif seccion != "Inicio":
     kpi(k[0],"Ventas totales", fmt_mm(pg["ventas"]))
     kpi(k[1],"Utilidad operativa", fmt_mm(pg["util_oper"]), fmt_pct(pg["margen_oper"]), GREEN)
     kpi(k[2],"UDI", fmt_mm(pg["udi"]))
-    _teq=fl.get("tir_equity"); _tref=fl.get("tir_apalancada_ref")
-    if _teq is not None:
-        kpi(k[3],"TIR apalancada", fmt_pct(_teq), (f"ref {fmt_pct(_tref)}" if _tref else "calculada"), GREEN)
-    else:
-        kpi(k[3],"TIR apalancada (ref)", fmt_pct(_tref), "modelo aprobado", MUTED)
-    kpi(k[4],"VPN @WACC", fmt_mm(fl["vpn_proyecto"]))
-    kpi(k[5],"Crédito máx", fmt_mm(fl["credito_max"]), f"prom {fmt_mm(fl.get('credito_prom',0))}", MUTED)
+    kpi(k[3],"TIR apalancada (ref)", fmt_pct(fl.get("tir_apalancada_ref")), "modelo aprobado", MUTED)
+    kpi(k[4],"VPN @WACC", fmt_mm(fl.get("vpn_proyecto")), "preliminar", AMBER)
+    kpi(k[5],"Crédito máx", fmt_mm(fl.get("credito_max")), "preliminar", AMBER)
     st.write("")
 
 # ============ INICIO (portada / bienvenida) ============
@@ -292,10 +286,10 @@ if seccion=="Proyectos activos":
                       "Crédito máx (M)":round((CONS["credito_max"] if CONS else 0)/1000)})
         st.dataframe(pd.DataFrame(filas), width="stretch", hide_index=True)
         st.caption("Cifras en **millones COP**. **Ventas, utilidad y UDI** se suman (reconciliadas con las "
-                   "prefactibilidades). **Crédito máx, VPN y TIR** salen del **waterfall de crédito calibrado** "
-                   "(Navarra valida exacto: crédito máx $56.827 M, TIR equity 41.9%). El pico de crédito se alinea "
-                   "por calendario absoluto. *Dominica y Torres usan aún calendario greenfield-2026 (pendiente "
-                   "anclar a fechas reales).* "
+                   "prefactibilidades). **Crédito máx, VPN y TIR** salen del waterfall de crédito, **en "
+                   "calibración** → preliminares (hoy sobreestiman: Navarra crédito máx 1.4× el real). El pico de "
+                   "crédito se alinea por calendario absoluto. *Dominica y Torres usan aún calendario "
+                   "greenfield-2026.* "
                    + ("Datos reales (privados)." if _proys and es_real(_proys[0]) else "Cifras ilustrativas."))
 
 # ============ DATOS DEL PROYECTO ============

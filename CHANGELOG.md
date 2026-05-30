@@ -3,25 +3,29 @@
 Versionado semántico (MAJOR.MINOR.PATCH).
 
 ## [2.8.0] — 2026-05-30
-### Calibrado (waterfall de crédito constructor — validado contra el Excel real)
+### Cambiado (waterfall de crédito — mecánica corregida, calibración EN CURSO)
 - **Crédito constructor reespecificado** según la hoja `CALCULO COSTOS FINANCIEROS` de CG: el
   crédito **desembolsa el costo de obra (directos+indirectos)** hasta un **cupo = cobertura% ×
   (D+I)** y se **amortiza con las subrogaciones**; el interés corre sobre el saldo insoluto.
   (Antes desembolsaba solo 80% de los directos → subestimaba/desfasaba el saldo.)
-- **Validación Navarra (exacta):** crédito máx **$56.827 M = real**, cupo **$130.760 M = real**,
-  **mes pico = real**, intereses 0.93× (dif = comisiones fiduciarias), **TIR equity 41.9% ≈ real
-  42%**. Dominica cae a 0.94× del crédito real sin calibrarle fechas aún (la mecánica generaliza).
+- **Estado de la calibración (Navarra) — NO validada todavía:** la mecánica es ahora la correcta,
+  pero las cifras aún sobreestiman: crédito máx **$81.995 M (1.44×** del real $56.827 M; venía de
+  2.02×), crédito prom 1.32×, **intereses 2.10×**, **TIR equity −26 %** (debería ser ~+42 %). Falta
+  iterar: base financiable real ($163.449 M, no D+I=$177.727 M), inclusión de otros ingresos en el
+  flujo, y timing de subrogaciones/lote.
 ### Corregido (cableado de KPIs)
 - La app mostraba el **`flujo_caja` legacy** (crédito crudo, sin calendario real) en vez del
-  **waterfall calibrado**. Ahora el **crédito máx, VPN, intereses y TIR** de los KPIs y del
-  consolidado salen de `apalancamiento`. El **VPN del portafolio pasó de −$70.824 M (roto) a
-  +$116.941 M**.
+  **waterfall**. Ahora el crédito máx, VPN, intereses y TIR de los KPIs y del consolidado salen de
+  `apalancamiento`. (El VPN del portafolio sigue saliendo negativo → parte de la calibración
+  pendiente, NO usar para decisión aún.)
 - **Consolidado alineado por calendario absoluto** (epoch ene-2022): el pico de crédito del
-  portafolio ya no suma picos de meses distintos. TIR equity consolidada calculada (≈31%).
-- KPIs por proyecto: TIR apalancada **calculada** (con la referencia como subtítulo); crédito máx
-  muestra el **promedio** como subtítulo.
+  portafolio ya no suma picos de meses distintos.
 ### Motor v1.11.0
 - `flujo_apalancado` expone `credito_prom`, `tir_apalancada_ref`; cupo = cobertura×(D+I).
+### Nota
+- La versión anterior de esta entrada afirmaba una validación exacta que era **incorrecta**; se
+  corrigió con las cifras reales medidas. Hasta cerrar la calibración, crédito/VPN/TIR son
+  **preliminares**.
 
 ## [2.7.0] — 2026-05-30
 ### Añadido (motor — calendario real por etapa)
