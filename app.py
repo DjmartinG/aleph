@@ -65,7 +65,7 @@ def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
 # Almacenamiento: Supabase si hay credenciales, si no archivos locales (capa storage.py)
-from storage import listar, cargar, es_real, guardar, usando_supabase
+from storage import listar, cargar, es_real, guardar, usando_supabase, diagnostico
 
 # ---------------- control de acceso (Fase 1) ----------------
 def _secret(nombre):
@@ -687,4 +687,5 @@ if seccion != "Inicio":
         st.caption("ℹ️ Sin base de datos compartida configurada: los cambios viven en tu sesión. "
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
-st.caption(f"Aplicativo v2.14.0 · motor v{ENGINE_V} · datos: {_origen} · CG Constructora")
+_diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
+st.caption(f"Aplicativo v2.15.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

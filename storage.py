@@ -19,6 +19,7 @@ PRIV_DIR = HERE / "proyectos_privados"   # reales (gitignored, local)
 
 _CLIENT = None
 _TRIED = False
+_DIAG = "no iniciado"     # motivo legible de por qué hay/no hay conexión a Supabase
 
 
 def _secret(name):
@@ -31,18 +32,28 @@ def _secret(name):
 
 def _client():
     """Cliente Supabase (singleton perezoso). None si no hay credenciales o falla la conexión."""
-    global _CLIENT, _TRIED
+    global _CLIENT, _TRIED, _DIAG
     if _TRIED:
         return _CLIENT
     _TRIED = True
     url, key = _secret("SUPABASE_URL"), _secret("SUPABASE_KEY")
-    if url and key:
-        try:
-            from supabase import create_client
-            _CLIENT = create_client(url, key)
-        except Exception:
-            _CLIENT = None
+    if not url or not key:
+        faltan = ", ".join([n for n, v in [("SUPABASE_URL", url), ("SUPABASE_KEY", key)] if not v])
+        _DIAG = f"faltan secrets: {faltan or 'ninguno'}"
+        return None
+    try:
+        from supabase import create_client
+        _CLIENT = create_client(url, key)
+        _DIAG = "conectado"
+    except Exception as e:
+        _CLIENT = None
+        _DIAG = f"error de conexión: {type(e).__name__}: {str(e)[:160]}"
     return _CLIENT
+
+
+def diagnostico():
+    _client()
+    return _DIAG
 
 
 def usando_supabase():
