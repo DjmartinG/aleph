@@ -36,9 +36,14 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 html, body, [class*="css"], .stApp { font-family:'Inter',-apple-system,sans-serif; }
-#MainMenu, footer, [data-testid="stToolbar"], [data-testid="stStatusWidget"] { visibility:hidden; height:0; }
+/* Ocultar SOLO menú hamburguesa y widget de estado — NO la toolbar entera (ahí vive el botón del menú lateral) */
+#MainMenu, footer, [data-testid="stStatusWidget"] { visibility:hidden; height:0; }
 [data-testid="stHeader"] { background:transparent; }
 [data-testid="stSidebar"] { background:#F7F9FA; border-right:1px solid #E6E9EF; }
+/* El control para abrir/colapsar el menú lateral SIEMPRE visible (varios nombres según versión de Streamlit) */
+[data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"], [data-testid="stExpandSidebarButton"] {
+    visibility:visible !important; display:flex !important; opacity:1 !important; z-index:999999 !important; }
 .block-container { padding-top:1.3rem; max-width:1320px; }
 h1 { color:#004854; font-weight:800; letter-spacing:-.02em; margin-bottom:.1rem; }
 h2,h3 { color:#13262B; font-weight:700; }
@@ -689,4 +694,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.15.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.15.2 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
