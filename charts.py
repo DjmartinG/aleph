@@ -289,3 +289,46 @@ def valor_ganado_s(evm, fecha_base=None, titulo="Valor Ganado (EVM) — curvas S
     if fecha_base is not None:
         fig.update_xaxes(dtick="M3", tickformat="%b %Y")
     return fig
+
+
+# ----------------------------------------------------------------------------- avance real vs programado
+def avance_real_vs_programado(cortes, titulo="Avance de obra — real vs programado · Torre 1"):
+    """Curva de avance REAL ejecutado vs PROGRAMADO (estándar PMI/Camacol).
+
+    `cortes`: lista de dicts {periodo:'2026-02', real:7.25, plan:6.20|None}. Marca el último corte y
+    pinta el área entre real y plan (verde si adelantado). El plan se interpola si falta algún punto."""
+    cortes = [c for c in cortes if c.get("periodo")]
+    xs = [c["periodo"] for c in cortes]
+    real = [c.get("real") for c in cortes]
+    plan = [c.get("plan") for c in cortes]
+    # interpolar plan faltante de forma simple (lineal entre puntos conocidos / extrapola plano)
+    kn = [(i, p) for i, p in enumerate(plan) if p is not None]
+    plan_i = list(plan)
+    if kn:
+        for i in range(len(plan_i)):
+            if plan_i[i] is None:
+                prev = [k for k in kn if k[0] <= i]; nxt = [k for k in kn if k[0] >= i]
+                if prev and nxt and prev[-1][0] != nxt[0][0]:
+                    (i0, p0), (i1, p1) = prev[-1], nxt[0]
+                    plan_i[i] = p0 + (p1 - p0) * (i - i0) / (i1 - i0)
+                else:
+                    plan_i[i] = (prev[-1][1] if prev else nxt[0][1])
+    fig = go.Figure()
+    # plan (base invisible para el relleno) + curva plan punteada
+    fig.add_scatter(x=xs, y=plan_i, mode="lines", line=dict(color="rgba(0,0,0,0)"),
+                    showlegend=False, hoverinfo="skip")
+    fig.add_scatter(x=xs, y=real, mode="lines+markers", name="Avance real ejecutado",
+                    line=dict(color=TEAL, width=3), marker=dict(size=11, color=TEAL),
+                    fill="tonexty", fillcolor="rgba(30,135,75,.15)",
+                    hovertemplate="%{x}<br>Real: <b>%{y:.1f}%</b><extra></extra>")
+    fig.add_scatter(x=xs, y=plan_i, mode="lines", name="Avance programado (curva S)",
+                    line=dict(color=AMBER, width=2, dash="dot"),
+                    hovertemplate="%{x}<br>Plan: %{y:.1f}%<extra></extra>")
+    # anotación último corte real
+    if real and real[-1] is not None:
+        fig.add_annotation(x=xs[-1], y=real[-1], text=f"<b>{real[-1]:.1f}%</b><br>último corte",
+                           bgcolor="white", bordercolor=TEAL, borderwidth=1, font=dict(size=11, color=TEAL),
+                           showarrow=True, arrowhead=2, arrowcolor=TEAL, yshift=24)
+    fig.update_layout(title=titulo, height=420, xaxis_title="Período",
+                      yaxis=dict(title="Avance (%)", range=[0, 105], ticksuffix="%"))
+    return fig

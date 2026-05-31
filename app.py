@@ -15,6 +15,7 @@ from streamlit_option_menu import option_menu
 from engine import calcular, __version__ as ENGINE_V
 from engine import evm as _evm   # Valor Ganado (EVM)
 import charts as _charts   # gráficos financieros pro (marca CG)
+import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
 
 # ---------------- marca CG ----------------
 TEAL="#004854"; AMBER="#F09C00"; INK="#13262B"; MUTED="#6B7280"
@@ -73,6 +74,28 @@ def fmt_pct(x): return f"{x*100:.2f}%" if x is not None else "n/d"
 def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
+
+_SEV={"critica":("#FEF2F2","#FCA5A5","#991B1B","🔴","CRÍTICA"),
+      "importante":("#FFFBEB","#FDE68A","#92400E","🟡","IMPORTANTE"),
+      "info":("#F0FDF4","#BBF7D0","#14532D","✅","INFO")}
+def render_alertas(alertas, solo_activas=True, modulo=None, max_items=None):
+    """Panel de alertas reutilizable (marca CG). Filtra por estado/módulo."""
+    fs=[a for a in alertas if (not solo_activas or a["estado"]=="Activa")
+        and (modulo is None or a["modulo_origen"]==modulo)]
+    if max_items: fs=fs[:max_items]
+    if not fs: return
+    for a in fs:
+        bg,bd,tx,ic,lb=_SEV.get(a["severidad"], _SEV["info"])
+        st.markdown(
+            f'<div style="background:{bg};border:1px solid {bd};border-left:4px solid {bd};'
+            f'border-radius:8px;padding:11px 15px;margin-bottom:8px;">'
+            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+            f'<div style="flex:1;"><div style="font-size:12.5px;font-weight:700;color:{tx};">{ic} {a["titulo"]}</div>'
+            f'<div style="font-size:11.5px;color:{tx};opacity:.85;line-height:1.5;margin-top:3px;">{a["descripcion"]}</div>'
+            f'<div style="font-size:10px;color:{tx};opacity:.6;margin-top:6px;">📋 {a["modulo_origen"]} · 🗓 {a["fecha_reporte"]} · 👤 {a["responsable"]}</div></div>'
+            f'<span style="background:{bd};color:{tx};font-size:9px;font-weight:800;padding:2px 8px;'
+            f'border-radius:99px;margin-left:12px;white-space:nowrap;">{lb}</span></div></div>',
+            unsafe_allow_html=True)
 # Almacenamiento: Supabase si hay credenciales, si no archivos locales (capa storage.py)
 from storage import listar, cargar, es_real, guardar, usando_supabase, diagnostico, probar_conexion
 
@@ -197,9 +220,9 @@ with st.sidebar:
         st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
         st.session_state.sel = sel
     par = st.session_state.par
-    MENU=["Inicio","Proyectos activos","Datos del proyecto","Urbanístico","Cronograma","Ingresos",
+    MENU=["Inicio","Proyectos activos","Datos del proyecto","Monitor de ejecución","Urbanístico","Cronograma","Ingresos",
           "Distribución costos","P&G","Reparto","Flujo de caja","Apalancamiento","Valor Ganado","Escenarios","Sensibilidad"]
-    ICONS=["house-door","buildings","pencil-square","building","calendar3","cash-coin",
+    ICONS=["house-door","buildings","pencil-square","clipboard-data","building","calendar3","cash-coin",
            "bar-chart-line","table","pie-chart","cash-stack","bank","graph-up-arrow","bullseye","sliders"]
     seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
         styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
@@ -319,6 +342,26 @@ if seccion=="Inicio":
 if seccion=="Proyectos activos":
     st.markdown("### 🏢 Proyectos activos — CG Constructora")
     st.caption("Portafolio de proyectos en evaluación. **Abre** uno para trabajarlo, o crea uno nuevo desde el selector lateral.")
+    # --- Navarra: estado operativo del comité (semáforo por etapa + alertas) ---
+    _act=[a for a in _nav.NAVARRA_ALERTAS if a["estado"]=="Activa"]
+    with st.expander(f"🏗️ Navarra — estado de obra (Corte Abr 2026) · ⚠️ {len(_act)} alertas activas", expanded=False):
+        _sem={"green":("#F0FDF4","#4ADE80","🟢"),"red":("#FEF2F2","#FCA5A5","🔴"),
+              "amber":("#FFFBEB","#FDE68A","🟡"),"gray":("#F8FAFC","#E2E8F0","⚪")}
+        _ec=st.columns(len(_nav.NAVARRA_ESTRUCTURA))
+        for _col,(_,e) in zip(_ec, _nav.NAVARRA_ESTRUCTURA.items()):
+            _bg,_bd,_ic=_sem.get(e["semaforo"], _sem["gray"])
+            _col.markdown(
+                f'<div style="background:{_bg};border:1px solid {_bd};border-radius:10px;padding:12px;'
+                f'text-align:center;min-height:170px;"><div style="font-size:18px;">{_ic}</div>'
+                f'<div style="font-weight:700;font-size:12px;color:{TEAL};margin:4px 0;">{e["nombre"]}</div>'
+                f'<div style="font-size:22px;font-weight:800;color:{TEAL};">{e["avance_pct"]:.0f}%</div>'
+                f'<div style="font-size:10px;color:#64748B;">{e["estado"]} · {e["unidades"]} und</div>'
+                f'<div style="font-size:10px;color:#64748B;margin-top:6px;line-height:1.4;">{e["detalle"]}</div></div>',
+                unsafe_allow_html=True)
+        st.write("")
+        render_alertas(_nav.NAVARRA_ALERTAS, solo_activas=True, max_items=4)
+        st.caption("Vista operativa por torre (970 und en 4 etapas) · seguimiento de comité. El modelo financiero "
+                   "auditado es por etapa (951 und). Detalle completo en 🏗️ **Monitor de ejecución**.")
     _proys=listar()
     if not _proys:
         st.info("No hay proyectos. Crea uno con «➕ Nuevo proyecto» en el menú lateral.")
@@ -721,6 +764,81 @@ if seccion=="Sensibilidad":
         marker_color=[GREEN if v>=0 else RED for _,v in it])])
     fig.update_layout(title="Tornado — impacto en utilidad operativa (miles COP)",height=380); st.plotly_chart(fig, width="stretch")
 
+# ============ MONITOR DE EJECUCIÓN (operativo, por torre) ============
+if seccion=="Monitor de ejecución":
+    st.markdown("### 🏗️ Monitor de Ejecución — seguimiento operativo")
+    _nombre=meta.get("nombre","")
+    if _nombre not in _nav.PROYECTOS_CON_MONITOR:
+        st.info(f"**{_nombre}** aún no tiene datos operativos de comité cargados. El Monitor de Ejecución "
+                "está disponible para proyectos en obra con seguimiento (hoy: **Navarra Apartamentos**).")
+        st.caption("Esta vista es operativa (por torre) y NO altera el modelo financiero auditado.")
+    else:
+        st.caption("Datos de los **Comités de Gerencia (Feb–Abr 2026)**. Vista por torre, independiente del "
+                   "modelo financiero auditado (3 etapas / 951 und / TIR 37.6%).")
+        # --- alertas activas ---
+        _act=[a for a in _nav.NAVARRA_ALERTAS if a["estado"]=="Activa"]
+        st.markdown(f"#### ⚠️ Alertas activas ({len(_act)})")
+        render_alertas(_nav.NAVARRA_ALERTAS, solo_activas=True)
+
+        tabs=st.tabs(["📊 Avance de obra","🏦 Crédito constructor","📋 Variaciones"])
+        # ---- Tab avance ----
+        with tabs[0]:
+            real,banco=_nav.avance_ultimo()
+            cortes=[{"periodo":p,"real":v["ejecutado"],"plan":v.get("programado")}
+                    for p,v in _nav.NAVARRA_AVANCE_OBRA.items() if "bancolombia" not in p]
+            plan_ult=next((c["plan"] for c in reversed(cortes) if c["plan"] is not None), None)
+            kk=st.columns(4)
+            kpi(kk[0],"Avance real (Torre 1)", f"{real:.1f}%", "Comité Abr 2026", GREEN)
+            kpi(kk[1],"Avance programado", f"{plan_ult:.1f}%" if plan_ult else "n/d", "curva S plan", MUTED)
+            kpi(kk[2],"Avance Bancolombia", f"{banco:.1f}%", "metodología bancaria", MUTED)
+            _spi=(real/plan_ult) if plan_ult else None
+            kpi(kk[3],"SPI (avance)", f"{_spi:.2f}" if _spi else "n/d",
+                ("adelantado" if _spi and _spi>=1 else "atrasado") if _spi else "", GREEN if _spi and _spi>=1 else RED)
+            st.plotly_chart(_charts.avance_real_vs_programado(cortes), width="stretch")
+            rows=[{"Período":c["periodo"],"Real %":f"{c['real']:.1f}%",
+                   "Plan %":(f"{c['plan']:.1f}%" if c["plan"] else "—"),
+                   "Δ":(f"{c['real']-c['plan']:+.1f}%" if c["plan"] else "—"),
+                   "Fuente":_nav.NAVARRA_AVANCE_OBRA[c["periodo"]].get("fuente","—")} for c in cortes]
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        # ---- Tab crédito ----
+        with tabs[1]:
+            cc=_nav.NAVARRA_CREDITO_CONSTRUCTOR
+            st.markdown("##### 🏗️ Torre 1 — crédito constructor")
+            t1=st.columns(3)
+            kpi(t1[0],"Monto autorizado", f"${cc['torre_1']['monto_autorizado_mm']:,} M".replace(",", "."), "Bancolombia", GREEN)
+            kpi(t1[1],"Avance requerido", f"{cc['torre_1']['avance_requerido_pct']:.2f}%", "Castillo Medina", MUTED)
+            kpi(t1[2],"Estado", "✅ Autorizado", cc['torre_1']['fecha_autorizacion'], GREEN)
+            st.markdown("##### 🏗️ Torres 2A/2B — crédito en trámite")
+            t2=st.columns(3)
+            kpi(t2[0],"Días en trámite", f"{cc['torre_2a_2b']['dias_tramite']}+ días", "desde 09-ene-2026", RED)
+            kpi(t2[1],"Saldo preventas", f"${cc['torre_2a_2b']['saldo_encargo_preventas_mm']:,} M".replace(",", "."), "disponible", MUTED)
+            kpi(t2[2],"Crédito puente req.", f"${cc['torre_2a_2b']['credito_puente_requerido_mm']:,} M".replace(",", "."), "apalancamiento", RED)
+            pend=cc['torre_2a_2b']['tramites_pendientes']
+            st.warning(f"⚠️ {len(pend)} trámites pendientes — fecha crítica **16-jun-2026**")
+            st.dataframe(pd.DataFrame([{"Actividad":t["actividad"],"Fecha límite":t["fecha_fin"],"Estado":t["estado"]} for t in pend]),
+                         width="stretch", hide_index=True)
+        # ---- Tab variaciones ----
+        with tabs[2]:
+            v=_nav.NAVARRA_VARIACIONES
+            ic={"Alto":"🔴","Medio":"🟡","Bajo":"⚪"}
+            c1,c2=st.columns(2)
+            with c1:
+                st.markdown(f"##### 🔴 Sobrecostos ({len(v['sobrecostos'])})")
+                for s in v["sobrecostos"]:
+                    st.markdown(f'<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:9px 11px;margin-bottom:6px;">'
+                        f'<b style="font-size:12px;color:#991B1B;">{ic.get(s["impacto"],"⚪")} {s["partida"]}</b>'
+                        f'<div style="font-size:11px;color:#7F1D1D;margin-top:2px;">{s["descripcion"]}</div>'
+                        f'<div style="font-size:10px;color:#9CA3AF;margin-top:3px;">{", ".join(s["meses"])} · {s["impacto"]}</div></div>',
+                        unsafe_allow_html=True)
+            with c2:
+                st.markdown(f"##### 🟢 Ahorros ({len(v['ahorros'])})")
+                for a in v["ahorros"]:
+                    st.markdown(f'<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;padding:9px 11px;margin-bottom:6px;">'
+                        f'<b style="font-size:12px;color:#14532D;">{ic.get(a["impacto"],"⚪")} {a["partida"]}</b>'
+                        f'<div style="font-size:11px;color:#166534;margin-top:2px;">{a["descripcion"]}</div>'
+                        f'<div style="font-size:10px;color:#9CA3AF;margin-top:3px;">{", ".join(a["meses"])} · {a["impacto"]}</div></div>',
+                        unsafe_allow_html=True)
+
 # ============ URBANÍSTICO ============
 if seccion=="Urbanístico":
     u=R["urbanistico"]
@@ -769,4 +887,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.21.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.22.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

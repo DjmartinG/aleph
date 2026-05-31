@@ -2,6 +2,22 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.22.0] — 2026-05-31
+### Añadido (Monitor de Ejecución — seguimiento operativo por torre · 1ª entrega)
+- Nueva sección **🏗️ Monitor de ejecución** y módulo **`navarra_data.py`** con datos reales de los
+  Comités de Gerencia (Feb–Abr 2026). Capa **operativa** (por torre, 4 etapas/970 und) **separada** del
+  modelo financiero auditado (3 etapas/951 und/TIR 37.6%) — no lo altera.
+- **Panel de alertas** reutilizable (`render_alertas`): 5 alertas (4 activas) con severidad crítica/
+  importante/info, en marca CG.
+- **Tab Avance de obra:** curva **real vs programado** con los 3 cortes reales (Feb 7.25% · Mar 31.5%
+  · Abr 42.01%), avance Bancolombia 59.57%, SPI, y tabla de cortes.
+- **Tab Crédito constructor:** estado por torre (T1 autorizado $2.000 M · T2A/2B 136+ días en trámite,
+  crédito puente $1.700 M) + tabla de los 7 trámites pendientes (fecha crítica 16-jun-2026).
+- **Tab Variaciones:** 7 sobrecostos y 7 ahorros con impacto y meses.
+- **Proyectos activos:** semáforo de estado por etapa (4 torres) + alertas activas de Navarra.
+- Otros proyectos muestran "sin datos operativos aún". Pendiente (2ª tanda): waterfall de variaciones,
+  EVM con presupuesto real por partida, comparativo Real vs Factibilidad (slides 7-12 por transcribir).
+
 ## [2.21.0] — 2026-05-31
 ### Añadido (Valor Ganado / EVM — Curva S, estándar PMI)
 - Nueva sección **📈 Valor Ganado (EVM)** y motor **`engine/evm.py`**: a partir del costo directo
