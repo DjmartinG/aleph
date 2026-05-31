@@ -2,6 +2,19 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.13.0] — 2026-05-30
+### Añadido (Fase 1 — control de acceso)
+- **Candado de equipo / editor.** Con `CLAVE_EQUIPO` en `st.secrets`, la app exige clave para VER
+  el tablero (rol *viewer*, solo lectura). Con `CLAVE_EDITOR` se habilita el **modo editor** (único
+  que puede ingresar/editar: "📝 Datos del proyecto", crear proyecto y descargar respaldo).
+- **Sin sorpresas:** si NO hay `CLAVE_EQUIPO` (p. ej. en local), la app queda **abierta** con rol
+  editor — subir el código NO bloquea a nadie hasta definir las claves en Streamlit Cloud.
+- Panel lateral: indicador de rol, campo para **elevar a editor** y **cerrar sesión**.
+- Plantilla `/.streamlit/secrets.toml.example` (claves de acceso + placeholder Supabase).
+### Pendiente (Fase 2)
+- Persistencia compartida en **Supabase** ("uno ingresa, todos ven"): crear el proyecto Supabase y
+  cargar `SUPABASE_URL`/`SUPABASE_KEY` en secrets.
+
 ## [2.12.0] — 2026-05-30
 ### Cambiado (formato de cifras)
 - **Cifras grandes en miles de millones** (`mil M`): `fmt_mm` ahora es adaptativo — ≥ mil millones

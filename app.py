@@ -75,6 +75,40 @@ def listar():
     return priv + pub
 def es_real(n): return (PRIV_DIR/f"{n}.json").exists()
 
+# ---------------- control de acceso (Fase 1) ----------------
+def _secret(nombre):
+    try:
+        return str(st.secrets.get(nombre, "")) if hasattr(st, "secrets") else ""
+    except Exception:
+        return ""
+
+def gate():
+    """Sin CLAVE_EQUIPO -> app abierta (rol editor, local). Con CLAVE_EQUIPO exige clave para ver;
+    CLAVE_EDITOR habilita edicion. Devuelve 'editor' | 'viewer'."""
+    clave_eq = _secret("CLAVE_EQUIPO"); clave_ed = _secret("CLAVE_EDITOR")
+    if not clave_eq:
+        st.session_state["_rol"] = "editor"; return "editor"
+    if st.session_state.get("_rol") in ("viewer", "editor"):
+        return st.session_state["_rol"]
+    c = st.columns([1, 2, 1])[1]
+    with c:
+        if LOGO.exists(): st.image(str(LOGO), width=160)
+        st.markdown("### Acceso — Factibilidad CG")
+        st.caption("Herramienta interna de CG Constructora. Clave de **equipo** para ver el tablero; "
+                   "clave de **editor** para ingresar datos.")
+        pwd = st.text_input("Clave", type="password", key="_pwd_in")
+        if st.button("Entrar", type="primary", width="stretch"):
+            if clave_ed and pwd == clave_ed:
+                st.session_state["_rol"] = "editor"; st.rerun()
+            elif pwd == clave_eq:
+                st.session_state["_rol"] = "viewer"; st.rerun()
+            else:
+                st.error("Clave incorrecta.")
+    st.stop()
+
+ROL = gate()
+ES_EDITOR = (ROL == "editor")
+
 def _irr_anual(flujos):
     """TIR anualizada de un flujo mensual (bisección robusta). None si no hay cambio de signo."""
     def vpn(r): return sum(f/(1+r)**t for t,f in enumerate(flujos))
@@ -151,11 +185,11 @@ with st.sidebar:
     st.markdown("##### Proyecto")
     proys = listar()
     nombres = {p: cargar(p).get("meta",{}).get("nombre", p) for p in proys}
-    opciones = ["➕ Nuevo proyecto"] + proys
+    opciones = (["➕ Nuevo proyecto"] + proys) if ES_EDITOR else (proys or ["➕ Nuevo proyecto"])
     if st.session_state.get("_pending_proj") in opciones:
         st.session_state["proj_sel"] = st.session_state.pop("_pending_proj")
-    if "proj_sel" not in st.session_state:
-        st.session_state["proj_sel"] = opciones[1] if len(opciones) > 1 else opciones[0]
+    if "proj_sel" not in st.session_state or st.session_state["proj_sel"] not in opciones:
+        st.session_state["proj_sel"] = next((o for o in opciones if o != "➕ Nuevo proyecto"), opciones[0])
     sel = st.selectbox("Seleccionar / crear", opciones, key="proj_sel", label_visibility="collapsed",
         format_func=lambda o: o if o == "➕ Nuevo proyecto" else nombres.get(o, o))
     if "par" not in st.session_state or st.session_state.get("sel") != sel:
@@ -171,6 +205,22 @@ with st.sidebar:
                 "icon":{"color":TEAL,"font-size":"14px"},
                 "nav-link":{"font-size":"13.5px","color":INK,"--hover-color":"#EAF0F2","margin":"1px 0"},
                 "nav-link-selected":{"background-color":TEAL,"color":"white","font-weight":"600"}})
+
+    if _secret("CLAVE_EQUIPO"):
+        st.divider()
+        if ES_EDITOR:
+            st.caption("🟢 Modo **editor** — puedes ingresar datos.")
+        else:
+            st.caption("🔒 Modo **consulta** (solo lectura).")
+            _ed = st.text_input("Clave de editor", type="password", key="_elevar_pwd",
+                                label_visibility="collapsed", placeholder="Clave de editor…")
+            if st.button("Activar edición", width="stretch"):
+                if _ed and _ed == _secret("CLAVE_EDITOR"):
+                    st.session_state["_rol"] = "editor"; st.rerun()
+                else:
+                    st.error("Clave de editor incorrecta.")
+        if st.button("Cerrar sesión", width="stretch"):
+            st.session_state.pop("_rol", None); st.rerun()
 
 # ---------------- cálculo ----------------
 R = calcular(copy.deepcopy(par)); pg=R["pyg"]; fl=R["flujo"]; meta=R["meta"]
@@ -302,7 +352,12 @@ if seccion=="Proyectos activos":
                    + ("Datos reales (privados)." if _proys and es_real(_proys[0]) else "Cifras ilustrativas."))
 
 # ============ DATOS DEL PROYECTO ============
-if seccion=="Datos del proyecto":
+if seccion=="Datos del proyecto" and not ES_EDITOR:
+    st.markdown("### 📝 Datos del proyecto")
+    st.info("🔒 **Modo solo lectura.** El ingreso de datos está restringido al editor del modelo. "
+            "Activa la **clave de editor** en el panel lateral para modificar datos.")
+    st.caption("El resto del tablero (resultados, flujo, apalancamiento, cronograma) está disponible para consulta.")
+elif seccion=="Datos del proyecto":
     st.markdown("### 📝 Datos del proyecto")
     st.caption("Ingresa aquí toda la información del proyecto. **No se importan archivos** — todo se digita en la plataforma. "
                "Las demás secciones se calculan automáticamente.")
@@ -620,9 +675,10 @@ if seccion != "Inicio":
             file_name=f"Factibilidad_{meta.get('nombre','proyecto')}_{date.today():%Y%m%d}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     with a2:
-        par["_fecha"]=str(date.today())
-        st.download_button("💾 Descargar proyecto (.json, respaldo)",
-            json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
-            file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
-            help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.12.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+        if ES_EDITOR:
+            par["_fecha"]=str(date.today())
+            st.download_button("💾 Descargar proyecto (.json, respaldo)",
+                json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
+                file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
+                help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
+st.caption(f"Aplicativo v2.13.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
