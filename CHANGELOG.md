@@ -2,8 +2,23 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.18.0] — 2026-05-31
+### Conectado (gráficos pro a sus secciones — estable y verificado)
+- **Flujo de caja** → waterfall (verde/rojo + caja acumulada + saldo de crédito + mes de exposición máx).
+- **Distribución costos** → curva S (campana de costo directo + avance % en eje derecho).
+- **Ingresos** → recaudo apilado por componente.
+- **Cronograma** → **Gantt** por etapa (barra de ventas + barra de construcción) con marcas de equilibrio/fin.
+- Integración hecha **una sección a la vez**, con `parse` tras cada edición y `AppTest` + render de las
+  4 figuras con los 3 proyectos reales (0 excepciones). 5 usos de `charts` en `app.py`.
+### Corregido (incidente 2.17.x)
+- v2.17.0 subió `app.py` **corrupto** (`import charts` duplicado + línea truncada → `SyntaxError`).
+  v2.17.1 lo restauró pero dejó `_charts.registrar_template()` **sin** su `import` → `NameError`
+  (app en vivo caída). v2.17.3 (hotfix) agregó el import y restauró producción.
+- *Lección reforzada:* una edición → `parse` → siguiente; `AppTest` **antes** de cada push; nunca
+  batches grandes sin verificar; sin emojis en `python -c` (rompen cp1252 en Windows).
+
 ## [2.17.0] — 2026-05-31
-### Añadido (gráficos financieros de nivel institucional — Fase A del refactor)
+### Añadido (módulo charts.py — gráficos financieros de nivel institucional)
 - Nuevo módulo **`charts.py`** con gráficos estándar de la industria, vestidos con la **marca CG real**
   (teal #004854 + ámbar #F09C00), no colores genéricos. Adaptados a las estructuras reales del motor
   (listas mensuales). Funciones: `flujo_caja_waterfall`, `curva_obra_s`, `recaudo_stacked`,

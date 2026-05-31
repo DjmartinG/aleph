@@ -563,18 +563,9 @@ if seccion=="Cronograma":
         rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],"Inicio Ventas":h[c]["IV"],"Pto Equilibrio":h[c]["PE"],
                "Fin Ventas":h[c]["FV"],"Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")} for c in sorted(h)]
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        fig=go.Figure()
-        for c in sorted(h, reverse=True):
-            x=h[c]; y=x["nombre"]; fin=max(d for d in [x["FV"],x.get("FC")] if d)
-            fig.add_scatter(x=[x["IV"],fin],y=[y,y],mode="lines",line=dict(color="#C8D2DE",width=5),showlegend=False,hoverinfo="skip")
-            pts=[("Inicio Ventas",x["IV"],TEAL,"circle"),("Pto Equilibrio",x["PE"],AMBER,"diamond"),
-                 ("Inicio Constr.",x.get("IC"),GREEN,"triangle-up"),("Fin Constr.",x.get("FC"),RED,"triangle-down"),
-                 ("Fin Ventas",x["FV"],INK,"circle")]; pts=[p for p in pts if p[1]]
-            fig.add_scatter(x=[p[1] for p in pts],y=[y]*len(pts),mode="markers",
-                marker=dict(size=13,color=[p[2] for p in pts],symbol=[p[3] for p in pts]),
-                showlegend=False,text=[p[0] for p in pts],hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
-        fig.update_layout(title="Cronograma por etapa — ventas y construcción",height=140+64*len(h),xaxis_title=""); st.plotly_chart(fig, width="stretch")
-        st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas.")
+        st.plotly_chart(_charts.gantt_etapas(h), width="stretch")
+        st.caption("Barras: 🟦 período de **ventas** · 🟧 período de **construcción** por etapa. "
+                   "Marcas: ◆ Punto de Equilibrio · ⚫ Fin de Ventas.")
 
         # -------- Ritmo de ventas y entregas (estilo R.ventas) --------
         st.markdown("#### Ritmo de ventas y entregas")
