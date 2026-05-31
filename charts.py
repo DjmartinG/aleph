@@ -16,8 +16,19 @@ Convenciones de la industria (Bloomberg/IFRS, PMI/Camacol, fiduciaria CO):
 Todas devuelven un go.Figure listo para st.plotly_chart(fig, width="stretch").
 """
 from __future__ import annotations
+from datetime import date
 import plotly.graph_objects as go
 import plotly.io as pio
+
+
+def _eje_fechas(base, n):
+    """Lista de n fechas mensuales a partir de `base` (1er día de cada mes)."""
+    out = []
+    for i in range(n):
+        y = base.year + (base.month - 1 + i) // 12
+        m = (base.month - 1 + i) % 12 + 1
+        out.append(date(y, m, 1))
+    return out
 
 # ---- paleta CG (alineada con app.py) ----
 TEAL = "#004854"; AMBER = "#F09C00"; INK = "#13262B"; MUTED = "#6B7280"
@@ -48,22 +59,33 @@ def _recortar(series, extra=2):
 
 
 # ----------------------------------------------------------------------------- flujo de caja
-def flujo_caja_waterfall(flujo, acumulado, saldo_credito=None, titulo="Flujo de caja del proyecto — mensual"):
+def flujo_caja_waterfall(flujo, acumulado, saldo_credito=None, fecha_base=None, tope_anio=None,
+                         titulo="Flujo de caja del proyecto"):
     """Barras verde/rojo del flujo neto mensual + acumulado + saldo de crédito + pico de exposición.
 
     Args:
         flujo: lista del flujo neto por mes (miles COP).
         acumulado: lista de la caja acumulada por mes.
         saldo_credito: lista del saldo de crédito constructor (opcional).
+        fecha_base: date del primer mes (mes 0). Si se da, el eje X son FECHAS reales; si no, nº de mes.
+        tope_anio: si se da (p.ej. 2030), recorta el eje al final de ese año.
     """
     n = max(_recortar(flujo), _recortar(acumulado))
-    x = list(range(1, n + 1))
+    if fecha_base is not None:
+        fechas = _eje_fechas(fecha_base, n)
+        if tope_anio:                                   # recorta hasta dic-tope_anio inclusive
+            lim = [i for i, d in enumerate(fechas) if d.year <= tope_anio]
+            if lim:
+                n = lim[-1] + 1; fechas = fechas[:n]
+        x = fechas; xtitle = ""; hov_x = "%{x|%b %Y}"
+    else:
+        x = list(range(1, n + 1)); xtitle = "Mes"; hov_x = "Mes %{x}"
     fig = go.Figure()
     colores = [GREEN if v >= 0 else RED for v in flujo[:n]]
     fig.add_bar(x=x, y=flujo[:n], name="Flujo neto mensual", marker_color=colores, opacity=0.85,
-                hovertemplate="Mes %{x}<br>Flujo: %{y:,.0f} mil COP<extra></extra>")
+                hovertemplate=hov_x + "<br>Flujo: %{y:,.0f} mil COP<extra></extra>")
     fig.add_scatter(x=x, y=acumulado[:n], name="Caja acumulada", line=dict(color=INK, width=2.5),
-                    hovertemplate="Mes %{x}: %{y:,.0f} acum.<extra></extra>")
+                    hovertemplate=hov_x + ": %{y:,.0f} acum.<extra></extra>")
     if saldo_credito:
         fig.add_scatter(x=x, y=saldo_credito[:n], name="Saldo crédito constructor",
                         line=dict(color=AMBER, width=2, dash="dot"))
@@ -73,12 +95,14 @@ def flujo_caja_waterfall(flujo, acumulado, saldo_credito=None, titulo="Flujo de 
     if sub:
         idx = min(range(len(sub)), key=lambda i: sub[i])
         if sub[idx] < -1:
-            fig.add_annotation(x=idx + 1, y=sub[idx],
+            fig.add_annotation(x=x[idx], y=sub[idx],
                 text=f"Exposición máx<br><b>{sub[idx]/1000:,.1f} mil M</b>".replace(",", "."),
                 bgcolor="white", bordercolor=RED, borderwidth=1, font=dict(size=11, color=RED),
                 showarrow=True, arrowhead=2, arrowcolor=RED)
-    fig.update_layout(title=titulo, height=430, xaxis_title="Mes", yaxis_title="Miles COP",
+    fig.update_layout(title=titulo, height=430, xaxis_title=xtitle, yaxis_title="Miles COP",
                       barmode="overlay")
+    if fecha_base is not None:
+        fig.update_xaxes(dtick="M6", tickformat="%b %Y")   # marca cada 6 meses
     return fig
 
 

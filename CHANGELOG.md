@@ -2,6 +2,17 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.19.0] — 2026-05-31
+### Cambiado (flujo de caja en fechas reales)
+- **El flujo de caja ahora usa FECHAS reales** en el eje X (antes "mes 1…90", confuso). Se ancla a
+  la fecha del mes 0 del proyecto (inicio de ventas de la etapa raíz) y se **proyecta hasta dic‑2030**.
+  Marcas cada 6 meses, formato "Mmm AAAA".
+- Usa la serie del **waterfall apalancado** (`apalancamiento.operativo/acumulado/saldo_credito`) — la
+  misma calibrada — en vez del `flujo_caja` legacy; KPIs de la sección alineados (TIR proyecto,
+  crédito máx, necesidad de caja, intereses).
+- `charts.flujo_caja_waterfall` admite `fecha_base` y `tope_anio`; rangos verificados: Navarra
+  2022‑08→2030‑12, Dominica/Torres 2026‑01→2030‑12.
+
 ## [2.18.0] — 2026-05-31
 ### Conectado (gráficos pro a sus secciones — estable y verificado)
 - **Flujo de caja** → waterfall (verde/rojo + caja acumulada + saldo de crédito + mes de exposición máx).

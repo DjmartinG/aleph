@@ -502,13 +502,24 @@ if seccion=="Distribución costos":
 
 # ============ FLUJO DE CAJA ============
 if seccion=="Flujo de caja":
-    _saldo=(R.get("apalancamiento") or {}).get("saldo_credito") or fl.get("saldo_credito")
-    st.plotly_chart(_charts.flujo_caja_waterfall(fl["flujo"], fl["acumulado"], _saldo), width="stretch")
-    st.caption("Barras = flujo neto mensual (🟢 caja positiva / 🔴 requiere financiación) · línea oscura = caja "
-               "acumulada · línea ámbar punteada = saldo de crédito constructor · anotación = mes de exposición máxima.")
-    cc=st.columns(4)
-    kpi(cc[0],"TIR proyecto (no apal.)",fmt_pct(fl["tir_proyecto"])); kpi(cc[1],"Crédito constructor máx",fmt_mm(fl["credito_max"]))
-    kpi(cc[2],"Necesidad máx de caja",fmt_mm(fl["max_caja"])); kpi(cc[3],"Intereses (prelim.)",fmt_mm(fl["intereses_total"]))
+    _ap=R.get("apalancamiento") or {}
+    _h=R.get("hitos") or {}
+    if _ap.get("operativo") and _h:
+        _base=min(x["IV"] for x in _h.values())          # fecha real del mes 0 (inicio del proyecto)
+        st.plotly_chart(_charts.flujo_caja_waterfall(
+            _ap["operativo"], _ap["acumulado"], _ap.get("saldo_credito"),
+            fecha_base=_base, tope_anio=2030), width="stretch")
+        st.caption("Eje en **fechas reales**. Barras = flujo neto mensual (🟢 caja positiva / 🔴 requiere "
+                   "financiación) · línea oscura = caja acumulada · línea ámbar punteada = saldo de crédito · "
+                   "anotación = exposición máxima. Proyectado hasta 2030.")
+        cc=st.columns(4)
+        kpi(cc[0],"TIR proyecto",fmt_pct(_ap.get("tir_proyecto")))
+        kpi(cc[1],"Crédito constructor máx",fmt_mm(_ap.get("credito_max")))
+        kpi(cc[2],"Necesidad máx de caja",fmt_mm(_ap.get("max_necesidad_caja")))
+        kpi(cc[3],"Intereses",fmt_mm(_ap.get("intereses_total")))
+    else:
+        st.plotly_chart(_charts.flujo_caja_waterfall(fl["flujo"], fl["acumulado"], fl.get("saldo_credito")), width="stretch")
+        st.caption("Flujo mensual del proyecto.")
 
 # ============ APALANCAMIENTO ============
 if seccion=="Apalancamiento":
@@ -692,4 +703,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.18.1 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.19.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
