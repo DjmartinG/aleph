@@ -4,8 +4,8 @@ Datos OPERATIVOS del Proyecto Navarra — CG Constructora S.A.S.
 Fuente: Comités de Gerencia Feb–Abr 2026 + Informe Financiero Navarra v2 (30 Abr 2026).
 
 Capa de SEGUIMIENTO (por torre), independiente del modelo financiero auditado (3 etapas, 951 und,
-TIR 37.6%/VPN $18.281M). Aquí la estructura es POR TORRE (4 etapas, 970 und). NO altera la
-factibilidad: alimenta el Monitor de Ejecución (avance real, alertas, crédito, variaciones).
+TIR 37.6%/VPN $18.281M). Aquí la estructura es POR TORRE (4 etapas, 951 und — cuadra con lo auditado).
+NO altera la factibilidad: alimenta el Monitor de Ejecución (avance real, alertas, crédito, variaciones).
 
 Actualizar mensualmente tras cada comité.
 """
@@ -30,9 +30,10 @@ NAVARRA_ESTRUCTURA = {
     "etapa_3": {"nombre": "Navarra 3 — Torres 3A/3B", "torres": ["Torre 3A", "Torre 3B"], "unidades": 238,
                 "estado": "Planificado", "avance_pct": 0, "semaforo": "gray",
                 "detalle": "Ejecutar simultáneamente · PE 3B ≤ 3 meses después de 3A"},
-    "etapa_4": {"nombre": "Navarra 4 — Torres 4/5", "torres": ["Torre 4", "Torre 5"], "unidades": 337,
+    "etapa_4": {"nombre": "Navarra 4 — Torres 4/5", "torres": ["Torre 4", "Torre 5"], "unidades": 318,
                 "estado": "Planificado", "avance_pct": 0, "semaforo": "gray",
                 "detalle": "Tipologías 27 m² y 36 m² · Oferta SDHT"},
+    # Total: 158 + 237 + 238 + 318 = 951 unidades (cuadra con el modelo financiero auditado).
 }
 
 # ------------------------------------------------------------------ crédito constructor por torre

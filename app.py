@@ -360,8 +360,8 @@ if seccion=="Proyectos activos":
                 unsafe_allow_html=True)
         st.write("")
         render_alertas(_nav.NAVARRA_ALERTAS, solo_activas=True, max_items=4)
-        st.caption("Vista operativa por torre (970 und en 4 etapas) · seguimiento de comité. El modelo financiero "
-                   "auditado es por etapa (951 und). Detalle completo en 🏗️ **Monitor de ejecución**.")
+        st.caption("Vista operativa por torre (951 und en 4 etapas) · seguimiento de comité. El modelo financiero "
+                   "auditado agrupa en 3 etapas (951 und). Detalle completo en 🏗️ **Monitor de ejecución**.")
     _proys=listar()
     if not _proys:
         st.info("No hay proyectos. Crea uno con «➕ Nuevo proyecto» en el menú lateral.")
@@ -773,8 +773,8 @@ if seccion=="Monitor de ejecución":
                 "está disponible para proyectos en obra con seguimiento (hoy: **Navarra Apartamentos**).")
         st.caption("Esta vista es operativa (por torre) y NO altera el modelo financiero auditado.")
     else:
-        st.caption("Datos de los **Comités de Gerencia (Feb–Abr 2026)**. Vista por torre, independiente del "
-                   "modelo financiero auditado (3 etapas / 951 und / TIR 37.6%).")
+        st.caption("Datos de los **Comités de Gerencia (Feb–Abr 2026)**. Vista por torre (951 und en 4 etapas), "
+                   "alineada con el modelo financiero auditado (951 und / TIR 37.6%).")
         # --- alertas activas ---
         _act=[a for a in _nav.NAVARRA_ALERTAS if a["estado"]=="Activa"]
         st.markdown(f"#### ⚠️ Alertas activas ({len(_act)})")
@@ -887,4 +887,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.22.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.22.1 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
