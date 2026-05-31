@@ -2,6 +2,24 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.17.0] — 2026-05-31
+### Añadido (gráficos financieros de nivel institucional — Fase A del refactor)
+- Nuevo módulo **`charts.py`** con gráficos estándar de la industria, vestidos con la **marca CG real**
+  (teal #004854 + ámbar #F09C00), no colores genéricos. Adaptados a las estructuras reales del motor
+  (listas mensuales). Funciones: `flujo_caja_waterfall`, `curva_obra_s`, `recaudo_stacked`,
+  `tornado`, `escenarios_grouped`, `gantt_etapas`.
+- **Flujo de caja** → waterfall: barras 🟢/🔴 según caja +/−, caja acumulada, **saldo de crédito
+  constructor** (del waterfall apalancado) y anotación del **mes de exposición máxima**.
+- **Distribución costos** → **curva S** (campana de costo directo + avance acumulado en %, eje
+  derecho) con anotación del pico de obra.
+- **Ingresos** → recaudo apilado por componente (separación/cuota inicial/subrogación) más limpio.
+- **Cronograma** → **Gantt** por etapa (barra de ventas + barra de construcción) con marcas de
+  equilibrio y fin de ventas.
+### Nota
+- Adoptado del prompt de refactor profesional, en modo **incremental** y conservando: motor auditado,
+  candado de acceso, persistencia Supabase y navegación por menú lateral. NO se migró a `pages/`
+  nativo (rompería el candado/menú). Bloque "eliminar sliders" ya estaba cumplido (0 sliders).
+
 ## [2.14.0] — 2026-05-30
 ### Añadido (Fase 2 — persistencia compartida en Supabase)
 - **Capa `storage.py`:** lee/escribe los proyectos en **Supabase** si hay `SUPABASE_URL` +

@@ -72,6 +72,7 @@ def kpi(col, label, value, sub="", sub_color=MUTED):
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
 # Almacenamiento: Supabase si hay credenciales, si no archivos locales (capa storage.py)
 from storage import listar, cargar, es_real, guardar, usando_supabase, diagnostico, probar_conexion
+import charts  # gráficos financieros pro (marca CG)
 
 # ---------------- control de acceso (Fase 1) ----------------
 def _secret(nombre):
@@ -565,18 +566,9 @@ if seccion=="Cronograma":
         rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],"Inicio Ventas":h[c]["IV"],"Pto Equilibrio":h[c]["PE"],
                "Fin Ventas":h[c]["FV"],"Inicio Constr.":h[c].get("IC"),"Fin Constr.":h[c].get("FC")} for c in sorted(h)]
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        fig=go.Figure()
-        for c in sorted(h, reverse=True):
-            x=h[c]; y=x["nombre"]; fin=max(d for d in [x["FV"],x.get("FC")] if d)
-            fig.add_scatter(x=[x["IV"],fin],y=[y,y],mode="lines",line=dict(color="#C8D2DE",width=5),showlegend=False,hoverinfo="skip")
-            pts=[("Inicio Ventas",x["IV"],TEAL,"circle"),("Pto Equilibrio",x["PE"],AMBER,"diamond"),
-                 ("Inicio Constr.",x.get("IC"),GREEN,"triangle-up"),("Fin Constr.",x.get("FC"),RED,"triangle-down"),
-                 ("Fin Ventas",x["FV"],INK,"circle")]; pts=[p for p in pts if p[1]]
-            fig.add_scatter(x=[p[1] for p in pts],y=[y]*len(pts),mode="markers",
-                marker=dict(size=13,color=[p[2] for p in pts],symbol=[p[3] for p in pts]),
-                showlegend=False,text=[p[0] for p in pts],hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
-        fig.update_layout(title="Cronograma por etapa — ventas y construcción",height=140+64*len(h),xaxis_title=""); st.plotly_chart(fig, width="stretch")
-        st.caption("🟢 Inicio Ventas · 🟡◆ Pto Equilibrio · 🟢▲ Inicio Construcción · 🔴▼ Fin Construcción · ⚫ Fin Ventas.")
+        st.plotly_chart(charts.gantt_etapas(h), width="stretch")
+        st.caption("Barras: 🟦 período de **ventas** · 🟧 período de **construcción** por etapa. "
+                   "Marcas: ◆ Punto de Equilibrio · ⚫ Fin de Ventas.")
 
         # -------- Ritmo de ventas y entregas (estilo R.ventas) --------
         st.markdown("#### Ritmo de ventas y entregas")
@@ -634,12 +626,7 @@ if seccion=="Ingresos":
         st.info("Completa los datos de etapas para ver el recaudo de ingresos.")
     else:
         sepr=rc["separacion"]; cir=rc["cuota_inicial"]; subr=rc["subrogacion"]; tot=rc["total"]
-        n=max([i for i,v in enumerate(tot) if abs(v)>1], default=0)+2; m=list(range(1,n+1))
-        fig=go.Figure()
-        fig.add_scatter(x=m,y=sepr[:n],name="Separación",stackgroup="r",line=dict(width=0.5,color=AMBER))
-        fig.add_scatter(x=m,y=cir[:n],name="Cuota inicial",stackgroup="r",line=dict(width=0.5,color=TEAL))
-        fig.add_scatter(x=m,y=subr[:n],name="Subrogación",stackgroup="r",line=dict(width=0.5,color=GREEN))
-        fig.update_layout(title="Recaudo mensual por componente",height=440,xaxis_title="Mes"); st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(charts.recaudo_stacked(sepr, cir, subr), width="stretch")
         cc=st.columns(4)
         kpi(cc[0],"Separación",fmt_mm(sum(sepr))); kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
         kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
@@ -708,4 +695,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.16.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.17.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
