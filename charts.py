@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Gráficos financieros de nivel institucional para Factibilidad CG (APEX ARCHITECT®).
+Gráficos financieros de nivel institucional para Factibilidad CG.
 
 Adaptados a las estructuras REALES del motor (listas mensuales, no DataFrames) y a la
 **marca CG aprobada** (teal #004854 + ámbar #F09C00), no a colores genéricos.
@@ -331,4 +331,43 @@ def avance_real_vs_programado(cortes, titulo="Avance de obra — real vs program
                            showarrow=True, arrowhead=2, arrowcolor=TEAL, yshift=24)
     fig.update_layout(title=titulo, height=420, xaxis_title="Período",
                       yaxis=dict(title="Avance (%)", range=[0, 105], ticksuffix="%"))
+    return fig
+
+
+# ----------------------------------------------------------------------------- presupuesto vs ejecutado
+def presupuesto_barras(partidas, top=14, titulo="Presupuesto base vs ejecutado — por capítulo"):
+    """Barras horizontales: base (BAC, teal) vs ejecutado (AC). `partidas`: lista de dicts con
+    'capitulo','base','ejecutado'. Toma las `top` de mayor base. Ejecutado en rojo si > base."""
+    ps = sorted([p for p in partidas if p.get("base", 0) > 0], key=lambda p: p["base"])[-top:]
+    cap = [p["capitulo"] for p in ps]
+    base = [p["base"] for p in ps]; ejec = [p["ejecutado"] for p in ps]
+    fig = go.Figure()
+    fig.add_bar(y=cap, x=base, orientation="h", name="Presupuesto base", marker_color=TEAL, opacity=0.55,
+                hovertemplate="%{y}<br>Base: $%{x:,.0f} M<extra></extra>")
+    fig.add_bar(y=cap, x=ejec, orientation="h", name="Ejecutado",
+                marker_color=[RED if e > b else GREEN for e, b in zip(ejec, base)],
+                hovertemplate="%{y}<br>Ejecutado: $%{x:,.0f} M<extra></extra>")
+    fig.update_layout(title=titulo, barmode="overlay", height=max(360, len(ps) * 30 + 120),
+                      xaxis_title="Millones COP", legend=dict(orientation="h", y=1.04))
+    return fig
+
+
+def variaciones_waterfall(partidas, titulo="Variaciones presupuestales (base → proyectado)"):
+    """Waterfall: del presupuesto BASE total a la PROYECCIÓN ACTUAL, capítulo a capítulo.
+    Ahorros (proy<base) en verde, sobrecostos (proy>base) en rojo. `partidas` con 'base','proy_act'."""
+    deltas = [(p["capitulo"], p.get("proy_act", 0) - p.get("base", 0)) for p in partidas]
+    deltas = [d for d in deltas if abs(d[1]) >= 1]
+    deltas.sort(key=lambda d: d[1])                     # ahorros primero, sobrecostos al final
+    base_total = sum(p.get("base", 0) for p in partidas)
+    x = ["BASE total"] + [d[0] for d in deltas] + ["PROYECTADO"]
+    measure = ["absolute"] + ["relative"] * len(deltas) + ["total"]
+    y = [base_total] + [d[1] for d in deltas] + [0]
+    fig = go.Figure(go.Waterfall(
+        orientation="v", measure=measure, x=x, y=y,
+        connector={"line": {"color": "#E2E8F0"}},
+        decreasing={"marker": {"color": GREEN}},        # proy<base = ahorro
+        increasing={"marker": {"color": RED}},          # proy>base = sobrecosto
+        totals={"marker": {"color": TEAL}},
+        hovertemplate="%{x}<br>%{y:,.0f} M<extra></extra>"))
+    fig.update_layout(title=titulo, height=430, yaxis_title="Millones COP", xaxis_tickangle=-40)
     return fig

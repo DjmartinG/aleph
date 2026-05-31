@@ -95,6 +95,46 @@ NAVARRA_VARIACIONES = {
     ],
 }
 
+# ------------------------------------------------------------------ presupuesto y ejecución Torre 1 (Etapa 1)
+# Control de Presupuesto y Ejecución — corte 30/04/2026 (valores en MILLONES COP).
+# Columnas: base (BAC) · proy_ant · ejecutado (AC) · asegurado · proy_act (EAC).
+NAVARRA_PRESUPUESTO_T1 = {
+    "fecha_corte": "2026-04-30",
+    "unidad": "millones COP",
+    "partidas": [
+        {"capitulo": "Preliminares",                              "base": 624,   "proy_ant": 545,   "ejecutado": 319,   "asegurado": 320,   "proy_act": 636},
+        {"capitulo": "Cimentaciones",                             "base": 3043,  "proy_ant": 3245,  "ejecutado": 3226,  "asegurado": 3240,  "proy_act": 3244},
+        {"capitulo": "Estructura",                                "base": 5259,  "proy_ant": 5609,  "ejecutado": 3270,  "asegurado": 4275,  "proy_act": 5372},
+        {"capitulo": "Muros y divisiones",                        "base": 794,   "proy_ant": 561,   "ejecutado": 68,    "asegurado": 361,   "proy_act": 518},
+        {"capitulo": "Cubiertas y techos",                        "base": 36,    "proy_ant": 39,    "ejecutado": 0,     "asegurado": 11,    "proy_act": 38},
+        {"capitulo": "Instalaciones hidrosanitarias",            "base": 873,   "proy_ant": 907,   "ejecutado": 281,   "asegurado": 671,   "proy_act": 907},
+        {"capitulo": "Instalaciones gas",                         "base": 497,   "proy_ant": 488,   "ejecutado": 39,    "asegurado": 382,   "proy_act": 489},
+        {"capitulo": "Instalaciones eléctricas e iluminación",   "base": 1194,  "proy_ant": 1365,  "ejecutado": 331,   "asegurado": 1287,  "proy_act": 1365},
+        {"capitulo": "Instalaciones telecomunicaciones",         "base": 178,   "proy_ant": 210,   "ejecutado": 17,    "asegurado": 210,   "proy_act": 210},
+        {"capitulo": "Sistema seguridad y salud humana",         "base": 402,   "proy_ant": 472,   "ejecutado": 18,    "asegurado": 462,   "proy_act": 458},
+        {"capitulo": "Revoque y pintura acabados muros y cielos","base": 540,   "proy_ant": 409,   "ejecutado": 0,     "asegurado": 13,    "proy_act": 408},
+        {"capitulo": "Enchape pisos y paredes",                   "base": 371,   "proy_ant": 294,   "ejecutado": 45,    "asegurado": 184,   "proy_act": 282},
+        {"capitulo": "Carpintería metálica y aluminio",          "base": 333,   "proy_ant": 333,   "ejecutado": 1,     "asegurado": 0,     "proy_act": 279},
+        {"capitulo": "Ventanería",                                "base": 757,   "proy_ant": 545,   "ejecutado": 0,     "asegurado": 525,   "proy_act": 548},
+        {"capitulo": "Carpintería madera y mesones",             "base": 173,   "proy_ant": 180,   "ejecutado": 23,    "asegurado": 89,    "proy_act": 180},
+        {"capitulo": "Aparatos sanitarios grifería y accesorios","base": 183,   "proy_ant": 183,   "ejecutado": 27,    "asegurado": 151,   "proy_act": 176},
+        {"capitulo": "Electrodomésticos y dotaciones internas",  "base": 0,     "proy_ant": 0,     "ejecutado": 0,     "asegurado": 0,     "proy_act": 0},
+        {"capitulo": "Sistemas especiales y dotaciones zonas com","base": 348,   "proy_ant": 20,    "ejecutado": 0,     "asegurado": 0,     "proy_act": 20},
+        {"capitulo": "Equipos de obra y consumibles",            "base": 239,   "proy_ant": 341,   "ejecutado": 152,   "asegurado": 275,   "proy_act": 354},
+        {"capitulo": "Control y mitigación ambiental",           "base": 121,   "proy_ant": 150,   "ejecutado": 46,    "asegurado": 63,    "proy_act": 144},
+        {"capitulo": "Control seguridad y salud en el trabajo",  "base": 106,   "proy_ant": 105,   "ejecutado": 34,    "asegurado": 78,    "proy_act": 106},
+        {"capitulo": "Urbanismo interno",                         "base": 1845,  "proy_ant": 2439,  "ejecutado": 38,    "asegurado": 1572,  "proy_act": 2457},
+        {"capitulo": "Aseo y entregas",                           "base": 100,   "proy_ant": 100,   "ejecutado": 0,     "asegurado": 0,     "proy_act": 100},
+        {"capitulo": "Gastos generales obra",                     "base": 1408,  "proy_ant": 1469,  "ejecutado": 507,   "asegurado": 645,   "proy_act": 1474},
+        {"capitulo": "Obras de certificación sostenibilidad",    "base": 8,     "proy_ant": 8,     "ejecutado": 0,     "asegurado": 0,     "proy_act": 8},
+        {"capitulo": "Edificaciones comunales",                   "base": 2854,  "proy_ant": 3090,  "ejecutado": 655,   "asegurado": 1742,  "proy_act": 3057},
+        {"capitulo": "Urbanismo externo",                         "base": 622,   "proy_ant": 622,   "ejecutado": 0,     "asegurado": 0,     "proy_act": 622},
+        {"capitulo": "Imprevistos",                               "base": 0,     "proy_ant": 61,    "ejecutado": 21,    "asegurado": 38,    "proy_act": 90},
+    ],
+    # totales de la imagen (control de transcripción)
+    "total_imagen": {"base": 22910, "proy_ant": 23791, "ejecutado": 9115, "asegurado": 16593, "proy_act": 23542},
+}
+
 # ------------------------------------------------------------------ factibilidad por etapa (slides 7-10)
 # PENDIENTE de transcripción manual desde el Informe Financiero (están como imágenes en el PPTX).
 NAVARRA_FACTIBILIDAD_POR_ETAPA = {

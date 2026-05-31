@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Apalancamiento (Fase 4 — paridad APEX: hoja Apalancamiento + k.FC).
+Apalancamiento (Fase 4: hoja Apalancamiento + k.FC del modelo financiero CG).
 Ensambla el flujo operativo consolidado del portafolio (recaudo F2 − costos F3 por etapa,
 costos directos distribuidos por curva Gauss sobre la ventana de obra IC..FC) y le aplica
 el waterfall de financiación:

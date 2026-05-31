@@ -31,7 +31,7 @@ def lineal(n):
     return [1.0/n]*n
 
 def gauss(n, moda=None):
-    """Curva de avance de obra estilo APEX (k.Directo): Normal centrada en el punto medio
+    """Curva de avance de obra (k.Directo): Normal centrada en el punto medio
     de la duración, con desviación = STDEV de 1..n y residuo normalizador (suma = 1)."""
     if n <= 1:
         return [1.0] * max(1, n)

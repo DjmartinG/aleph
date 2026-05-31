@@ -2,6 +2,19 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.23.0] — 2026-05-31
+### Añadido (ejecución presupuestal real Torre 1 — EVM + waterfall)
+- Cargadas las **28 partidas** del Control de Presupuesto y Ejecución Torre 1 (corte 30/04/2026) en
+  `navarra_data.py` (`NAVARRA_PRESUPUESTO_T1`): base/proy_ant/ejecutado/asegurado/proy_act. Totales
+  cuadran con la imagen (Base $22.910 M · Ejecutado $9.115 M · Proyectado $23.542 M; dif <0.04% por
+  redondeo de la imagen).
+- Nuevo **tab "💰 Ejecución presupuestal"** en el Monitor: KPIs **BAC/AC/EAC/CPI/VAC**, **waterfall**
+  de variaciones (base → proyectado, capítulo a capítulo, ahorros verdes / sobrecostos rojos), barras
+  base vs ejecutado y tabla por capítulo. `charts.variaciones_waterfall` y `charts.presupuesto_barras`.
+### Cambiado (marca)
+- **Eliminada toda referencia a "APEX ARCHITECT"** (portada, captions y comentarios internos del
+  motor). La herramienta queda como "Evaluación Financiera de Proyectos · CG Constructora".
+
 ## [2.22.0] — 2026-05-31
 ### Añadido (Monitor de Ejecución — seguimiento operativo por torre · 1ª entrega)
 - Nueva sección **🏗️ Monitor de ejecución** y módulo **`navarra_data.py`** con datos reales de los

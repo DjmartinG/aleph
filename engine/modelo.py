@@ -18,7 +18,7 @@ except Exception:
 
 
 def _hitos(par):
-    """Calcula los hitos del portafolio (IV/PE/FV por etapa) — estructura APEX."""
+    """Calcula los hitos del portafolio (IV/PE/FV por etapa)."""
     et = par.get("etapas", [])
     plist = []
     for i, e in enumerate(et):
@@ -131,7 +131,7 @@ def pyg(par):
 def distribucion_costos(par, directos_miles):
     cr = par.get("cronograma", {})
     dur = int(cr.get("dur_obra", 40)); moda = int(cr.get("moda_pert", 24))
-    tipo = cr.get("curva", "Gauss")          # APEX usa curva Gauss (Normal) de avance de obra
+    tipo = cr.get("curva", "Gauss")          # curva Gauss (Normal) de avance de obra
     base = curvas.distribuir(directos_miles, dur, tipo, moda=moda)
     esc  = curvas.escalar_mat_mo(base, rel_mat=cr.get("rel_materiales",0.8),
                                  ea_mat=cr.get("ea_materiales",0.06), ea_mo=cr.get("ea_mano_obra",0.12))

@@ -2,7 +2,7 @@
 """
 Aplicativo de Prefactibilidad / Factibilidad — CG Constructora.
 Capa de presentación (Streamlit). NO contiene lógica financiera: usa engine/ (fuente única).
-Navegación por menú lateral (estilo APEX) con tablero de Inicio. Data 100% en plataforma. v2.0.0
+Navegación por menú lateral con tablero de Inicio. Data 100% en plataforma. v2.0.0
 """
 import json, io, copy
 from pathlib import Path
@@ -303,7 +303,7 @@ if seccion=="Inicio":
     if LOGO.exists(): pc1.image(str(LOGO), width=150)
     with pc2:
         st.markdown("<h1 style='font-size:2.3rem;margin:.2rem 0 0'>Evaluación Financiera de Proyectos</h1>", unsafe_allow_html=True)
-        st.markdown("<div style='color:#6B7280;font-size:1.02rem;font-weight:600'>APEX ARCHITECT® · Modelo de factibilidad inmobiliaria · CG Constructora</div>", unsafe_allow_html=True)
+        st.markdown("<div style='color:#6B7280;font-size:1.02rem;font-weight:600'>Modelo de factibilidad inmobiliaria · CG Constructora</div>", unsafe_allow_html=True)
     st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
     st.markdown(
         "Plataforma para evaluar la **prefactibilidad y factibilidad financiera** de los proyectos "
@@ -336,7 +336,7 @@ if seccion=="Inicio":
         li="".join(f"<li>{x}</li>" for x in items)
         g[i].markdown(f'<div class="navcard"><h4>{t}</h4><ul>{li}</ul></div>', unsafe_allow_html=True)
     st.write("")
-    st.caption("APEX ARCHITECT® · modelo financiero CG Constructora · estándar FAST de modelación")
+    st.caption("Modelo financiero CG Constructora · estándar FAST de modelación")
 
 # ============ PROYECTOS ACTIVOS ============
 if seccion=="Proyectos activos":
@@ -780,7 +780,7 @@ if seccion=="Monitor de ejecución":
         st.markdown(f"#### ⚠️ Alertas activas ({len(_act)})")
         render_alertas(_nav.NAVARRA_ALERTAS, solo_activas=True)
 
-        tabs=st.tabs(["📊 Avance de obra","🏦 Crédito constructor","📋 Variaciones"])
+        tabs=st.tabs(["📊 Avance de obra","💰 Ejecución presupuestal","🏦 Crédito constructor","📋 Variaciones"])
         # ---- Tab avance ----
         with tabs[0]:
             real,banco=_nav.avance_ultimo()
@@ -800,8 +800,35 @@ if seccion=="Monitor de ejecución":
                    "Δ":(f"{c['real']-c['plan']:+.1f}%" if c["plan"] else "—"),
                    "Fuente":_nav.NAVARRA_AVANCE_OBRA[c["periodo"]].get("fuente","—")} for c in cortes]
             st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        # ---- Tab crédito ----
+        # ---- Tab ejecución presupuestal (EVM real por partida) ----
         with tabs[1]:
+            PR=_nav.NAVARRA_PRESUPUESTO_T1; parts=PR["partidas"]
+            bac=sum(p["base"] for p in parts); ac=sum(p["ejecutado"] for p in parts)
+            eac=sum(p["proy_act"] for p in parts); aseg=sum(p["asegurado"] for p in parts)
+            real_av,_=_nav.avance_ultimo(); ev=real_av/100.0*bac      # valor ganado = %avance × BAC
+            cpi=(ev/ac) if ac else None; vac=bac-eac
+            st.caption(f"Control de presupuesto Torre 1 · corte {PR['fecha_corte']} · valores en **millones COP**.")
+            e=st.columns(5)
+            kpi(e[0],"Presupuesto base (BAC)", f"${bac:,.0f} M".replace(",", "."), "planeado", MUTED)
+            kpi(e[1],"Ejecutado (AC)", f"${ac:,.0f} M".replace(",", "."), f"{ac/bac*100:.0f}% del BAC", MUTED)
+            kpi(e[2],"Proyectado final (EAC)", f"${eac:,.0f} M".replace(",", "."),
+                ("ahorro" if vac>=0 else "sobrecosto"), GREEN if vac>=0 else RED)
+            kpi(e[3],"CPI (eficiencia costo)", f"{cpi:.2f}" if cpi else "n/d",
+                ("eficiente" if cpi and cpi>=1 else "sobrecosto") if cpi else "", GREEN if cpi and cpi>=1 else RED)
+            kpi(e[4],"Variación final (VAC)", f"${vac:,.0f} M".replace(",", "."),
+                ("bajo presupuesto" if vac>=0 else "sobre presupuesto"), GREEN if vac>=0 else RED)
+            st.plotly_chart(_charts.variaciones_waterfall(parts), width="stretch")
+            st.plotly_chart(_charts.presupuesto_barras(parts), width="stretch")
+            st.markdown("##### Detalle por capítulo")
+            dfp=pd.DataFrame([{"Capítulo":p["capitulo"],"Base":p["base"],"Ejecutado":p["ejecutado"],
+                               "Asegurado":p["asegurado"],"Proyectado":p["proy_act"],
+                               "Δ vs base":p["proy_act"]-p["base"]} for p in parts])
+            st.dataframe(dfp, width="stretch", hide_index=True)
+            st.caption("EAC (proyectado) vs BAC (base): VAC = "
+                       f"${vac:,.0f} M ({'ahorro' if vac>=0 else 'sobrecosto'} proyectado). ".replace(",", ".")
+                       + "EV (valor ganado) = avance real 42.0% × BAC. Aprovechable también en 📈 Valor Ganado.")
+        # ---- Tab crédito ----
+        with tabs[2]:
             cc=_nav.NAVARRA_CREDITO_CONSTRUCTOR
             st.markdown("##### 🏗️ Torre 1 — crédito constructor")
             t1=st.columns(3)
@@ -818,7 +845,7 @@ if seccion=="Monitor de ejecución":
             st.dataframe(pd.DataFrame([{"Actividad":t["actividad"],"Fecha límite":t["fecha_fin"],"Estado":t["estado"]} for t in pend]),
                          width="stretch", hide_index=True)
         # ---- Tab variaciones ----
-        with tabs[2]:
+        with tabs[3]:
             v=_nav.NAVARRA_VARIACIONES
             ic={"Alto":"🔴","Medio":"🟡","Bajo":"⚪"}
             c1,c2=st.columns(2)
@@ -887,4 +914,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.22.1 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.23.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

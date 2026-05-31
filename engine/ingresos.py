@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Kernel de Ingresos (Fase 2 — paridad APEX: k.Ventas + k.Separ + k.CuotaInicial).
+Kernel de Ingresos (Fase 2: k.Ventas + k.Separ + k.CuotaInicial del modelo financiero CG).
 Recaudo mensual de una etapa a partir del ritmo de ventas Y el ritmo de entregas:
   - Separación: sep_und por unidad, DIFERIDA en 'diferido_sep' meses desde la venta.
   - Cuota inicial: (pct_ci*precio - sep_und) por unidad, lineal de la venta a SU entrega.
