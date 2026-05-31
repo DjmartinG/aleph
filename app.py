@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from streamlit_option_menu import option_menu
 from engine import calcular, __version__ as ENGINE_V
+import charts as _charts   # gráficos financieros pro (marca CG)
 
 # ---------------- marca CG ----------------
 TEAL="#004854"; AMBER="#F09C00"; INK="#13262B"; MUTED="#6B7280"
