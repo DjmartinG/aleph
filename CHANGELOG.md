@@ -2,6 +2,20 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.14.0] — 2026-05-30
+### Añadido (Fase 2 — persistencia compartida en Supabase)
+- **Capa `storage.py`:** lee/escribe los proyectos en **Supabase** si hay `SUPABASE_URL` +
+  `SUPABASE_KEY` en `st.secrets`; si no, usa los archivos JSON locales (fallback). Ante cualquier
+  error de red, cae al respaldo local → la app nunca se rompe.
+- **Tabla `public.proyectos`** (slug · nombre · es_real · data jsonb · updated_at · updated_by) con
+  **RLS activo y sin políticas públicas**: solo la clave secreta (servidor) accede; la clave pública
+  no puede leer los datos reales.
+- **Botón "☁️ Guardar en la nube"** (solo editor, solo con Supabase): persiste el proyecto para que
+  **el equipo lo vea** al recargar ("uno ingresa, todos ven"). Refresca el consolidado al guardar.
+- El pie indica el origen de datos: **☁️ nube (compartido)** o **💾 local**.
+- `app.py` ahora importa `listar/cargar/es_real/guardar` desde `storage`. Dependencia: `supabase`.
+- Script `execution/migrar_supabase.py` (fuera del repo) para sembrar la BD desde los JSON locales.
+
 ## [2.13.0] — 2026-05-30
 ### Añadido (Fase 1 — control de acceso)
 - **Candado de equipo / editor.** Con `CLAVE_EQUIPO` en `st.secrets`, la app exige clave para VER

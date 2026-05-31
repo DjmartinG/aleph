@@ -64,16 +64,8 @@ def fmt_pct(x): return f"{x*100:.2f}%" if x is not None else "n/d"
 def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
-def cargar(n):
-    p = PRIV_DIR/f"{n}.json"                                  # privado (datos reales) tiene prioridad
-    if not p.exists(): p = PROY_DIR/f"{n}.json"
-    return json.loads(p.read_text(encoding="utf-8"))
-def listar():
-    priv = sorted(p.stem for p in PRIV_DIR.glob("*.json")) if PRIV_DIR.exists() else []
-    cubiertas = {s[:-5] for s in priv if s.endswith("_REAL")}  # "1_navarra_REAL" oculta "1_navarra"
-    pub = sorted(p.stem for p in PROY_DIR.glob("*.json") if p.stem not in cubiertas)
-    return priv + pub
-def es_real(n): return (PRIV_DIR/f"{n}.json").exists()
+# Almacenamiento: Supabase si hay credenciales, si no archivos locales (capa storage.py)
+from storage import listar, cargar, es_real, guardar, usando_supabase
 
 # ---------------- control de acceso (Fase 1) ----------------
 def _secret(nombre):
@@ -681,4 +673,18 @@ if seccion != "Inicio":
                 json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
                 file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
                 help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.13.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+    # Guardar en la nube (compartir con el equipo) — solo editor y solo si hay Supabase
+    if ES_EDITOR and usando_supabase() and sel and sel != "➕ Nuevo proyecto":
+        if st.button("☁️ Guardar en la nube (compartir con el equipo)", type="primary", width="stretch"):
+            try:
+                guardar(sel, par, nombre=meta.get("nombre", sel), es_real_flag=es_real(sel),
+                        by=_secret("CLAVE_EDITOR") and "editor")
+                st.cache_data.clear()        # refresca el consolidado
+                st.success("Guardado. El equipo verá estos datos al recargar.")
+            except Exception as e:
+                st.error(f"No se pudo guardar en la nube: {e}")
+    elif ES_EDITOR and not usando_supabase():
+        st.caption("ℹ️ Sin base de datos compartida configurada: los cambios viven en tu sesión. "
+                   "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
+_origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
+st.caption(f"Aplicativo v2.14.0 · motor v{ENGINE_V} · datos: {_origen} · CG Constructora")
