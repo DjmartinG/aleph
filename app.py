@@ -496,9 +496,14 @@ if seccion=="Reparto":
 # ============ DISTRIBUCIÓN COSTOS ============
 if seccion=="Distribución costos":
     d=R["distribucion"]
-    st.plotly_chart(_charts.curva_obra_s(d["escalada"], d["acumulada"]), width="stretch")
-    st.caption(f"Curva S de avance de obra: barras = costo directo mensual (campana de Gauss); línea ámbar = "
-               f"avance acumulado en %. Pico de obra: mes {d['pico_mes']}.")
+    _h=R.get("hitos") or {}
+    _ic=[x.get("IC") for x in _h.values() if x.get("IC")]
+    _base_obra=min(_ic) if _ic else None                 # inicio real de obra (dic-2025 en Navarra)
+    st.plotly_chart(_charts.curva_obra_s(d["escalada"], d["acumulada"], fecha_base=_base_obra), width="stretch")
+    _pico_txt=(f"{_base_obra.year+(_base_obra.month-1+d['pico_mes']-1)//12}-"
+               f"{(_base_obra.month-1+d['pico_mes']-1)%12+1:02d}") if _base_obra else f"mes {d['pico_mes']}"
+    st.caption("Curva S de avance de obra: barras = costo directo mensual (campana de Gauss); línea ámbar = "
+               f"avance acumulado en %. La obra inicia {('en '+_base_obra.strftime('%b %Y')) if _base_obra else 'según cronograma'}.")
 
 # ============ FLUJO DE CAJA ============
 if seccion=="Flujo de caja":
@@ -506,12 +511,19 @@ if seccion=="Flujo de caja":
     _h=R.get("hitos") or {}
     if _ap.get("operativo") and _h:
         _base=min(x["IV"] for x in _h.values())          # fecha real del mes 0 (inicio del proyecto)
+        _en_ejecucion = _base < date(2026,5,1)           # proyecto ya arrancó (caso Navarra)
+        _desde=None
+        if _en_ejecucion:
+            _solo_futuro=st.toggle("Mostrar solo la caja de aquí en adelante (desde hoy)", value=True,
+                                   help="Este proyecto ya está en ejecución. Activa para ver solo el flujo futuro.")
+            if _solo_futuro: _desde=date(2026,5,1)
         st.plotly_chart(_charts.flujo_caja_waterfall(
             _ap["operativo"], _ap["acumulado"], _ap.get("saldo_credito"),
-            fecha_base=_base, tope_anio=2030), width="stretch")
-        st.caption("Eje en **fechas reales**. Barras = flujo neto mensual (🟢 caja positiva / 🔴 requiere "
-                   "financiación) · línea oscura = caja acumulada · línea ámbar punteada = saldo de crédito · "
-                   "anotación = exposición máxima. Proyectado hasta 2030.")
+            fecha_base=_base, tope_anio=2030, desde=_desde), width="stretch")
+        _tramo=("desde hoy (may-2026)" if _desde else f"desde {_base:%b %Y}")
+        st.caption(f"Eje en **fechas reales**, {_tramo} hasta 2030. Barras = flujo neto mensual (🟢 caja positiva / "
+                   "🔴 requiere financiación) · línea oscura = caja acumulada · línea ámbar punteada = saldo de "
+                   "crédito · anotación = exposición máxima.")
         cc=st.columns(4)
         kpi(cc[0],"TIR proyecto",fmt_pct(_ap.get("tir_proyecto")))
         kpi(cc[1],"Crédito constructor máx",fmt_mm(_ap.get("credito_max")))
@@ -558,10 +570,20 @@ if seccion=="Apalancamiento":
         c2=st.columns(4)
         kpi(c2[0],"Crédito constructor máx",fmt_mm(a["credito_max"])); kpi(c2[1],"Necesidad máx de caja",fmt_mm(a["max_necesidad_caja"]))
         kpi(c2[2],"Valor financiable",fmt_mm(a["valor_financiable"])); kpi(c2[3],"Intereses",fmt_mm(a["intereses_total"]))
-        n=max([i for i,v in enumerate(op) if abs(v)>1],default=0)+2; m=list(range(1,n+1))
-        fig2=go.Figure(); fig2.add_scatter(x=m,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=2))
-        fig2.add_scatter(x=m,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
-        fig2.update_layout(title="Mensual: caja acumulada y saldo de crédito",height=340,xaxis_title="Mes"); st.plotly_chart(fig2, width="stretch")
+        _hh=R.get("hitos") or {}
+        _b=min((x["IV"] for x in _hh.values()), default=None)
+        n=max([i for i,v in enumerate(op) if abs(v)>1],default=0)+2
+        if _b is not None:
+            xs=_charts._eje_fechas(_b, n)
+            lim=[i for i,dd in enumerate(xs) if dd.year<=2030]
+            if lim: n=lim[-1]+1; xs=xs[:n]
+        else:
+            xs=list(range(1,n+1))
+        fig2=go.Figure(); fig2.add_scatter(x=xs,y=ac[:n],name="Operativo acumulado",line=dict(color=INK,width=2))
+        fig2.add_scatter(x=xs,y=sc[:n],name="Saldo crédito constructor",line=dict(color=AMBER,dash="dot"))
+        fig2.update_layout(title="Caja acumulada y saldo de crédito (mensual)",height=340,xaxis_title="")
+        if _b is not None: fig2.update_xaxes(dtick="M6", tickformat="%b %Y")
+        st.plotly_chart(fig2, width="stretch")
         st.caption("Crédito constructor: cobertura (~80%) del costo de obra, amortizado con las subrogaciones; los aportes cubren el resto.")
 
 # ============ CRONOGRAMA ============
@@ -634,7 +656,9 @@ if seccion=="Ingresos":
         st.info("Completa los datos de etapas para ver el recaudo de ingresos.")
     else:
         sepr=rc["separacion"]; cir=rc["cuota_inicial"]; subr=rc["subrogacion"]; tot=rc["total"]
-        st.plotly_chart(_charts.recaudo_stacked(sepr, cir, subr), width="stretch")
+        _h=R.get("hitos") or {}
+        _base_v=min((x["IV"] for x in _h.values()), default=None)   # inicio de ventas real (mes 0)
+        st.plotly_chart(_charts.recaudo_stacked(sepr, cir, subr, fecha_base=_base_v, tope_anio=2030), width="stretch")
         cc=st.columns(4)
         kpi(cc[0],"Separación",fmt_mm(sum(sepr))); kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
         kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
@@ -703,4 +727,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.19.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.20.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

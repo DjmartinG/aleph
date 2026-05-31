@@ -60,7 +60,7 @@ def _recortar(series, extra=2):
 
 # ----------------------------------------------------------------------------- flujo de caja
 def flujo_caja_waterfall(flujo, acumulado, saldo_credito=None, fecha_base=None, tope_anio=None,
-                         titulo="Flujo de caja del proyecto"):
+                         desde=None, titulo="Flujo de caja del proyecto"):
     """Barras verde/rojo del flujo neto mensual + acumulado + saldo de crédito + pico de exposición.
 
     Args:
@@ -69,15 +69,23 @@ def flujo_caja_waterfall(flujo, acumulado, saldo_credito=None, fecha_base=None, 
         saldo_credito: lista del saldo de crédito constructor (opcional).
         fecha_base: date del primer mes (mes 0). Si se da, el eje X son FECHAS reales; si no, nº de mes.
         tope_anio: si se da (p.ej. 2030), recorta el eje al final de ese año.
+        desde: date — si se da (con fecha_base), recorta el inicio a ese mes ("caja de aquí en adelante").
     """
     n = max(_recortar(flujo), _recortar(acumulado))
+    i0 = 0
     if fecha_base is not None:
         fechas = _eje_fechas(fecha_base, n)
+        if desde is not None:                           # arranca el eje en 'desde' (proyecto en ejecución)
+            futuros = [i for i, d in enumerate(fechas) if (d.year, d.month) >= (desde.year, desde.month)]
+            if futuros:
+                i0 = futuros[0]
         if tope_anio:                                   # recorta hasta dic-tope_anio inclusive
             lim = [i for i, d in enumerate(fechas) if d.year <= tope_anio]
             if lim:
                 n = lim[-1] + 1; fechas = fechas[:n]
-        x = fechas; xtitle = ""; hov_x = "%{x|%b %Y}"
+        x = fechas[i0:n]; flujo = flujo[i0:n]; acumulado = acumulado[i0:n]
+        if saldo_credito: saldo_credito = saldo_credito[i0:n]
+        n = len(x); xtitle = ""; hov_x = "%{x|%b %Y}"
     else:
         x = list(range(1, n + 1)); xtitle = "Mes"; hov_x = "Mes %{x}"
     fig = go.Figure()
@@ -107,9 +115,14 @@ def flujo_caja_waterfall(flujo, acumulado, saldo_credito=None, fecha_base=None, 
 
 
 # ----------------------------------------------------------------------------- curva S obra
-def curva_obra_s(escalada, acumulada, titulo="Curva S de avance de obra (costo directo)"):
-    """Campana de costo directo mensual (barras) + curva S de avance acumulado en % (eje der.)."""
-    n = min(_recortar(escalada), len(escalada)); x = list(range(1, n + 1))
+def curva_obra_s(escalada, acumulada, fecha_base=None, titulo="Curva S de avance de obra (costo directo)"):
+    """Campana de costo directo mensual (barras) + curva S de avance acumulado en % (eje der.).
+    Si `fecha_base` (date del mes 0 de la OBRA) se da, el eje X son fechas reales."""
+    n = min(_recortar(escalada), len(escalada))
+    if fecha_base is not None:
+        x = _eje_fechas(fecha_base, n); xtitle = ""; hov_x = "%{x|%b %Y}"
+    else:
+        x = list(range(1, n + 1)); xtitle = "Mes de obra"; hov_x = "Mes %{x}"
     total = (sum(escalada) or 1)                       # base del avance = costo directo total
     acum = []; run = 0.0
     for i in range(n):
@@ -118,35 +131,53 @@ def curva_obra_s(escalada, acumulada, titulo="Curva S de avance de obra (costo d
     avance = [(acum[i] / total) if total else 0 for i in range(n)]
     fig = go.Figure()
     fig.add_bar(x=x, y=escalada[:n], name="Costo directo mensual", marker_color=TEAL, opacity=0.85,
-                hovertemplate="Mes %{x}: %{y:,.0f} mil COP<extra></extra>")
+                hovertemplate=hov_x + ": %{y:,.0f} mil COP<extra></extra>")
     fig.add_scatter(x=x, y=avance, name="Avance acumulado", yaxis="y2",
                     line=dict(color=AMBER, width=3), fill="tozeroy", fillcolor="rgba(240,156,0,.08)",
-                    hovertemplate="Mes %{x}: %{y:.0%} avance<extra></extra>")
+                    hovertemplate=hov_x + ": %{y:.0%} avance<extra></extra>")
     # pico de la campana
     if escalada[:n]:
         pk = max(range(n), key=lambda i: escalada[i])
-        fig.add_annotation(x=pk + 1, y=escalada[pk], text=f"Pico obra<br>mes {pk+1}",
+        etiqueta = (f"Pico obra<br>{x[pk]:%b %Y}" if fecha_base is not None else f"Pico obra<br>mes {pk+1}")
+        fig.add_annotation(x=x[pk], y=escalada[pk], text=etiqueta,
                            showarrow=True, arrowhead=2, arrowcolor=TEAL, font=dict(size=11, color=TEAL),
                            bgcolor="white", bordercolor=TEAL, borderwidth=1)
-    fig.update_layout(title=titulo, height=410, xaxis_title="Mes de obra", yaxis_title="Miles COP",
+    fig.update_layout(title=titulo, height=410, xaxis_title=xtitle, yaxis_title="Miles COP",
                       yaxis2=dict(overlaying="y", side="right", title="Avance", tickformat=".0%",
                                   range=[0, 1.05], showgrid=False))
+    if fecha_base is not None:
+        fig.update_xaxes(dtick="M3", tickformat="%b %Y")
     return fig
 
 
 # ----------------------------------------------------------------------------- recaudo apilado
-def recaudo_stacked(separacion, cuota_inicial, subrogacion, titulo="Recaudo mensual por componente"):
-    """Área apilada: separación (ámbar) + cuota inicial (teal) + subrogación (verde)."""
+def recaudo_stacked(separacion, cuota_inicial, subrogacion, fecha_base=None, tope_anio=None,
+                    titulo="Recaudo mensual por componente"):
+    """Área apilada: separación (ámbar) + cuota inicial (teal) + subrogación (verde).
+    Si `fecha_base` (date del mes 0) se da, el eje X son fechas; `tope_anio` recorta al fin de ese año."""
     n = max(_recortar(separacion), _recortar(cuota_inicial), _recortar(subrogacion))
-    x = list(range(1, n + 1))
+    if fecha_base is not None:
+        fechas = _eje_fechas(fecha_base, n)
+        if tope_anio:
+            lim = [i for i, d in enumerate(fechas) if d.year <= tope_anio]
+            if lim:
+                n = lim[-1] + 1; fechas = fechas[:n]
+        x = fechas; xtitle = ""; hov_x = "%{x|%b %Y}"
+    else:
+        x = list(range(1, n + 1)); xtitle = "Mes"; hov_x = "Mes %{x}"
     fig = go.Figure()
     fig.add_scatter(x=x, y=separacion[:n], name="Separación", stackgroup="r",
-                    line=dict(width=0.5, color=AMBER), fillcolor="rgba(240,156,0,.55)")
+                    line=dict(width=0.5, color=AMBER), fillcolor="rgba(240,156,0,.55)",
+                    hovertemplate=hov_x + " · Separación: %{y:,.0f}<extra></extra>")
     fig.add_scatter(x=x, y=cuota_inicial[:n], name="Cuota inicial", stackgroup="r",
-                    line=dict(width=0.5, color=TEAL), fillcolor="rgba(0,72,84,.55)")
+                    line=dict(width=0.5, color=TEAL), fillcolor="rgba(0,72,84,.55)",
+                    hovertemplate=hov_x + " · Cuota inicial: %{y:,.0f}<extra></extra>")
     fig.add_scatter(x=x, y=subrogacion[:n], name="Subrogación (escrituración)", stackgroup="r",
-                    line=dict(width=0.5, color=GREEN), fillcolor="rgba(30,135,75,.55)")
-    fig.update_layout(title=titulo, height=400, xaxis_title="Mes", yaxis_title="Miles COP")
+                    line=dict(width=0.5, color=GREEN), fillcolor="rgba(30,135,75,.55)",
+                    hovertemplate=hov_x + " · Subrogación: %{y:,.0f}<extra></extra>")
+    fig.update_layout(title=titulo, height=400, xaxis_title=xtitle, yaxis_title="Miles COP")
+    if fecha_base is not None:
+        fig.update_xaxes(dtick="M6", tickformat="%b %Y")
     return fig
 
 

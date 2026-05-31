@@ -2,6 +2,17 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.20.0] — 2026-05-31
+### Cambiado (todos los gráficos mensuales en fechas reales)
+- **Distribución costos** (curva S), **Ingresos** (recaudo apilado) y el mensual de **Apalancamiento**
+  ahora usan **fechas reales** en el eje X (antes "mes 1,2,3…"). Curva S anclada al **inicio real de
+  obra** (dic‑2025 en Navarra); recaudo y caja/crédito anclados al inicio de ventas, topados a 2030.
+- **Flujo de caja — "caja de aquí en adelante":** para proyectos en ejecución (caso Navarra, arrancó
+  2022) hay un **toggle** que recorta el eje desde el mes actual (may‑2026), activado por defecto.
+  Así se ve solo la caja futura, no el histórico.
+- `charts`: `curva_obra_s`/`recaudo_stacked` admiten `fecha_base` (+`tope_anio`); `flujo_caja_waterfall`
+  admite `desde` (recorta el inicio). Verificado en los 3 proyectos.
+
 ## [2.19.0] — 2026-05-31
 ### Cambiado (flujo de caja en fechas reales)
 - **El flujo de caja ahora usa FECHAS reales** en el eje X (antes "mes 1…90", confuso). Se ancla a
