@@ -495,21 +495,17 @@ if seccion=="Reparto":
 
 # ============ DISTRIBUCIÓN COSTOS ============
 if seccion=="Distribución costos":
-    d=R["distribucion"]; m=list(range(1,len(d["escalada"])+1))
-    fig=go.Figure(); fig.add_bar(x=m,y=d["escalada"],name="Costo mensual",marker_color=TEAL)
-    fig.add_scatter(x=m,y=d["acumulada"],name="Acumulado",yaxis="y2",line=dict(color=AMBER,width=3))
-    fig.update_layout(title=f"Distribución del costo directo — curva Gauss de avance de obra (pico mes {d['pico_mes']})",
-                      yaxis2=dict(overlaying="y",side="right",showgrid=False),height=440,xaxis_title="Mes de obra")
-    st.plotly_chart(fig, width="stretch")
+    d=R["distribucion"]
+    st.plotly_chart(_charts.curva_obra_s(d["escalada"], d["acumulada"]), width="stretch")
+    st.caption(f"Curva S de avance de obra: barras = costo directo mensual (campana de Gauss); línea ámbar = "
+               f"avance acumulado en %. Pico de obra: mes {d['pico_mes']}.")
 
 # ============ FLUJO DE CAJA ============
 if seccion=="Flujo de caja":
-    n=len([x for x in fl["flujo"] if abs(x)>1])+2; m=list(range(1,n+1))
-    fig=go.Figure(); fig.add_bar(x=m,y=fl["flujo"][:n],name="Flujo mensual",marker_color=TEAL)
-    fig.add_scatter(x=m,y=fl["acumulado"][:n],name="Acumulado",line=dict(color=INK,width=3))
-    fig.add_scatter(x=m,y=fl["saldo_credito"][:n],name="Saldo crédito",line=dict(color=AMBER,dash="dot"))
-    fig.update_layout(title="Flujo de caja del proyecto (modelo simplificado)",height=440,xaxis_title="Mes")
-    st.plotly_chart(fig, width="stretch")
+    _saldo=(R.get("apalancamiento") or {}).get("saldo_credito") or fl.get("saldo_credito")
+    st.plotly_chart(_charts.flujo_caja_waterfall(fl["flujo"], fl["acumulado"], _saldo), width="stretch")
+    st.caption("Barras = flujo neto mensual (🟢 caja positiva / 🔴 requiere financiación) · línea oscura = caja "
+               "acumulada · línea ámbar punteada = saldo de crédito constructor · anotación = mes de exposición máxima.")
     cc=st.columns(4)
     kpi(cc[0],"TIR proyecto (no apal.)",fmt_pct(fl["tir_proyecto"])); kpi(cc[1],"Crédito constructor máx",fmt_mm(fl["credito_max"]))
     kpi(cc[2],"Necesidad máx de caja",fmt_mm(fl["max_caja"])); kpi(cc[3],"Intereses (prelim.)",fmt_mm(fl["intereses_total"]))
@@ -636,12 +632,7 @@ if seccion=="Ingresos":
         st.info("Completa los datos de etapas para ver el recaudo de ingresos.")
     else:
         sepr=rc["separacion"]; cir=rc["cuota_inicial"]; subr=rc["subrogacion"]; tot=rc["total"]
-        n=max([i for i,v in enumerate(tot) if abs(v)>1], default=0)+2; m=list(range(1,n+1))
-        fig=go.Figure()
-        fig.add_scatter(x=m,y=sepr[:n],name="Separación",stackgroup="r",line=dict(width=0.5,color=AMBER))
-        fig.add_scatter(x=m,y=cir[:n],name="Cuota inicial",stackgroup="r",line=dict(width=0.5,color=TEAL))
-        fig.add_scatter(x=m,y=subr[:n],name="Subrogación",stackgroup="r",line=dict(width=0.5,color=GREEN))
-        fig.update_layout(title="Recaudo mensual por componente",height=440,xaxis_title="Mes"); st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(_charts.recaudo_stacked(sepr, cir, subr), width="stretch")
         cc=st.columns(4)
         kpi(cc[0],"Separación",fmt_mm(sum(sepr))); kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
         kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
@@ -710,4 +701,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.16.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.18.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
