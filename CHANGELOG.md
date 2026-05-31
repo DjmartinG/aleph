@@ -2,6 +2,20 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.11.0] — 2026-05-30
+### Validado EXACTO (TIR/VPN de Navarra contra el modelo aprobado)
+- **FCL auditado de fiducia:** el motor acepta `par["fiducia"]` con el Flujo de Caja Libre anual
+  real (hoja `FC LOTE CG -V2K`: Aportes → Devoluciones → Retornos → FCL). Cuando existe, la TIR/VPN
+  del **proyecto** y del **socio** se calculan sobre esa serie a la TIO, en vez de la aproximación
+  mensual. Campo `apalancamiento.fiducia_real = True`.
+- **Navarra reproduce el Excel al peso (vía la app):** TIR proyecto **37.5975%** (=D113), VPN
+  **$18.280.688** (=D114) @ TIO 15%; **TIR socio CG 41.7189%** (=D120), VPN socio **$9.885.116**
+  (=D121); Σ FCL proyecto **$46.271.073** (=real). Verificado con `execution/validar_fcl_navarra.py`.
+- **UI:** con datos de fiducia, los KPIs muestran TIR proyecto · VPN @TIO · TIR socio CG en verde
+  **"auditado"**; la sección Apalancamiento añade la tabla **FCL año a año** (Proyecto / Socio CG).
+- **Estado Navarra:** P&G reconciliado, calendario real, **TIR/VPN auditados exactos**. Crédito
+  constructor mensual queda en 0.87× (aprox., no afecta la TIR/VPN auditada). **Navarra: cerrado.**
+
 ## [2.10.0] — 2026-05-30
 ### Calibrado (retorno al desarrollador y tasa de descuento — Navarra, medido)
 - **Flujo de retorno al desarrollador** (criterio CG): TIR/VPN se calculan sobre los **REINTEGROS

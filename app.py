@@ -208,9 +208,14 @@ elif seccion != "Inicio":
     kpi(k[0],"Ventas totales", fmt_mm(pg["ventas"]))
     kpi(k[1],"Utilidad operativa", fmt_mm(pg["util_oper"]), fmt_pct(pg["margen_oper"]), GREEN)
     kpi(k[2],"UDI", fmt_mm(pg["udi"]))
-    kpi(k[3],"TIR apalancada (ref)", fmt_pct(fl.get("tir_apalancada_ref")), "modelo aprobado", MUTED)
-    kpi(k[4],"VPN @WACC", fmt_mm(fl.get("vpn_proyecto")), "preliminar", AMBER)
-    kpi(k[5],"Crédito máx", fmt_mm(fl.get("credito_max")), "preliminar", AMBER)
+    if ap.get("fiducia_real"):                  # TIR/VPN auditados (FCL real de fiducia)
+        kpi(k[3],"TIR proyecto", fmt_pct(ap.get("tir_proyecto")), "auditado · fiducia", GREEN)
+        kpi(k[4],"VPN @TIO", fmt_mm(ap.get("vpn_proyecto")), "auditado", GREEN)
+        kpi(k[5],"TIR socio CG", fmt_pct(ap.get("tir_equity")), "auditado", GREEN)
+    else:
+        kpi(k[3],"TIR apalancada (ref)", fmt_pct(fl.get("tir_apalancada_ref")), "modelo aprobado", MUTED)
+        kpi(k[4],"VPN @WACC", fmt_mm(fl.get("vpn_proyecto")), "preliminar", AMBER)
+        kpi(k[5],"Crédito máx", fmt_mm(fl.get("credito_max")), "preliminar", AMBER)
     st.write("")
 
 # ============ INICIO (portada / bienvenida) ============
@@ -448,9 +453,25 @@ if seccion=="Apalancamiento":
             fig=go.Figure(); fig.add_bar(x=[str(y) for y in yrs],y=[an[y] for y in yrs],name="Flujo operativo",marker_color=TEAL)
             fig.add_scatter(x=[str(y) for y in yrs],y=cum,name="Acumulado",line=dict(color=INK,width=3))
             fig.update_layout(title="Flujo de caja consolidado del portafolio (anual)",height=400); st.plotly_chart(fig, width="stretch")
+        if a.get("fiducia_real"):
+            cc=st.columns(4)
+            kpi(cc[0],"TIR proyecto",fmt_pct(a.get("tir_proyecto")),"auditado · fiducia",GREEN)
+            kpi(cc[1],"VPN proyecto @TIO",fmt_mm(a.get("vpn_proyecto")),f"TIO {fmt_pct(a.get('tio'))}",GREEN)
+            kpi(cc[2],"TIR socio CG",fmt_pct(a.get("tir_equity")),"auditado",GREEN)
+            kpi(cc[3],"VPN socio CG",fmt_mm(a.get("vpn_socio")) if a.get("vpn_socio") is not None else "n/d","auditado",GREEN)
+            fp=a.get("fcl_proyecto_anual"); fs=a.get("fcl_socio_anual"); y0=a.get("anio0_fiducia")
+            if fp and y0:
+                st.markdown("##### Flujo de caja libre (auditado · fiducia)")
+                cols=[str(y0+i) for i in range(len(fp))]
+                dff={"Concepto":["FCL Proyecto","FCL Socio CG"]}
+                for i,c in enumerate(cols):
+                    dff[c]=[round(fp[i]/1000), round((fs[i] if fs and i<len(fs) else 0)/1000)]
+                st.dataframe(pd.DataFrame(dff), width="stretch", hide_index=True)
+                st.caption("Cifras en millones COP. FCL = Retornos + Devoluciones de aportes − Aportes "
+                           "(hoja *FC LOTE CG -V2K*). TIR/VPN reproducen exacto el modelo aprobado.")
         c1=st.columns(4)
         kpi(c1[0],"TIR proyecto",fmt_pct(a.get("tir_proyecto")))
-        kpi(c1[1],"VPN @WACC",fmt_mm(a["vpn_proyecto"]) if a.get("vpn_proyecto") is not None else "n/d")
+        kpi(c1[1],"VPN",fmt_mm(a["vpn_proyecto"]) if a.get("vpn_proyecto") is not None else "n/d")
         kpi(c1[2],"WACC E.A.",fmt_pct(a.get("wacc")))
         pb=a.get("payback_mes"); kpi(c1[3],"Payback (caja+)",(f"{pb} meses" if pb else "—"))
         c2=st.columns(4)
@@ -599,4 +620,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.10.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.11.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

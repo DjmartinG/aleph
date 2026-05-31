@@ -39,6 +39,21 @@ def _tir(flujos, anual=True):
         prev = cur; r = r2
     return None
 
+def _tir_periodo(flujos):
+    """TIR por periodo (la serie ya viene en su periodicidad, p.ej. anual). Bisección robusta."""
+    def vpn(r): return sum(f / (1 + r) ** t for t, f in enumerate(flujos))
+    lo, hi = -0.95, 5.0
+    if vpn(lo) * vpn(hi) > 0:
+        return None
+    for _ in range(300):
+        mid = (lo + hi) / 2
+        if vpn(lo) * vpn(mid) <= 0: hi = mid
+        else: lo = mid
+    return (lo + hi) / 2
+
+def _vpn(flujos, r):
+    return sum(f / (1 + r) ** t for t, f in enumerate(flujos))
+
 
 def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     if not hitos or not recaudo or not recaudo.get("total"):
@@ -160,7 +175,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
             payback = i; break
 
     pos = [x for x in saldo_serie if x > 0]
-    return {
+    out = {
         "ingresos": ingresos_m, "costos": costos_m, "operativo": operativo,
         "acumulado": acum, "saldo_credito": saldo_serie, "flujo_equity": flujo_equity,
         "credito_max": max(saldo_serie), "credito_prom": (sum(pos) / len(pos)) if pos else 0.0,
@@ -172,4 +187,25 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         "tir_apalancada_ref": fin.get("tir_apalancada_ref"),
         "vpn_proyecto": sum(f / (1 + tio_m) ** t for t, f in enumerate(retorno)),
         "tio": tio, "wacc": wacc, "anual": anual, "anio0": anio0, "payback_mes": payback,
+        "fiducia_real": False,
     }
+
+    # ---- FCL auditado de fiducia (autoritativo) ----
+    # Si el proyecto trae el Flujo de Caja Libre anual real de la fiducia (hoja FC LOTE CG -V2K:
+    # Aportes → Devoluciones → Retornos → FCL), la TIR/VPN del PROYECTO y del SOCIO se calculan
+    # sobre esa serie anual a la TIO. Es la cifra auditada de CG (no la aproximación mensual).
+    fd = par.get("fiducia") or {}
+    fcl_p = fd.get("fcl_proyecto")
+    if fcl_p:
+        tio_f = fd.get("tio", tio)
+        out["fiducia_real"] = True
+        out["fcl_proyecto_anual"] = fcl_p
+        out["anio0_fiducia"] = fd.get("anio0")
+        out["tir_proyecto"] = _tir_periodo(fcl_p)
+        out["vpn_proyecto"] = _vpn(fcl_p, tio_f)
+        fcl_s = fd.get("fcl_socio_cg")
+        if fcl_s:
+            out["fcl_socio_anual"] = fcl_s
+            out["tir_equity"] = _tir_periodo(fcl_s)
+            out["vpn_socio"] = _vpn(fcl_s, tio_f)
+    return out
