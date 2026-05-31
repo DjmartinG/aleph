@@ -19,7 +19,8 @@ TEAL="#004854"; AMBER="#F09C00"; INK="#13262B"; MUTED="#6B7280"
 GREEN="#1E874B"; RED="#C0392B"; BORDER="#E6E9EF"
 HERE=Path(__file__).parent; PROY_DIR=HERE/"proyectos"; PRIV_DIR=HERE/"proyectos_privados"; LOGO=HERE/"assets"/"logo_cg.png"
 _icon = str(LOGO) if LOGO.exists() else "🏗️"
-st.set_page_config(page_title="Factibilidad CG", page_icon=_icon, layout="wide")
+st.set_page_config(page_title="Factibilidad CG", page_icon=_icon, layout="wide",
+                   initial_sidebar_state="expanded")
 
 pio.templates["cg"]=go.layout.Template(layout=dict(
     font=dict(family="Inter, sans-serif", color=INK, size=13),
