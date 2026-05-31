@@ -85,9 +85,13 @@ def flujo_caja_waterfall(flujo, acumulado, saldo_credito=None, titulo="Flujo de 
 # ----------------------------------------------------------------------------- curva S obra
 def curva_obra_s(escalada, acumulada, titulo="Curva S de avance de obra (costo directo)"):
     """Campana de costo directo mensual (barras) + curva S de avance acumulado en % (eje der.)."""
-    n = _recortar(escalada); x = list(range(1, n + 1))
-    total = acumulada[n - 1] if n and acumulada else (sum(escalada) or 1)
-    avance = [(acumulada[i] / total) if i < len(acumulada) and total else 0 for i in range(n)]
+    n = min(_recortar(escalada), len(escalada)); x = list(range(1, n + 1))
+    total = (sum(escalada) or 1)                       # base del avance = costo directo total
+    acum = []; run = 0.0
+    for i in range(n):
+        run += escalada[i] if i < len(escalada) else 0
+        acum.append(run)
+    avance = [(acum[i] / total) if total else 0 for i in range(n)]
     fig = go.Figure()
     fig.add_bar(x=x, y=escalada[:n], name="Costo directo mensual", marker_color=TEAL, opacity=0.85,
                 hovertemplate="Mes %{x}: %{y:,.0f} mil COP<extra></extra>")
