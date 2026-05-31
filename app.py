@@ -13,6 +13,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from streamlit_option_menu import option_menu
 from engine import calcular, __version__ as ENGINE_V
+from engine import evm as _evm   # Valor Ganado (EVM)
 import charts as _charts   # gráficos financieros pro (marca CG)
 
 # ---------------- marca CG ----------------
@@ -197,9 +198,9 @@ with st.sidebar:
         st.session_state.sel = sel
     par = st.session_state.par
     MENU=["Inicio","Proyectos activos","Datos del proyecto","Urbanístico","Cronograma","Ingresos",
-          "Distribución costos","P&G","Reparto","Flujo de caja","Apalancamiento","Escenarios","Sensibilidad"]
+          "Distribución costos","P&G","Reparto","Flujo de caja","Apalancamiento","Valor Ganado","Escenarios","Sensibilidad"]
     ICONS=["house-door","buildings","pencil-square","building","calendar3","cash-coin",
-           "bar-chart-line","table","pie-chart","cash-stack","bank","bullseye","sliders"]
+           "bar-chart-line","table","pie-chart","cash-stack","bank","graph-up-arrow","bullseye","sliders"]
     seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
         styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
                 "icon":{"color":TEAL,"font-size":"14px"},
@@ -399,9 +400,11 @@ elif seccion=="Datos del proyecto":
         st.caption("✏️ Ajusta las **unidades** de cada etapa en la columna *Unidades*. Cada etapa abre ventas cuando su "
                    "**sucesora** llega al equilibrio; la raíz no tiene sucesora. **Precio**: $/m² (× área/und) o $/und. "
                    "**Ritmo de ventas** (Vtas/mes·Frec) y **ritmo de entregas** (Entr/mes·Frec ent) mueven los hitos y el recaudo.")
-        cols=["cod","nom","und","metodo","precio","area_und","vmes","frec","emes","efrec","pe_pct","sucesora","desfase","dur_obra","escrituracion"]
+        cols=["cod","nom","und","metodo","precio","area_und","vmes","frec","emes","efrec","pe_pct","sucesora","desfase","dur_obra","escrituracion","avance_real","costo_real"]
         df_et=pd.DataFrame(par["etapas"]).reindex(columns=cols)
         if "metodo" in df_et: df_et["metodo"]=df_et["metodo"].fillna("$/m²")
+        if "avance_real" in df_et:                       # se guarda 0..1, se muestra 0..100
+            df_et["avance_real"]=df_et["avance_real"].apply(lambda v: v*100 if pd.notna(v) else v)
         edited=st.data_editor(df_et, num_rows="dynamic", width="stretch", key=f"editor_{sel}",
             column_config={
                 "cod": st.column_config.NumberColumn("Cód", format="%d", width="small"),
@@ -418,7 +421,11 @@ elif seccion=="Datos del proyecto":
                 "sucesora": st.column_config.NumberColumn("Sucesora", format="%d"),
                 "desfase": st.column_config.NumberColumn("Desfase (m)", format="%d"),
                 "dur_obra": st.column_config.NumberColumn("Dur. obra (m)", format="%d"),
-                "escrituracion": st.column_config.NumberColumn("Escrit. (m)", format="%d")})
+                "escrituracion": st.column_config.NumberColumn("Escrit. (m)", format="%d"),
+                "avance_real": st.column_config.NumberColumn("Avance real %", format="%.0f", min_value=0, max_value=100,
+                    help="Valor Ganado (EVM): % de avance de obra REAL de esta etapa a la fecha (0–100). Vacío = sin EVM."),
+                "costo_real": st.column_config.NumberColumn("Costo real (miles)", format="%d",
+                    help="Valor Ganado (EVM): costo directo realmente gastado en esta etapa a la fecha (miles COP).")})
         def _i(v):
             try: return int(v) if v is not None and not pd.isna(v) else None
             except Exception: return None
@@ -431,12 +438,16 @@ elif seccion=="Datos del proyecto":
             und=_i(r.get("und")) or 0; metodo=r.get("metodo") or "$/m²"
             precio=_f(r.get("precio")) or 0; area=_f(r.get("area_und")) or 0
             ventas_miles=und*precio*area/1000 if metodo=="$/m²" else und*precio/1000
-            recs.append({"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa","und":und,"metodo":metodo,
+            _av=_f(r.get("avance_real")); _cr=_f(r.get("costo_real"))
+            rec={"cod":_i(r.get("cod")),"nom":r.get("nom") or "Etapa","und":und,"metodo":metodo,
                 "precio":precio,"area_und":area,"ventas_miles":ventas_miles,"vmes":_i(r.get("vmes")) or 6,
                 "frec":_i(r.get("frec")) or 1,"emes":_i(r.get("emes")),"efrec":_i(r.get("efrec")) or 1,
                 "pe_pct":_f(r.get("pe_pct")) or 0.60,"sucesora":_i(r.get("sucesora")),
                 "desfase":_i(r.get("desfase")) or 0,"obra_offset":1,"dur_obra":_i(r.get("dur_obra")) or 24,
-                "escrituracion":_i(r.get("escrituracion")) or 30})
+                "escrituracion":_i(r.get("escrituracion")) or 30}
+            if _av is not None: rec["avance_real"]=_av/100.0      # se guarda 0..1
+            if _cr is not None: rec["costo_real"]=_cr
+            recs.append(rec)
         for idx,r in enumerate(recs):
             if not r["cod"]: r["cod"]=idx+1
         if _raiz is not None:
@@ -586,6 +597,37 @@ if seccion=="Apalancamiento":
         st.plotly_chart(fig2, width="stretch")
         st.caption("Crédito constructor: cobertura (~80%) del costo de obra, amortizado con las subrogaciones; los aportes cubren el resto.")
 
+# ============ VALOR GANADO (EVM) ============
+if seccion=="Valor Ganado":
+    st.markdown("### 📈 Valor Ganado (EVM)")
+    st.caption("Earned Value Management — estándar PMI. Compara lo **planeado** (PV), lo **ejecutado** "
+               "(EV) y lo **gastado** (AC) para medir eficiencia de costo (CPI) y cronograma (SPI).")
+    ev=_evm.calcular_evm(par, R, hoy=date(2026,5,1))
+    if not ev:
+        st.info("Para ver el Valor Ganado, ingresa el **% de avance real** y el **costo real** de cada etapa "
+                "en 📝 **Datos del proyecto → ③ Etapas** (columnas *Avance real* y *Costo real*).")
+    else:
+        _verde=GREEN; _rojo=RED; _amb=AMBER
+        k=st.columns(4)
+        cpi=ev.get("CPI"); spi=ev.get("SPI")
+        kpi(k[0],"Avance de obra", fmt_pct(ev["avance_global"]))
+        kpi(k[1],"CPI (costo)", f"{cpi:.2f}" if cpi else "n/d",
+            ("eficiente" if cpi and cpi>=1 else "sobrecosto") if cpi else "", _verde if cpi and cpi>=1 else _rojo)
+        kpi(k[2],"SPI (cronograma)", f"{spi:.2f}" if spi else "n/d",
+            ("adelantado" if spi and spi>=1 else "atrasado") if spi else "", _verde if spi and spi>=1 else _rojo)
+        kpi(k[3],"EAC (costo final est.)", fmt_mm(ev.get("EAC")),
+            ("ahorro" if (ev.get("VAC") or 0)>=0 else "sobrecosto"),
+            _verde if (ev.get("VAC") or 0)>=0 else _rojo)
+        st.markdown(_evm.estado_en_palabras(ev))
+        st.plotly_chart(_charts.valor_ganado_s(ev, fecha_base=ev.get("base_obra")), width="stretch")
+        k2=st.columns(4)
+        kpi(k2[0],"PV · Valor Planeado", fmt_mm(ev["PV"]))
+        kpi(k2[1],"EV · Valor Ganado", fmt_mm(ev["EV"]))
+        kpi(k2[2],"AC · Costo Real", fmt_mm(ev["AC"]))
+        kpi(k2[3],"BAC · Presupuesto", fmt_mm(ev["BAC"]))
+        st.caption("PV (teal) = costo directo planeado acumulado · EV (verde) = avance real valorado al "
+                   "presupuesto · AC (rojo) = costo realmente gastado · EAC (ámbar) = proyección del costo final.")
+
 # ============ CRONOGRAMA ============
 if seccion=="Cronograma":
     h=R.get("hitos",{})
@@ -727,4 +769,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.20.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.21.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

@@ -2,6 +2,22 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.21.0] — 2026-05-31
+### Añadido (Valor Ganado / EVM — Curva S, estándar PMI)
+- Nueva sección **📈 Valor Ganado (EVM)** y motor **`engine/evm.py`**: a partir del costo directo
+  planeado (curva Gauss) y del **% avance real + costo real por etapa**, calcula las **3 curvas S**
+  (PV planeado · EV ganado · AC costo real), índices **CPI** (costo) y **SPI** (cronograma),
+  varianzas CV/SV y proyección **EAC/ETC/VAC**.
+- **Inputs nuevos** por etapa en 📝 Datos del proyecto → ③ Etapas: **"Avance real %"** (0–100) y
+  **"Costo real (miles)"**. Si están vacíos, la sección invita a llenarlos (no rompe nada).
+- KPIs con semáforo (CPI/SPI verde≥1, rojo<1), **EAC** vs presupuesto, y un **resumen en palabras**
+  ("la obra va al X%, sobre/bajo presupuesto, adelantada/atrasada…").
+- `charts.valor_ganado_s`: PV (teal), EV (verde), AC (rojo punteado), EAC (ámbar), línea "hoy" en la
+  fecha de corte. Eje en fechas reales (anclado al inicio de obra). Motor v1.5.0.
+### Nota
+- Pedido prioritario del usuario. Navarra (en ejecución, obra desde dic‑2025) es el caso ideal de EVM.
+  El mes de corte se calcula desde el inicio real de obra hasta hoy.
+
 ## [2.20.0] — 2026-05-31
 ### Cambiado (todos los gráficos mensuales en fechas reales)
 - **Distribución costos** (curva S), **Ingresos** (recaudo apilado) y el mensual de **Apalancamiento**

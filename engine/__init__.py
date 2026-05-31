@@ -2,4 +2,4 @@
 from .modelo import calcular, pyg, flujo_caja, escenarios, sensibilidades, calcular_wacc, tir
 from . import curvas
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"

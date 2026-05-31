@@ -243,3 +243,49 @@ def gantt_etapas(hitos, titulo="Cronograma de etapas — ventas y construcción"
                             text=[p[0] for p in pts], hovertemplate="%{text}: %{x|%b %Y}<extra></extra>")
     fig.update_layout(title=titulo, height=140 + 70 * len(cods), xaxis_title="")
     return fig
+
+
+# ----------------------------------------------------------------------------- valor ganado (EVM)
+def valor_ganado_s(evm, fecha_base=None, titulo="Valor Ganado (EVM) — curvas S"):
+    """3 curvas S del EVM: PV (planeado, teal), EV (ganado, verde), AC (costo real, rojo).
+    `evm` = salida de engine.evm.calcular_evm. PV viene como serie acumulada mensual completa;
+    EV y AC son puntos a la fecha de corte (línea recta desde el inicio hasta el corte)."""
+    pv_acum = list(evm.get("curva_pv", []))
+    n = len(pv_acum)
+    if fecha_base is not None:
+        x = _eje_fechas(fecha_base, n); hov = "%{x|%b %Y}"
+    else:
+        x = list(range(1, n + 1)); hov = "Mes %{x}"
+    corte = evm.get("mes_corte")
+    fig = go.Figure()
+    # PV: curva S completa planeada
+    fig.add_scatter(x=x, y=pv_acum, name="PV · Valor Planeado", line=dict(color=TEAL, width=3),
+                    hovertemplate=hov + " · PV: %{y:,.0f}<extra></extra>")
+    # EV y AC: rampa lineal desde el inicio hasta el punto de corte (lo ejecutado a la fecha)
+    if corte is not None and 0 <= corte < n:
+        xi = x[:corte + 1]
+        ev_line = [evm["EV"] * (i / corte) if corte else evm["EV"] for i in range(corte + 1)]
+        ac_line = [evm["AC"] * (i / corte) if corte else evm["AC"] for i in range(corte + 1)]
+        fig.add_scatter(x=xi, y=ev_line, name="EV · Valor Ganado", line=dict(color=GREEN, width=3),
+                        hovertemplate=hov + " · EV: %{y:,.0f}<extra></extra>")
+        fig.add_scatter(x=xi, y=ac_line, name="AC · Costo Real", line=dict(color=RED, width=3, dash="dot"),
+                        hovertemplate=hov + " · AC: %{y:,.0f}<extra></extra>")
+        # línea vertical "hoy" (fecha de corte) — add_shape evita el bug de add_vline con fechas
+        fig.add_shape(type="line", x0=x[corte], x1=x[corte], y0=0, y1=1, yref="paper",
+                      line=dict(color=MUTED, width=1.5, dash="dash"))
+        fig.add_annotation(x=x[corte], y=1, yref="paper", text="hoy", showarrow=False,
+                           yanchor="bottom", font=dict(size=11, color=MUTED))
+        # marcadores en el corte
+        fig.add_scatter(x=[x[corte]] * 2, y=[evm["EV"], evm["AC"]], mode="markers", showlegend=False,
+                        marker=dict(size=10, color=[GREEN, RED]),
+                        hovertemplate="%{y:,.0f}<extra></extra>")
+    # EAC: proyección del costo final (punteado teal hasta el fin)
+    if evm.get("EAC") is not None and n:
+        fig.add_scatter(x=[x[corte] if (corte is not None and corte < n) else x[0], x[-1]],
+                        y=[evm["AC"], evm["EAC"]], name="EAC · costo final estimado",
+                        line=dict(color=AMBER, width=2, dash="dot"),
+                        hovertemplate="EAC: %{y:,.0f}<extra></extra>")
+    fig.update_layout(title=titulo, height=430, xaxis_title="", yaxis_title="Miles COP")
+    if fecha_base is not None:
+        fig.update_xaxes(dtick="M3", tickformat="%b %Y")
+    return fig
