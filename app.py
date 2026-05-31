@@ -54,7 +54,12 @@ h2,h3 { color:#13262B; font-weight:700; }
 </style>
 """, unsafe_allow_html=True)
 
-def fmt_mm(x): return f"${x/1000:,.0f} M" if x else "$0"
+def fmt_mm(x):
+    # x viene en MILES COP. ≥ mil millones → "mil M" (miles de millones); si no → "M" (millones).
+    if not x: return "$0"
+    if abs(x) >= 1_000_000:
+        return f"${x/1_000_000:,.1f} mil M".replace(",", ".")
+    return f"${x/1000:,.0f} M".replace(",", ".")
 def fmt_pct(x): return f"{x*100:.2f}%" if x is not None else "n/d"
 def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
@@ -116,8 +121,8 @@ def consolidado(_keys):
                 if m<len(e): equity[g]+=e[m]
                 if m<len(s): saldo[g]+=s[m]
         filas.append({"Proyecto":mt.get("nombre",name),"Unidades":sum(x.get("und",0) or 0 for x in par.get("etapas",[])),
-                      "Ventas (M)":round(pg["ventas"]/1000),"Util. oper (M)":round(pg["util_oper"]/1000),
-                      "Margen":f"{pg['margen_oper']*100:.1f}%","Crédito máx (M)":round((ap.get('credito_max',0) or 0)/1000)})
+                      "Ventas":fmt_mm(pg["ventas"]),"Utilidad oper.":fmt_mm(pg["util_oper"]),
+                      "Margen":f"{pg['margen_oper']*100:.1f}%","Crédito máx":fmt_mm(ap.get('credito_max',0) or 0)})
         n+=1
     return {"n":n,"unidades":int(und),"ventas":ventas,"util_oper":util,"udi":udi,"vpn":vpn,
             "margen":util/ventas if ventas else 0,
@@ -285,10 +290,10 @@ if seccion=="Proyectos activos":
         st.markdown("##### Resumen financiero del portafolio")
         filas=list(CONS["filas"]) if CONS else []
         filas.append({"Proyecto":"— TOTAL —","Unidades":CONS["unidades"] if CONS else 0,
-                      "Ventas (M)":round((CONS["ventas"] if CONS else 0)/1000),
-                      "Util. oper (M)":round((CONS["util_oper"] if CONS else 0)/1000),
+                      "Ventas":fmt_mm(CONS["ventas"] if CONS else 0),
+                      "Utilidad oper.":fmt_mm(CONS["util_oper"] if CONS else 0),
                       "Margen":f"{(CONS['margen'] if CONS else 0)*100:.1f}%",
-                      "Crédito máx (M)":round((CONS["credito_max"] if CONS else 0)/1000)})
+                      "Crédito máx":fmt_mm(CONS["credito_max"] if CONS else 0)})
         st.dataframe(pd.DataFrame(filas), width="stretch", hide_index=True)
         st.caption("Cifras en **millones COP**. **Ventas, utilidad y UDI** se suman (reconciliadas con las "
                    "prefactibilidades). **Crédito máx** calibrado (Navarra 0.87× del real) y **reintegros 1.00×**. "
@@ -620,4 +625,4 @@ if seccion != "Inicio":
             json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
             file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
             help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-st.caption(f"Aplicativo v2.11.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")
+st.caption(f"Aplicativo v2.12.0 · motor v{ENGINE_V} · portafolio de proyectos · navegación por menú · CG Constructora")

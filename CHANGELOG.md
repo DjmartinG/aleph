@@ -2,6 +2,13 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.12.0] — 2026-05-30
+### Cambiado (formato de cifras)
+- **Cifras grandes en miles de millones** (`mil M`): `fmt_mm` ahora es adaptativo — ≥ mil millones
+  COP muestra "$229.7 mil M"; cifras menores siguen en "$X M". Aplica a las tarjetas KPI y a la
+  **tabla del Resumen financiero del portafolio** (columnas Ventas / Utilidad oper. / Crédito máx),
+  para lectura consistente y clara. Separador de miles con punto (formato COP).
+
 ## [2.11.0] — 2026-05-30
 ### Validado EXACTO (TIR/VPN de Navarra contra el modelo aprobado)
 - **FCL auditado de fiducia:** el motor acepta `par["fiducia"]` con el Flujo de Caja Libre anual
