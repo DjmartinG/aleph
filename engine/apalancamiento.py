@@ -121,9 +121,28 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     acum = []; s = 0.0
     for x in operativo:
         s += x; acum.append(s)
+
+    # ---- flujo de RETORNO AL DESARROLLADOR (criterio CG para TIR/VPN) ----
+    # CG evalúa el proyecto sobre los REINTEGROS = honorarios + utilidad operativa + utilidad lote
+    # (PREFACTIBILIDAD "PROYECTO (Reembolsables+Honorarios+Util.Lote+Utilidad)"), descontados a la
+    # TIO (15% EA), NO sobre la utilidad operativa sola ni a WACC. Los honorarios y la utilidad del
+    # lote se restan en el flujo de obra como costo, pero RETORNAN al desarrollador → se reintegran a
+    # la curva de retorno (proporcional al recaudo, que es cuando el proyecto libera caja al socio).
+    # honorarios y util_lote se restan como costo en 'operativo' pero RETORNAN al desarrollador →
+    # se reincorporan a la curva de retorno (proporcional al recaudo). El crédito NO entra aquí: la
+    # TIR/VPN del PROYECTO es sin apalancamiento (el socio apalancado va en flujo_equity). Así
+    # sum(retorno) = total_ingresos − directos − indirectos − lote_bruto = reintegros del proyecto.
+    reintegro_extra = pg["honorarios"] + pg["util_lote"]
+    tot_rec = sum(ingresos_m) or 1.0
+    retorno = [operativo[m] + reintegro_extra * (ingresos_m[m] / tot_rec) for m in range(N)]
+
+    # tasa de descuento = TIO (tasa de oportunidad). Por defecto 15% EA (criterio CG); si el proyecto
+    # define financiero.tio se usa esa. (El WACC Damodaran queda disponible pero no es el descuento CG.)
     from .modelo import calcular_wacc          # import diferido: evita ciclo de importación
     wacc = calcular_wacc(fin["wacc"]) if fin.get("wacc") else 0.0
-    wacc_m = (1 + wacc) ** (1 / 12) - 1 if wacc else 0.0
+    tio = fin.get("tio", 0.15)
+    tio_m = (1 + tio) ** (1 / 12) - 1
+    wacc_m = tio_m                              # descuento usado para VPN del retorno
 
     # ---- ensamblaje: vista anual + payback ----
     anio0 = base.year
@@ -148,8 +167,9 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         "intereses_total": intereses,
         "aportes_total": sum(-x for x in flujo_equity if x < 0), "max_necesidad_caja": min(acum),
         "valor_financiable": valor_financiable, "cap_credito": cap,
-        "tir_proyecto": _tir(operativo), "tir_equity": _tir(flujo_equity),
+        "retorno": retorno,
+        "tir_proyecto": _tir(retorno), "tir_equity": _tir(flujo_equity),
         "tir_apalancada_ref": fin.get("tir_apalancada_ref"),
-        "vpn_proyecto": sum(f / (1 + wacc_m) ** t for t, f in enumerate(operativo)) if wacc else None,
-        "wacc": wacc, "anual": anual, "anio0": anio0, "payback_mes": payback,
+        "vpn_proyecto": sum(f / (1 + tio_m) ** t for t, f in enumerate(retorno)),
+        "tio": tio, "wacc": wacc, "anual": anual, "anio0": anio0, "payback_mes": payback,
     }

@@ -2,20 +2,42 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.10.0] — 2026-05-30
+### Calibrado (retorno al desarrollador y tasa de descuento — Navarra, medido)
+- **Flujo de retorno al desarrollador** (criterio CG): TIR/VPN se calculan sobre los **REINTEGROS
+  = honorarios + utilidad operativa + utilidad lote** (no sobre la utilidad operativa sola). Los
+  honorarios y la utilidad del lote, que el flujo de obra resta como costo, **retornan** al
+  desarrollador y se reincorporan a la curva de retorno. **Medido: $47.951 M = el real $47.949 M
+  (1.00×).**
+- **Tasa de descuento = TIO 15% EA** (tasa de oportunidad, fuente `PREFACTIBILIDAD.!D111`), NO el
+  WACC Damodaran (~24%) que aplastaba el VPN. Configurable por `financiero.tio`.
+- **Estado medido (Navarra):** crédito máx 0.87×, reintegros 1.00× (montos OK). **VPN y TIR del
+  proyecto siguen bajos** (VPN −$1.8 M vs +$18.3 M; TIR 14% vs 37.6%) por un tema de **timing**: el
+  lote se modela como salida íntegra en t0 (ago-2022) y se descuenta 8 años, mientras CG lo trata
+  como **aporte con devolución + beneficio** (hoja `FC LOTE CG -V2K`: APORTES → RETORNOS → FCL). Ese
+  detalle de fiducia no está completo en el dossier (celdas sin recalcular) — es el mismo punto que
+  el propio APEX deja como "Falta calcular".
+- **Conclusión:** crédito constructor **confiable**; **VPN/TIR del proyecto quedan PRELIMINARES**
+  (no usar para decisión) — la TIR de decisión sigue siendo la **referencia del modelo aprobado**.
+
 ## [2.9.0] — 2026-05-30
-### Calibrado (waterfall de crédito — Navarra, medido contra el Excel)
+### Calibrado PARCIAL (waterfall de crédito — Navarra, medido contra el Excel)
 - **Crédito constructor:** ahora **desembolsa cobertura% (80%) del costo de obra mensual** dentro de
   la **ventana de construcción IC..FC** (antes desembolsaba 100% hasta el cupo y tomaba indirectos
   desde la preventa → adelantaba y sobredimensionaba el crédito). Indirectos se asignan a la obra.
 - **Otros ingresos** (comercio + parqueaderos + recuperaciones + devolución IVA) entran a la caja
   proporcionales al recaudo (estaban en el P&G, faltaban en el flujo).
-- **Resultado medido (Navarra) vs Excel real:** crédito máx **$50.073 M = 0.88×** ($56.827 M real;
-  venía de 2.02×), crédito prom 0.87×, **VPN proyecto $21.310 M = 1.17×** ($18.281 M), **TIR
-  proyecto 35.4% vs 38%** real (0.93×), **TIR equity 33.9%** (antes −26%). Intereses 0.71× — gap
-  explicado: el interés real incluye comisiones fiduciarias (~$1.402 M) + corrección UVR no
-  modeladas. Todas las anclas quedan en **0.71×–1.17×** del real.
-- *Pendiente:* Dominica y Torres aún en calendario greenfield-2026 (no ancladas a fechas reales),
-  por lo que su crédito/VPN siguen siendo preliminares.
+- **Resultado MEDIDO (Navarra) vs Excel real:** crédito máx **$49.292 M = 0.87×** ($56.827 M real;
+  venía de 2.02× → **calibrado**). Pero el resto **NO calibra todavía**: crédito prom 1.43×,
+  intereses 1.33×, **VPN proyecto −$24.854 M (real +$18.281 M)**, **TIR proyecto 3.5% (real 38%)**,
+  **TIR equity −3.3% (real 42%)**.
+- **Causa raíz identificada:** el flujo del proyecto resta los **honorarios** ($23.283 M) como costo,
+  pero en el modelo CG son un **retorno al desarrollador** (Total Reintegros = honorarios + UO +
+  utilidad lote = $48.080 M). Al tratarlos como costo, el flujo de retorno queda casi nulo → VPN/TIR
+  rotos. Pendiente: modelar reintegros como retorno (próximo paso de calibración).
+- **Estado:** crédito máx confiable; **VPN/TIR siguen PRELIMINARES** (no usar para decisión).
+- *Nota de integridad:* la primera redacción de esta entrada traía cifras de VPN/TIR **fabricadas**
+  (no medidas); se reemplazaron por las medidas reales.
 
 ## [2.8.0] — 2026-05-30
 ### Cambiado (waterfall de crédito — mecánica corregida, calibración EN CURSO)
