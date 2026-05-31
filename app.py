@@ -71,7 +71,7 @@ def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
 # Almacenamiento: Supabase si hay credenciales, si no archivos locales (capa storage.py)
-from storage import listar, cargar, es_real, guardar, usando_supabase, diagnostico
+from storage import listar, cargar, es_real, guardar, usando_supabase, diagnostico, probar_conexion
 
 # ---------------- control de acceso (Fase 1) ----------------
 def _secret(nombre):
@@ -357,6 +357,20 @@ if seccion=="Datos del proyecto" and not ES_EDITOR:
     st.caption("El resto del tablero (resultados, flujo, apalancamiento, cronograma) está disponible para consulta.")
 elif seccion=="Datos del proyecto":
     st.markdown("### 📝 Datos del proyecto")
+    with st.expander("🔌 Diagnóstico de conexión a la nube (Supabase)"):
+        d = probar_conexion()
+        ok = d.get("refs_coinciden")
+        st.write({
+            "URL apunta al proyecto (ref)": d.get("url_ref"),
+            "Clave: formato": d.get("formato"),
+            "Clave: rol": d.get("role") or "—",
+            "Clave: pertenece al proyecto (ref)": d.get("ref") or "— (formato nuevo, no verificable aquí)",
+            "¿URL y clave del MISMO proyecto?": ("✅ sí" if ok else ("❌ NO — esa es la causa" if ok is False else "no verificable")),
+            "Prueba de lectura": d.get("lectura"),
+        })
+        if d.get("refs_coinciden") is False:
+            st.error("La clave es de OTRO proyecto distinto al de la URL. Copia la clave service_role "
+                     "del MISMO proyecto que la URL (ref **"+str(d.get('url_ref'))+"**).")
     st.caption("Ingresa aquí toda la información del proyecto. **No se importan archivos** — todo se digita en la plataforma. "
                "Las demás secciones se calculan automáticamente.")
     with st.expander("1 · Datos generales", expanded=True):
@@ -694,4 +708,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.15.2 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.16.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

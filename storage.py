@@ -56,6 +56,49 @@ def diagnostico():
     return _DIAG
 
 
+def _ref_de_url(url):
+    # https://<ref>.supabase.co  ->  <ref>
+    try:
+        return url.split("//", 1)[1].split(".", 1)[0]
+    except Exception:
+        return "?"
+
+
+def _ref_de_key(key):
+    """Si la key es un JWT legacy (eyJ...), extrae 'ref' y 'role' del payload (público, no secreto)."""
+    import base64, json as _json
+    if not key.startswith("eyJ"):
+        fmt = "sb_secret" if key.startswith("sb_secret") else ("sb_publishable" if key.startswith("sb_publishable") else "desconocido")
+        return {"formato": fmt, "ref": None, "role": None}
+    try:
+        payload = key.split(".")[1]
+        payload += "=" * (-len(payload) % 4)            # padding base64
+        d = _json.loads(base64.urlsafe_b64decode(payload))
+        return {"formato": "JWT legacy", "ref": d.get("ref"), "role": d.get("role")}
+    except Exception:
+        return {"formato": "JWT (no decodificable)", "ref": None, "role": None}
+
+
+def probar_conexion():
+    """Diagnóstico seguro (sin exponer la clave). Devuelve dict con: refs, rol, y test de lectura."""
+    url = _secret("SUPABASE_URL"); key = _secret("SUPABASE_KEY")
+    info = {"url_ref": _ref_de_url(url) if url else None,
+            "tiene_url": bool(url), "tiene_key": bool(key),
+            "key_len": len(key)}
+    info.update(_ref_de_key(key) if key else {"formato": None, "ref": None, "role": None})
+    info["refs_coinciden"] = (info.get("ref") == info.get("url_ref")) if info.get("ref") else None
+    cl = _client()
+    if not cl:
+        info["lectura"] = f"sin cliente: {_DIAG}"
+        return info
+    try:
+        r = cl.table("proyectos").select("slug").execute()
+        info["lectura"] = f"OK · {len(r.data)} filas en la nube: {[x['slug'] for x in r.data]}"
+    except Exception as e:
+        info["lectura"] = f"ERROR: {type(e).__name__}: {str(e)[:140]}"
+    return info
+
+
 def usando_supabase():
     return _client() is not None
 
