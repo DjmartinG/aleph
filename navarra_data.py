@@ -60,7 +60,7 @@ NAVARRA_ALERTAS = [
      "descripcion": "Se requiere apalancamiento de $1.700 mm mientras se aprueba el crédito constructor Torres 2A/2B. Sin él, la Etapa 2 enfrenta riesgo de liquidez.",
      "modulo_origen": "Flujo de Caja", "fecha_reporte": "2026-04-30", "estado": "Activa", "responsable": "Gerencia Financiera"},
     {"id": "a2", "severidad": "critica", "titulo": "Trámites crédito Torres 2A/2B — fecha crítica 16-jun-2026",
-     "descripcion": "La aprobación lleva 136 días (desde 09-ene-2026). El visto bueno jurídico de Bancolombia se estima al 16-jun-2026; cualquier demora previa lo impacta.",
+     "descripcion": "La aprobación lleva más de 4 meses (desde 09-ene-2026). El visto bueno jurídico de Bancolombia se estima al 16-jun-2026; cualquier demora previa lo impacta.",
      "modulo_origen": "Crédito Constructor", "fecha_reporte": "2026-05-26", "estado": "Activa", "responsable": "Gerencia Jurídica"},
     {"id": "a3", "severidad": "importante", "titulo": "Otrosíes pendientes con adherentes Torres 2A/2B",
      "descripcion": "Falta suscribir otrosíes al contrato de adhesión con compradores T2A/T2B. Riesgo legal si no se gestionan antes del inicio de obra.",
@@ -153,3 +153,13 @@ def avance_ultimo():
     real = NAVARRA_AVANCE_OBRA["2026-04"]["ejecutado"]
     banco = NAVARRA_AVANCE_OBRA["2026-04-bancolombia"]["ejecutado"]
     return real, banco
+
+
+def dias_tramite_t2(hoy=None):
+    """Días en trámite del crédito Torres 2A/2B = desde fecha_inicio_tramite hasta hoy.
+    Se calcula en vivo (nunca se desactualiza). `hoy` opcional (date) para pruebas."""
+    from datetime import date, datetime
+    ini = NAVARRA_CREDITO_CONSTRUCTOR["torre_2a_2b"]["fecha_inicio_tramite"]
+    d0 = datetime.strptime(ini, "%Y-%m-%d").date()
+    hoy = hoy or date.today()
+    return max(0, (hoy - d0).days)

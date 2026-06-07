@@ -751,18 +751,34 @@ if seccion=="Ingresos":
 
 # ============ ESCENARIOS ============
 if seccion=="Escenarios":
-    esc=R["escenarios"]
-    fig=go.Figure(data=[go.Bar(x=list(esc.keys()),y=[v["util_oper"] for v in esc.values()],
-        marker_color=[TEAL,GREEN,RED],text=[fmt_pct(v["margen"]) for v in esc.values()],textposition="outside")])
-    fig.update_layout(title="Utilidad operativa por escenario",height=420); st.plotly_chart(fig, width="stretch")
-    st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo")
+    et=st.tabs(["📊 Escenarios","🗺️ Sensibilidad 2D (precio vs costo)"])
+    with et[0]:
+        esc=R["escenarios"]
+        st.plotly_chart(_charts.escenarios_barras(esc), width="stretch")
+        st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo. "
+                   "Barras = utilidad operativa; etiqueta = utilidad y margen.")
+    with et[1]:
+        from engine import modelo as _modelo
+        _pe=copy.deepcopy(par)
+        _pe.setdefault("ventas_miles", sum(e.get("ventas_miles",0) for e in _pe.get("etapas",[])))
+        pasos=[-0.10,-0.05,0.0,0.05,0.10]
+        # matriz de margen %: filas = variación de costo, columnas = variación de precio
+        mat=[[_modelo._correr(_pe, dp, dc)["margen"]*100 for dp in pasos] for dc in pasos]
+        st.plotly_chart(_charts.heatmap_sensibilidad([p*100 for p in pasos],[c*100 for c in pasos], mat), width="stretch")
+        st.caption("Cada celda = margen operativo resultante al variar precio (eje X) y costo directo "
+                   "(eje Y). Verde = sano · blanco = punto de quiebre · rojo = pérdida. La celda central es la base.")
 
 # ============ SENSIBILIDAD ============
 if seccion=="Sensibilidad":
-    s=R["sensibilidades"]; it=sorted(s.items(),key=lambda kv:kv[1])
-    fig=go.Figure(data=[go.Bar(y=[k for k,_ in it],x=[v for _,v in it],orientation="h",
-        marker_color=[GREEN if v>=0 else RED for _,v in it])])
-    fig.update_layout(title="Tornado — impacto en utilidad operativa (miles COP)",height=380); st.plotly_chart(fig, width="stretch")
+    s=R["sensibilidades"]; base=R["pyg"]["util_oper"]
+    # agrupar +/- por variable para el tornado (delta_pos/delta_neg respecto a la base)
+    filas=[
+        {"variable":"Precio de venta ±10%", "delta_pos":s.get("Precio +10%",0), "delta_neg":s.get("Precio -10%",0)},
+        {"variable":"Costo directo ±10%",   "delta_pos":s.get("Costo directo -10%",0), "delta_neg":s.get("Costo directo +10%",0)},
+    ]
+    st.plotly_chart(_charts.tornado(filas, base, kpi_nombre="utilidad operativa"), width="stretch")
+    st.caption("Tornado: impacto en la utilidad operativa al mover cada variable ±10%. La barra más larga "
+               "= variable más sensible. Verde favorable / rojo desfavorable; la línea vertical es la base.")
 
 # ============ MONITOR DE EJECUCIÓN (operativo, por torre) ============
 if seccion=="Monitor de ejecución":
@@ -837,7 +853,7 @@ if seccion=="Monitor de ejecución":
             kpi(t1[2],"Estado", "✅ Autorizado", cc['torre_1']['fecha_autorizacion'], GREEN)
             st.markdown("##### 🏗️ Torres 2A/2B — crédito en trámite")
             t2=st.columns(3)
-            kpi(t2[0],"Días en trámite", f"{cc['torre_2a_2b']['dias_tramite']}+ días", "desde 09-ene-2026", RED)
+            kpi(t2[0],"Días en trámite", f"{_nav.dias_tramite_t2()} días", "desde 09-ene-2026 (en vivo)", RED)
             kpi(t2[1],"Saldo preventas", f"${cc['torre_2a_2b']['saldo_encargo_preventas_mm']:,} M".replace(",", "."), "disponible", MUTED)
             kpi(t2[2],"Crédito puente req.", f"${cc['torre_2a_2b']['credito_puente_requerido_mm']:,} M".replace(",", "."), "apalancamiento", RED)
             pend=cc['torre_2a_2b']['tramites_pendientes']
@@ -914,4 +930,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.23.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.24.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

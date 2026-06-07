@@ -2,6 +2,21 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.24.0] — 2026-06-07
+### Añadido (sensibilidad pro + tornado)
+- **Escenarios** ahora con 2 tabs: barras pro (utilidad+margen por escenario) y **mapa de sensibilidad
+  2D** (heatmap precio×costo → margen operativo; verde sano / blanco quiebre / rojo pérdida; celda
+  central = base 4.95% Navarra). `charts.escenarios_barras` y `charts.heatmap_sensibilidad`.
+- **Sensibilidad** ahora con **tornado** (impacto ±10% de precio y costo en la utilidad operativa,
+  ordenado por sensibilidad). `charts.tornado`.
+### Corregido (dato operativo en vivo)
+- **`días en trámite`** del crédito Torres 2A/2B ahora se **calcula en vivo** desde
+  `fecha_inicio_tramite` (no más valor fijo que se desactualiza). `navarra_data.dias_tramite_t2()`.
+  Alerta a2 ajustada a "más de 4 meses" (neutra).
+### Verificación
+- Auditoría read-only multi-agente (22 agentes): reconciliación numérica, código, UI, datos y
+  seguridad — **sin hallazgos reales**. Los 3 proyectos reconcilian exacto; 0 secretos en el repo.
+
 ## [2.23.0] — 2026-05-31
 ### Añadido (ejecución presupuestal real Torre 1 — EVM + waterfall)
 - Cargadas las **28 partidas** del Control de Presupuesto y Ejecución Torre 1 (corte 30/04/2026) en

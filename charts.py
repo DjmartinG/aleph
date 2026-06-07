@@ -371,3 +371,40 @@ def variaciones_waterfall(partidas, titulo="Variaciones presupuestales (base →
         hovertemplate="%{x}<br>%{y:,.0f} M<extra></extra>"))
     fig.update_layout(title=titulo, height=430, yaxis_title="Millones COP", xaxis_tickangle=-40)
     return fig
+
+
+# ----------------------------------------------------------------------------- escenarios (grouped)
+def escenarios_barras(esc, titulo="Escenarios — utilidad operativa y margen"):
+    """Barras por escenario (Base teal / Optimista verde / Pesimista rojo). `esc`: dict
+    {nombre:{util_oper, margen, ventas}}."""
+    col = {"Base": TEAL, "Optimista": GREEN, "Pesimista": RED}
+    nombres = list(esc.keys())
+    fig = go.Figure(go.Bar(
+        x=nombres, y=[esc[k]["util_oper"] for k in nombres],
+        marker_color=[col.get(k, TEAL) for k in nombres],
+        text=[f"{esc[k]['util_oper']/1000:,.0f} mil M · {esc[k]['margen']*100:.1f}%".replace(",", ".") for k in nombres],
+        textposition="outside",
+        hovertemplate="%{x}<br>Utilidad: %{y:,.0f} mil COP<extra></extra>"))
+    fig.add_hline(y=0, line_color=MUTED, line_width=1)
+    fig.update_layout(title=titulo, height=420, yaxis_title="Utilidad operativa (miles COP)")
+    return fig
+
+
+# ----------------------------------------------------------------------------- heatmap sensibilidad 2D
+def heatmap_sensibilidad(precio_vars, costo_vars, matriz_margen,
+                         titulo="Mapa de sensibilidad — margen operativo (precio vs costo)"):
+    """Heatmap 2D: eje X variación de precio, eje Y variación de costo directo, celda = margen %.
+    Verde (alto) → blanco (cero) → rojo (negativo). `matriz_margen` en % (filas=costo, cols=precio)."""
+    escala = [[0.0, RED], [0.4, "#FCA5A5"], [0.5, "#FFFFFF"], [0.6, "#86EFAC"], [1.0, GREEN]]
+    fig = go.Figure(go.Heatmap(
+        z=matriz_margen,
+        x=[f"Precio {v:+.0f}%" for v in precio_vars],
+        y=[f"Costo {v:+.0f}%" for v in costo_vars],
+        colorscale=escala, zmid=0,
+        text=[[f"{v:.1f}%" for v in fila] for fila in matriz_margen],
+        texttemplate="%{text}", textfont=dict(size=12),
+        hovertemplate="%{y} · %{x}<br>Margen: %{z:.1f}%<extra></extra>",
+        colorbar=dict(title="Margen %")))
+    fig.update_layout(title=titulo, height=420, xaxis_title="Variación de precio",
+                      yaxis_title="Variación de costo directo")
+    return fig
