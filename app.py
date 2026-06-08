@@ -246,17 +246,30 @@ with st.sidebar:
         st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
         st.session_state.sel = sel
     par = st.session_state.par
-    MENU=["Inicio","Cockpit","Proyectos activos","Portafolio (burbujas)","Datos del proyecto","Monitor de ejecución",
-          "Urbanístico","Cronograma","Ingresos","Distribución costos","P&G","Reparto","Flujo de caja",
-          "Costo de capital","Apalancamiento","Valor Ganado","Escenarios","Monte Carlo","Sensibilidad"]
-    ICONS=["house-door","speedometer2","buildings","graph-up","pencil-square","clipboard-data",
-           "building","calendar3","cash-coin","bar-chart-line","table","pie-chart","cash-stack",
-           "percent","bank","graph-up-arrow","bullseye","dice-5","sliders"]
-    seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
-        styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
-                "icon":{"color":TEAL,"font-size":"14px"},
-                "nav-link":{"font-size":"13.5px","color":INK,"--hover-color":"#EAF0F2","margin":"1px 0"},
-                "nav-link-selected":{"background-color":TEAL,"color":"white","font-weight":"600"}})
+    # --- navegación en 3 capas (Tablero / Factibilidad / Seguimiento) ---
+    # Cada capa agrupa secciones EXISTENTES (sin renombrar). Las hojas "K." son el motor (engine), no menú.
+    GRUPOS = {
+        "Tablero": [("Inicio","house-door"),("Cockpit","speedometer2"),
+                    ("Proyectos activos","buildings"),("Portafolio (burbujas)","graph-up")],
+        "Factibilidad": [("Datos del proyecto","pencil-square"),("Urbanístico","building"),("Cronograma","calendar3"),
+                         ("Ingresos","cash-coin"),("Distribución costos","bar-chart-line"),
+                         ("P&G","table"),("Reparto","pie-chart"),("Flujo de caja","cash-stack"),
+                         ("Costo de capital","percent"),("Apalancamiento","bank"),
+                         ("Escenarios","bullseye"),("Monte Carlo","dice-5"),("Sensibilidad","sliders")],
+        "Seguimiento": [("Monitor de ejecución","clipboard-data"),("Valor Ganado","graph-up-arrow")],
+    }
+    _AREA_ICON={"Tablero":"grid-1x2-fill","Factibilidad":"calculator","Seguimiento":"activity"}
+    _smenu={"container":{"padding":"2px","background-color":"#F7F9FA"},
+            "icon":{"color":TEAL,"font-size":"14px"},
+            "nav-link":{"font-size":"13.5px","color":INK,"--hover-color":"#EAF0F2","margin":"1px 0"},
+            "nav-link-selected":{"background-color":TEAL,"color":"white","font-weight":"600"}}
+    area = option_menu(None, list(GRUPOS.keys()), icons=[_AREA_ICON[a] for a in GRUPOS], default_index=0,
+        menu_icon="list", key="area_menu",
+        styles={**_smenu, "nav-link":{**_smenu["nav-link"],"font-size":"13px","font-weight":"600"},
+                "nav-link-selected":{"background-color":INK,"color":"white","font-weight":"700"}})
+    _secs=GRUPOS[area]
+    seccion = option_menu(None, [s[0] for s in _secs], icons=[s[1] for s in _secs], default_index=0,
+        menu_icon="list", key=f"sub_{area}", styles=_smenu)
 
     if _secret("CLAVE_EQUIPO"):
         st.divider()
@@ -1127,4 +1140,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.26.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.27.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

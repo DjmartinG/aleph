@@ -2,6 +2,20 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.27.0] — 2026-06-08
+### Cambiado (arquitectura de navegación en 3 capas)
+- El menú lateral pasa de lista plana (19 ítems) a **navegación de 2 niveles**: primero la **capa**
+  (🧭 Tablero · 🧮 Factibilidad · 📡 Seguimiento), luego la sección de esa capa. Refleja la síntesis del
+  modelo maestro (APEX): **Factibilidad = el plan (ex-ante)**, **Seguimiento = lo real (ex-post)**.
+  - **Tablero:** Inicio · Cockpit · Proyectos activos · Portafolio (burbujas).
+  - **Factibilidad:** Datos · Urbanístico · Cronograma · Ingresos · Distribución costos · P&G · Reparto ·
+    Flujo de caja · Costo de capital · Apalancamiento · Escenarios · Monte Carlo · Sensibilidad.
+  - **Seguimiento:** Monitor de ejecución · Valor Ganado.
+- Sin renombrar ni eliminar secciones (solo reagrupar): cero cambio de cálculo. Las hojas "K." del modelo
+  maestro quedan como **motor** (engine), no como pestañas. Cada capa recuerda su última sección (key por capa).
+### Verificación
+- AppTest sobre las **19 secciones** navegando por su capa: 0 excepciones.
+
 ## [2.26.0] — 2026-06-08
 ### Añadido (capítulo K. Betas — Costo de Capital / WACC)
 - Nueva sección **"Costo de capital"** (antes de Apalancamiento): reproduce el build-up CAPM de mercado
