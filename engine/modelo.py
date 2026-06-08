@@ -123,6 +123,17 @@ def tir(flujos):
 
 
 # ----------------------------- P&G -----------------------------
+def directos_total(par, V):
+    """Costo directo total (miles COP). Si el proyecto trae presupuesto por capítulos
+    (`par['directos_cap']`, lista {capitulo, valor_miles}), el directo es su SUMA (bottom-up,
+    presupuesto absoluto). Si no, es el % de ventas (`costos_pct['directos']`)·V (top-down).
+    `par['_costo_scale']` (escenarios/sensibilidad/Monte Carlo) escala el directo en ambos casos."""
+    scale = par.get("_costo_scale", 1.0)
+    cap = par.get("directos_cap")
+    if cap:
+        return sum(x.get("valor_miles", 0) or 0 for x in cap) * scale
+    return par["costos_pct"]["directos"] * V * scale
+
 def pyg(par):
     """Estado de resultados (miles COP). par = params['costos_pct'], par['lote_bruto_miles'],
     par['financiero'], y ventas (par['ventas_miles'])."""
@@ -130,7 +141,7 @@ def pyg(par):
     c = par["costos_pct"]; fin = par["financiero"]
     recon = c.get("recon_codensa", 0.002) * V
     total_ingresos = V + recon
-    directos   = c["directos"]  * V
+    directos   = directos_total(par, V)
     indirectos = c["indirectos"]* V
     honorarios = c["honorarios"]* V
     util_lote  = c["util_lote"] * V
@@ -228,9 +239,10 @@ def flujo_caja(par, pg):
 
 # ----------------------------- escenarios y sensibilidades -----------------------------
 def _correr(par, d_precio=0.0, d_costo=0.0):
+    # d_precio escala las ventas; d_costo escala el costo directo (vía _costo_scale, que
+    # respeta tanto el presupuesto por capítulos como el % de ventas — ver directos_total()).
     p2=dict(par); p2["ventas_miles"]=par["ventas_miles"]*(1+d_precio)
-    c=dict(par["costos_pct"]); c["directos"]=par["costos_pct"]["directos"]*(1+d_costo)
-    p2["costos_pct"]=c
+    p2["_costo_scale"]=par.get("_costo_scale",1.0)*(1+d_costo)
     r=pyg(p2)
     return {"ventas":r["ventas"],"util_oper":r["util_oper"],"margen":r["margen_oper"]}
 

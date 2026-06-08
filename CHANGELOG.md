@@ -2,6 +2,22 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.28.0] — 2026-06-08
+### Añadido (Egresos · Fase 1 — costo directo a 28 capítulos, bottom-up)
+- El **costo directo** puede modelarse como **presupuesto por capítulos** (`directos_cap`: lista
+  {capitulo, valor_miles}). Si existe, el directo del P&G es la **SUMA de capítulos** (bottom-up,
+  presupuesto absoluto); si no, sigue el % de ventas (top-down). Motor: nueva `engine.directos_total`;
+  `_correr` ahora escala el costo vía `_costo_scale` (respeta ambos modos). Motor v1.8.0.
+- **Navarra sembrado con sus 28 capítulos reales** (Preliminares→Imprevistos), tomando el mix de la
+  Torre 1 escalado ×6,26 (≈6 torres para 951 und) de modo que **suman exacto el directo auditado**
+  ($143.474 M = 62,47% de ventas). Anclas intactas: **UO 11,36 mil M · margen 4,95% · TIR 0,376 · VPN
+  18,28 mil M · TIR socio 0,4172**.
+- **Distribución costos** ahora muestra el **presupuesto por capítulo** (editable para el editor; KPIs de
+  total, $/m² construido e incidencia s/ ventas) sobre la curva S. Greenfield sin presupuesto cae al % de ventas.
+### Verificación
+- Reconciliación exacta (suma capítulos − directo = 0); retro-compatibilidad de escenarios/sensibilidad
+  (Cd±10% = ±$14.347 M); AppTest de Distribución costos en editor y consulta, Navarra y greenfield: 0 excepciones.
+
 ## [2.27.0] — 2026-06-08
 ### Cambiado (arquitectura de navegación en 3 capas)
 - El menú lateral pasa de lista plana (19 ítems) a **navegación de 2 niveles**: primero la **capa**

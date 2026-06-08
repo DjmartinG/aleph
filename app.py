@@ -650,6 +650,41 @@ if seccion=="Reparto":
 
 # ============ DISTRIBUCIÓN COSTOS ============
 if seccion=="Distribución costos":
+    # --- Presupuesto de costo directo por capítulos (bottom-up) ---
+    _dcap = par.get("directos_cap")
+    st.markdown("#### Presupuesto de costo directo — por capítulo")
+    if _dcap:
+        _tot = sum((x.get("valor_miles",0) or 0) for x in _dcap)
+        _ac = par.get("areas",{}).get("m2_construidos",0) or 0
+        kk=st.columns(3)
+        kpi(kk[0],"Costo directo total", fmt_mm(_tot), f"{len(_dcap)} capítulos · bottom-up", TEAL)
+        kpi(kk[1],"Costo directo /m² const", (f"${_tot*1000/_ac:,.0f}".replace(",", ".") if _ac else "—"), "por m² construido", MUTED)
+        kpi(kk[2],"Incidencia s/ ventas", fmt_pct(_tot/pg["ventas"] if pg["ventas"] else 0), "del directo en ventas", MUTED)
+        if ES_EDITOR:
+            _dfc=pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0)} for x in _dcap])
+            _ed=st.data_editor(_dfc, num_rows="dynamic", width="stretch", key=f"dcap_{sel}",
+                column_config={"Capítulo":st.column_config.TextColumn("Capítulo"),
+                    "Valor (miles COP)":st.column_config.NumberColumn("Valor (miles COP)", format="%d",
+                        help="Presupuesto del capítulo. La SUMA de capítulos es el costo directo del P&G (bottom-up).")})
+            _new=[]
+            for r in _ed.to_dict("records"):
+                _cap=r.get("Capítulo"); _val=r.get("Valor (miles COP)")
+                if _cap and _val is not None and not pd.isna(_val):
+                    _new.append({"capitulo":str(_cap),"valor_miles":float(_val)})
+            if _new:
+                par["directos_cap"]=_new
+                st.success(f"**{len(_new)} capítulos · costo directo total {fmt_mm(sum(x['valor_miles'] for x in _new))}** "
+                           f"= base del P&G y de la curva S. (Incidencia {fmt_pct(sum(x['valor_miles'] for x in _new)/pg['ventas'] if pg['ventas'] else 0)} sobre ventas.)")
+        else:
+            _dfc=pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0),
+                               "% del directo":f"{(x.get('valor_miles',0) or 0)/_tot*100:.1f}%" if _tot else "—"} for x in _dcap])
+            st.dataframe(_dfc, width="stretch", hide_index=True)
+            st.caption(f"Costo directo total = **{fmt_mm(_tot)}** en {len(_dcap)} capítulos. Es la base del P&G y de la curva S de obra.")
+    else:
+        st.info("Este proyecto aún no tiene **presupuesto por capítulos**. El costo directo se calcula como "
+                f"**{fmt_pct(par.get('costos_pct',{}).get('directos',0))} de las ventas** = {fmt_mm(pg['directos'])}. "
+                "Para detallarlo por capítulo (bottom-up), cárgalo en este proyecto.")
+    st.markdown("#### Curva S de avance de obra")
     d=R["distribucion"]
     _h=R.get("hitos") or {}
     _ic=[x.get("IC") for x in _h.values() if x.get("IC")]
@@ -1140,4 +1175,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.27.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.28.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
