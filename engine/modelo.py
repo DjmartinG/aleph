@@ -69,15 +69,44 @@ def _recaudo(par, hitos):
 
 
 # ----------------------------- utilidades financieras -----------------------------
-def calcular_wacc(p):
-    b_d = p["beta_us"]/(1+(1-p["tax_us"]/100)*(p["de_us"]/100))
-    b_c = b_d*(1+(1-p["tax_col"]/100)*(p["de_col"]/100))
-    ke  = p["rf"]/100 + b_c*((p["rm"]-p["rf"])/100) + p["rp"]/100
-    rplp = (1+p["inf_col"]/100)/(1+p["inf_us"]/100)-1
-    ke_cop = (1+ke)*(1+rplp)-1
-    kd = p["tasa_d"]/100 + p["spread"]/100
-    dw = (100-p["eq_w"])/100
-    return (p["eq_w"]/100)*ke_cop + dw*kd*(1-p["tax_col"]/100)
+def calcular_wacc(p, detalle=False):
+    """WACC en COP por el build-up CAPM de mercado emergente (metodología Damodaran/CESLA, auditada CG).
+
+    Cadena: beta de la deuda → desapalancar beta US (CON beta de deuda) → reapalancar a la estructura
+    de Colombia → Ke USD → + riesgo país (EMBI) → paridad de inflación a COP → Kd COP (compuesto) →
+    WACC = E·Ke$COP + D·Kd·(1−t). Reproduce la hoja k.beta (WACC Navarra = 21,54%).
+
+    `detalle=True` devuelve todos los eslabones intermedios (para la sección Costo de Capital).
+    """
+    rf = p["rf"]/100; rm = p["rm"]/100; pm = rm - rf                  # prima de mercado = Rm − Rf
+    # --- beta de la deuda del comparable US: βd = (kd_us − rf) / (Rm − Rf) ---
+    kd_us = p.get("kd_us", 9.335)/100
+    beta_d = (kd_us - rf)/pm if pm else 0.0
+    # --- desapalancar beta US CON beta de deuda (no Hamada simple) ---
+    de_us = p["de_us"]/100; t_us = p["tax_us"]/100
+    E_us = 1.0/(1.0+de_us); D_us = 1.0 - E_us                         # de_us = D/E
+    den_u = E_us + D_us*(1-t_us)
+    beta_u = (E_us/den_u)*p["beta_us"] + (D_us*(1-t_us)/den_u)*beta_d
+    # --- reapalancar a la estructura de Colombia CON beta de deuda ---
+    de_col = p["de_col"]/100; t_col = p["tax_col"]/100
+    beta_l = beta_u + (beta_u - beta_d)*(1-t_col)*de_col
+    # --- costo de recursos propios en USD + riesgo país (EMBI) ---
+    ke_usd = rf + beta_l*pm
+    ke_usd_rp = ke_usd + p["rp"]/100
+    # --- pasar a COP por paridad de inflación de largo plazo (RPLP/DPLP) ---
+    rplp = (1+p["inf_col"]/100)/(1+p["inf_us"]/100) - 1
+    ke_cop = (1+ke_usd_rp)*(1+rplp) - 1
+    # --- costo de la deuda en Colombia (COMPUESTO, no aditivo) ---
+    kd_cop = (1+p["tasa_d"]/100)*(1+p["spread"]/100) - 1
+    # --- WACC ---
+    we = p["eq_w"]/100; wd = 1.0 - we
+    wacc = we*ke_cop + wd*kd_cop*(1-t_col)
+    if detalle:
+        return {"pm":pm, "beta_d":beta_d, "beta_u":beta_u, "beta_l":beta_l,
+                "ke_usd":ke_usd, "rp":p["rp"]/100, "ke_usd_rp":ke_usd_rp, "rplp":rplp,
+                "ke_cop":ke_cop, "kd_cop":kd_cop, "we":we, "wd":wd, "t_col":t_col, "wacc":wacc,
+                "E_us":E_us, "D_us":D_us}
+    return wacc
 
 def tir(flujos):
     if not _SCIPY:

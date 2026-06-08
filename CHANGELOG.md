@@ -2,6 +2,24 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.26.0] — 2026-06-08
+### Añadido (capítulo K. Betas — Costo de Capital / WACC)
+- Nueva sección **"Costo de capital"** (antes de Apalancamiento): reproduce el build-up CAPM de mercado
+  emergente (Damodaran/CESLA) — beta del comparable US → desapalancar **con beta de deuda** → reapalancar
+  a Colombia → Ke USD → **+ riesgo país (EMBI)** → paridad de inflación a COP → WACC. Inputs editables
+  (editor) / solo lectura (consulta); **riesgo país EMBI manual con ayuda** en pantalla (valor de
+  referencia ~2,0% / fuentes BanRep · BCRP · CESLA).
+### Corregido (metodología WACC alineada a la hoja auditada)
+- `engine.calcular_wacc` ahora usa la **beta de la deuda** βd=(kd−Rf)/(Rm−Rf) en el des/reapalancamiento
+  (antes Hamada simple con βd=0) y **compone** el costo de deuda Kd COP=(1+tasa)(1+spread)−1 (antes sumaba).
+  Reproduce la hoja k.beta: **WACC Navarra 21,54%** (antes el motor daba 24,08%, ~2,5 pp de más). Esto
+  sube el VPN@WACC preliminar de los greenfield (Dominica/Torres). Navarra mantiene su VPN auditado de
+  fiducia (la WACC solo descuenta los VPN preliminares). Motor v1.7.0; nuevo parámetro `kd_us` (9,335).
+### Verificación
+- WACC reproducido eslabón a eslabón vs la hoja (βd 0,748 · βu 1,2047 · βl₂ 1,918 · Ke COP 29,60% · WACC
+  21,54%, dif <0,02 pp). AppTest de la sección en rol **editor y consulta**: 0 excepciones; sin regresión
+  en las demás secciones (menú 19:19).
+
 ## [2.25.0] — 2026-06-08
 ### Añadido (gráficos ejecutivos de decisión)
 - **Cockpit ejecutivo** (nueva sección, tras *Inicio*): resumen 1-vistazo para comité con **8 KPIs con

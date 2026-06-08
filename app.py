@@ -226,7 +226,7 @@ def nuevo_proyecto():
         "cronograma":{"dur_obra":40,"moda_pert":24,"curva":"Gauss","rel_materiales":0.8,"ea_materiales":0.06,"ea_mano_obra":0.12},
         "financiero":{"renta":0.35,"split_cg":0.70,"pct_ci":0.30,"sep_und_miles":5000,"diferido_sep":4,
                       "tasa_credito_ea":0.155,"cobertura_cc":0.80,"monto_cc_pct":0.80,"tir_apalancada_ref":0.20,
-                      "wacc":{"beta_us":1.29,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,"rf":0.12,
+                      "wacc":{"beta_us":1.29,"kd_us":9.335,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,"rf":0.12,
                               "rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}}}
 
 # ---------------- sidebar: proyecto + menú ----------------
@@ -248,10 +248,10 @@ with st.sidebar:
     par = st.session_state.par
     MENU=["Inicio","Cockpit","Proyectos activos","Portafolio (burbujas)","Datos del proyecto","Monitor de ejecución",
           "Urbanístico","Cronograma","Ingresos","Distribución costos","P&G","Reparto","Flujo de caja",
-          "Apalancamiento","Valor Ganado","Escenarios","Monte Carlo","Sensibilidad"]
+          "Costo de capital","Apalancamiento","Valor Ganado","Escenarios","Monte Carlo","Sensibilidad"]
     ICONS=["house-door","speedometer2","buildings","graph-up","pencil-square","clipboard-data",
            "building","calendar3","cash-coin","bar-chart-line","table","pie-chart","cash-stack",
-           "bank","graph-up-arrow","bullseye","dice-5","sliders"]
+           "percent","bank","graph-up-arrow","bullseye","dice-5","sliders"]
     seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
         styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
                 "icon":{"color":TEAL,"font-size":"14px"},
@@ -675,6 +675,83 @@ if seccion=="Flujo de caja":
         st.plotly_chart(_charts.flujo_caja_waterfall(fl["flujo"], fl["acumulado"], fl.get("saldo_credito")), width="stretch")
         st.caption("Flujo mensual del proyecto.")
 
+# ============ COSTO DE CAPITAL (WACC) ============
+if seccion=="Costo de capital":
+    from engine import modelo as _modelo
+    st.markdown("### 📐 Costo de Capital (WACC)")
+    st.caption("Rentabilidad mínima exigida al proyecto. Build-up CAPM de mercado emergente "
+               "(metodología Damodaran / CESLA): beta del sector comparable EE.UU. → desapalancar con "
+               "**beta de deuda** → reapalancar a la estructura de Colombia → Ke USD → **+ riesgo país (EMBI)** "
+               "→ paridad de inflación a COP → WACC. Reproduce la hoja k.beta auditada (Navarra 21,54%).")
+    wcfg = par.setdefault("financiero",{}).setdefault("wacc",{})
+    _defw = {"beta_us":1.29,"kd_us":9.335,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,
+             "rf":0.12,"rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}
+    for _k,_v in _defw.items(): wcfg.setdefault(_k,_v)
+    if ES_EDITOR:
+        with st.expander("✏️ Parámetros del costo de capital (editar)", expanded=True):
+            st.markdown("**Comparable EE.UU.** (sector Engineering/Construction · fuente: Damodaran)")
+            e1=st.columns(4)
+            wcfg["beta_us"]=e1[0].number_input("Beta apalancado βl (US)", value=float(wcfg["beta_us"]), step=0.01, format="%.4f")
+            wcfg["kd_us"]=e1[1].number_input("Costo deuda US kd (%)", value=float(wcfg["kd_us"]), step=0.05, format="%.3f",
+                help="De aquí sale la beta de la deuda βd = (kd − Rf)/(Rm − Rf).")
+            wcfg["tax_us"]=e1[2].number_input("Impuesto US (%)", value=float(wcfg["tax_us"]), step=0.1, format="%.1f")
+            wcfg["de_us"]=e1[3].number_input("Estructura D/E US (%)", value=float(wcfg["de_us"]), step=0.5, format="%.2f")
+            st.markdown("**Mercado**")
+            e2=st.columns(2)
+            wcfg["rm"]=e2[0].number_input("Rentabilidad del mercado Rm (%)", value=float(wcfg["rm"]), step=0.1, format="%.2f")
+            wcfg["rf"]=e2[1].number_input("Tasa libre de riesgo Rf (%)", value=float(wcfg["rf"]), step=0.01, format="%.2f")
+            st.markdown("**Colombia**")
+            e3=st.columns(4)
+            _eq=e3[0].number_input("Equity en la estructura (%)", value=float(wcfg.get("eq_w",30.0)), step=1.0,
+                min_value=1.0, max_value=99.0, format="%.1f",
+                help="Peso del capital propio. Deuda y D/E se derivan (Equity 30% → Deuda 70% → D/E 233%).")
+            wcfg["eq_w"]=_eq; wcfg["de_col"]=((100-_eq)/_eq*100 if _eq else 0.0)
+            wcfg["tax_col"]=e3[1].number_input("Impuesto Colombia (%)", value=float(wcfg["tax_col"]), step=0.5, format="%.1f")
+            wcfg["tasa_d"]=e3[2].number_input("Tasa deuda Colombia (%)", value=float(wcfg["tasa_d"]), step=0.5, format="%.2f")
+            wcfg["spread"]=e3[3].number_input("Spread deuda (%)", value=float(wcfg["spread"]), step=0.1, format="%.2f")
+            e4=st.columns(2)
+            wcfg["inf_col"]=e4[0].number_input("Inflación Colombia EA (%)", value=float(wcfg["inf_col"]), step=0.1, format="%.2f")
+            wcfg["inf_us"]=e4[1].number_input("Inflación EE.UU. EA (%)", value=float(wcfg["inf_us"]), step=0.1, format="%.2f")
+            st.markdown("**Riesgo país — EMBI Colombia**")
+            wcfg["rp"]=st.number_input("Riesgo país (EMBI, %)", value=float(wcfg["rp"]), step=0.01, format="%.2f",
+                help="Spread EMBI Colombia (JP Morgan). 1% = 100 puntos básicos.")
+            st.info("📡 **EMBI Colombia de referencia:** ~**2,0%** (≈200 pb; en abril-2026 tocó 219 pb, mínimo en 5 años). "
+                    "El valor de la hoja era 3,14% (314 pb, may-2023). "
+                    "Fuentes: [Banco de la República](https://www.banrep.gov.co/es/taxonomy/term/7611) · "
+                    "[BCRP serie diaria](https://estadisticas.bcrp.gob.pe/estadisticas/series/diarias/resultados/PD04715XD/html) · "
+                    "[CESLA](https://www.cesla.com). Actualízalo con el dato vigente al día de la evaluación.")
+    else:
+        st.info("🔒 Modo consulta: los parámetros del costo de capital los edita el editor del modelo.")
+    d=_modelo.calcular_wacc(wcfg, detalle=True)
+    st.markdown("#### Cadena de cálculo")
+    col=st.columns(2)
+    with col[0]:
+        st.markdown("**Beta**")
+        st.dataframe(pd.DataFrame([
+            ("Beta apalancado βl (US)", f"{wcfg['beta_us']:.4f}"),
+            ("Beta de la deuda βd", f"{d['beta_d']:.4f}"),
+            ("Beta desapalancado βu", f"{d['beta_u']:.4f}"),
+            ("Beta reapalancado Colombia βl₂", f"{d['beta_l']:.4f}"),
+        ], columns=["Concepto","Valor"]), width="stretch", hide_index=True)
+    with col[1]:
+        st.markdown("**Costo de recursos propios**")
+        st.dataframe(pd.DataFrame([
+            ("Ke USD (CAPM)", fmt_pct(d['ke_usd'])),
+            ("(+) Riesgo país (EMBI)", fmt_pct(d['rp'])),
+            ("Ke USD + riesgo país", fmt_pct(d['ke_usd_rp'])),
+            ("Paridad de inflación (RPLP)", fmt_pct(d['rplp'])),
+            ("Ke en COP", fmt_pct(d['ke_cop'])),
+        ], columns=["Concepto","Valor"]), width="stretch", hide_index=True)
+    st.markdown("#### Resultado")
+    kk=st.columns(4)
+    kpi(kk[0],"Ke COP (recursos propios)", fmt_pct(d['ke_cop']), f"E = {d['we']*100:.0f}%", TEAL)
+    kpi(kk[1],"Kd COP (deuda)", fmt_pct(d['kd_cop']), f"D = {d['wd']*100:.0f}%", AMBER)
+    kpi(kk[2],"Kd después de impuestos", fmt_pct(d['kd_cop']*(1-d['t_col'])), f"escudo fiscal {d['t_col']*100:.0f}%", MUTED)
+    kpi(kk[3],"WACC", fmt_pct(d['wacc']), "rentabilidad mínima", GREEN)
+    st.caption(f"**WACC = E·Ke$COP + D·Kd·(1−t)** = {d['we']*100:.0f}%·{d['ke_cop']*100:.2f}% + "
+               f"{d['wd']*100:.0f}%·{d['kd_cop']*100:.2f}%·(1−{d['t_col']*100:.0f}%) = **{fmt_pct(d['wacc'])}**. "
+               "El WACC es la tasa de descuento del VPN del proyecto (sección **Apalancamiento**).")
+
 # ============ APALANCAMIENTO ============
 if seccion=="Apalancamiento":
     a=R.get("apalancamiento",{})
@@ -1050,4 +1127,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.25.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.26.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
