@@ -408,3 +408,125 @@ def heatmap_sensibilidad(precio_vars, costo_vars, matriz_margen,
     fig.update_layout(title=titulo, height=420, xaxis_title="Variación de precio",
                       yaxis_title="Variación de costo directo")
     return fig
+
+
+# ----------------------------------------------------------------------------- cockpit (velocímetro)
+def cockpit_gauge(valor, titulo, rango=(0, 1), zonas=((0, 0.2, RED), (0.2, 0.3, AMBER), (0.3, 1, GREEN)),
+                  es_pct=True):
+    """Velocímetro ejecutivo (go.Indicator) de un KPI con zonas verde/ámbar/rojo (marca CG).
+    `zonas`: lista de (desde, hasta, color). La aguja/barra toma el color de la zona donde cae el valor."""
+    lo, hi = rango
+    v = valor if valor is not None else lo
+    suaves = {RED: "#FBE3E0", AMBER: "#FDEFD2", GREEN: "#DCF0E4"}
+    steps = [dict(range=[a, b], color=suaves.get(c, "#EEF1F5")) for a, b, c in zonas]
+    barcol = TEAL
+    for a, b, c in zonas:
+        if a <= v < b: barcol = c
+    if v >= hi: barcol = zonas[-1][2]
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number", value=v,
+        number=dict(font=dict(size=30, color=INK), valueformat=(".1%" if es_pct else ",.0f")),
+        title=dict(text=titulo, font=dict(size=13, color=TEAL)),
+        gauge=dict(
+            axis=dict(range=[lo, hi], tickformat=(".0%" if es_pct else ",.0f"),
+                      tickfont=dict(size=10, color=MUTED)),
+            bar=dict(color=barcol, thickness=0.30),
+            bgcolor="white", borderwidth=0, steps=steps,
+            threshold=dict(line=dict(color=INK, width=2), thickness=0.78, value=v))))
+    fig.update_layout(height=240, margin=dict(l=22, r=22, t=46, b=8))
+    return fig
+
+
+# ----------------------------------------------------------------------------- burbujas de portafolio
+def bubbles_portafolio(puntos, tir_refs=(0.20, 0.30), margen_refs=(0.03, 0.05),
+                       x_clip=(-0.20, 0.70), titulo="Portafolio CG — TIR vs margen operativo"):
+    """Mapa de valor del portafolio: X=TIR del proyecto, Y=margen operativo, tamaño=ventas, color=tipo.
+    Cuadrantes Estrella / Crecimiento / Vigilancia / Revisar con líneas de referencia. Proyectos con
+    TIR < x_clip[0] (outlier muy negativo, p.ej. greenfield) se recortan al borde y se anotan, para no
+    aplastar el eje. `puntos`: lista de dicts {nombre, tir(0..1|None), margen(0..1), ventas(miles), tipo}.
+    """
+    xlo, xhi = x_clip[0] * 100, x_clip[1] * 100
+    norm = []; outliers = []
+    for p in puntos:
+        tir = p.get("tir")
+        if tir is None:
+            continue
+        x = tir * 100; y = (p.get("margen") or 0) * 100
+        rec = {**p, "_x": max(xlo, min(xhi, x)), "_y": y, "_tir_real": x}
+        if x < xlo:
+            outliers.append(rec)
+        norm.append(rec)
+    if not norm:
+        return go.Figure().update_layout(title=titulo, height=470)
+    ventas = [max(0.0, p.get("ventas") or 0) for p in norm]
+    vmax = max(ventas) or 1
+    sizeref = 2.0 * vmax / (95.0 ** 2)
+    fig = go.Figure()
+    grupos = {}
+    for p in norm:
+        tipo = "VIS" if str(p.get("tipo", "")).strip().upper() == "VIS" else "No VIS"
+        grupos.setdefault(tipo, []).append(p)
+    colores = {"VIS": TEAL, "No VIS": AMBER}
+    for tipo, pts in grupos.items():
+        fig.add_scatter(
+            x=[p["_x"] for p in pts], y=[p["_y"] for p in pts], mode="markers+text",
+            text=[p.get("nombre", "") for p in pts], textposition="top center",
+            textfont=dict(size=11, color=INK), name=tipo,
+            marker=dict(size=[max(0.0, p.get("ventas") or 0) for p in pts], sizemode="area",
+                        sizeref=sizeref, sizemin=9, color=colores[tipo], opacity=0.80,
+                        line=dict(width=1.4, color="white")),
+            customdata=[[(p.get("ventas") or 0) / 1_000_000, p["_tir_real"], p["_y"]] for p in pts],
+            hovertemplate="<b>%{text}</b><br>TIR: %{customdata[1]:.1f}%<br>"
+                          "Margen: %{customdata[2]:.1f}%<br>Ventas: %{customdata[0]:,.1f} mil M<extra></extra>")
+    for xr in tir_refs:
+        fig.add_vline(x=xr * 100, line=dict(color=MUTED, width=1, dash="dot"))
+    for yr in margen_refs:
+        fig.add_hline(y=yr * 100, line=dict(color=MUTED, width=1, dash="dot"))
+    cuad = [(0.99, 0.97, "right", "top", "★ Estrella", GREEN),
+            (0.99, 0.03, "right", "bottom", "Crecimiento", TEAL),
+            (0.01, 0.97, "left", "top", "Vigilancia", AMBER),
+            (0.01, 0.03, "left", "bottom", "Revisar", RED)]
+    for xp, yp, xa, ya, txt, col in cuad:
+        fig.add_annotation(x=xp, y=yp, xref="paper", yref="paper", text=txt, showarrow=False,
+                           xanchor=xa, yanchor=ya, font=dict(size=10, color=col), opacity=0.7)
+    for p in outliers:
+        fig.add_annotation(x=p["_x"], y=p["_y"], text=f"TIR {p['_tir_real']:.0f}%", showarrow=True,
+                           arrowhead=2, arrowcolor=RED, ax=30, ay=0, font=dict(size=10, color=RED),
+                           bgcolor="white", bordercolor=RED, borderwidth=1)
+    fig.update_layout(title=titulo, height=470,
+                      xaxis=dict(title="TIR del proyecto (%)", range=[xlo - 4, xhi + 4], ticksuffix="%"),
+                      yaxis=dict(title="Margen operativo (%)", ticksuffix="%"))
+    return fig
+
+
+# ----------------------------------------------------------------------------- monte carlo (histograma)
+def montecarlo_hist(muestras, p10, p50, p90, umbral=0.0, es_pct=True,
+                    titulo="Monte Carlo — distribución del margen operativo"):
+    """Histograma de la distribución simulada. Resalta la zona < `umbral` (pérdida) en rojo y marca
+    P10 (ámbar) / P50 (tinta) / P90 (verde). `muestras` en fracción (margen 0..1) si `es_pct`,
+    o en miles COP si no. Los bins se alinean entre la serie completa y la zona de pérdida."""
+    datos = list(muestras)
+    if not datos:
+        return go.Figure().update_layout(title=titulo, height=430)
+    lo, hi = min(datos), max(datos)
+    size = (hi - lo) / 40 if hi > lo else (abs(hi) or 1) / 40 or 1
+    binargs = dict(start=lo, end=hi + size, size=size)
+    perdida = [v for v in datos if v < umbral]
+    hov = ("Margen %{x:.1%}" if es_pct else "%{x:,.0f}") + "<br>%{y} escenarios<extra></extra>"
+    fig = go.Figure()
+    fig.add_histogram(x=datos, xbins=binargs, marker_color=TEAL, opacity=0.75,
+                      name="Escenarios", hovertemplate=hov)
+    if perdida:
+        fig.add_histogram(x=perdida, xbins=binargs, marker_color=RED, opacity=0.85,
+                          name="Zona de pérdida", hovertemplate=hov)
+    _f = (lambda v: f"{v*100:.1f}%") if es_pct else (lambda v: f"{v/1000:,.0f} mil M".replace(",", "."))
+    for val, col, lab in [(p10, AMBER, "P10"), (p50, INK, "P50"), (p90, GREEN, "P90")]:
+        fig.add_vline(x=val, line=dict(color=col, width=2, dash="dash"),
+                      annotation_text=f"{lab} {_f(val)}", annotation_position="top",
+                      annotation_font_color=col, annotation_font_size=10)
+    fig.update_layout(
+        title=titulo, height=430, barmode="overlay",
+        xaxis=dict(title=("Margen operativo" if es_pct else "Utilidad operativa (miles COP)"),
+                   tickformat=(".0%" if es_pct else ",.0f")),
+        yaxis_title="Frecuencia (nº de escenarios)")
+    return fig

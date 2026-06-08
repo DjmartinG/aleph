@@ -5,6 +5,7 @@ Toma un dict de parámetros de proyecto y devuelve P&G, reparto, distribución d
 flujo de caja, escenarios, sensibilidades e indicadores. Metodología validada contra
 prefactibilidades reales. Enfoque híbrido: TIR apalancada de referencia es un parámetro.
 """
+import random
 from datetime import datetime
 from . import curvas
 from . import portafolio
@@ -214,6 +215,43 @@ def sensibilidades(par):
         "Precio +10%": _correr(par,+0.10,0)["util_oper"]-base,
         "Costo directo +10%": _correr(par,0,+0.10)["util_oper"]-base,
         "Costo directo -10%": _correr(par,0,-0.10)["util_oper"]-base,
+    }
+
+
+def _percentil(serie_ordenada, q):
+    """Percentil q (0..1) por interpolación lineal sobre una lista YA ordenada."""
+    s = serie_ordenada
+    if not s: return 0.0
+    i = q * (len(s) - 1); lo = int(i); hi = min(lo + 1, len(s) - 1)
+    return s[lo] + (s[hi] - s[lo]) * (i - lo)
+
+def montecarlo(par, n=500, rango_precio=(-0.15, 0.15), rango_costo=(-0.10, 0.10), seed=42):
+    """Simulación Monte Carlo del margen operativo y la utilidad operativa.
+
+    Varía el precio de venta y el costo directo de forma uniforme en los rangos dados y recorre
+    el P&G `n` veces (vía _correr). Determinística por `seed` (reproducible). NO muta `par`.
+
+    Devuelve dict con: margenes[], util_oper[], p10/p50/p90 (del margen), media, std, prob_pos
+    (fracción de escenarios con margen > 0), n, y los rangos usados.
+    """
+    p = dict(par)
+    if "ventas_miles" not in p:
+        p["ventas_miles"] = sum(e.get("ventas_miles", 0) for e in p.get("etapas", []))
+    rng = random.Random(seed)
+    margenes = []; utils = []
+    for _ in range(int(n)):
+        dp = rng.uniform(*rango_precio); dc = rng.uniform(*rango_costo)
+        r = _correr(p, dp, dc)
+        margenes.append(r["margen"]); utils.append(r["util_oper"])
+    ms = sorted(margenes)
+    media = sum(margenes) / len(margenes) if margenes else 0.0
+    var = sum((x - media) ** 2 for x in margenes) / len(margenes) if margenes else 0.0
+    prob_pos = sum(1 for x in margenes if x > 0) / len(margenes) if margenes else 0.0
+    return {
+        "margenes": margenes, "util_oper": utils,
+        "p10": _percentil(ms, 0.10), "p50": _percentil(ms, 0.50), "p90": _percentil(ms, 0.90),
+        "media": media, "std": var ** 0.5, "prob_pos": prob_pos, "n": int(n),
+        "rango_precio": rango_precio, "rango_costo": rango_costo,
     }
 
 

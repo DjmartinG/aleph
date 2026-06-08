@@ -75,6 +75,14 @@ def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
 
+def _sem(v, amarillo, verde, invertir=False):
+    """Color de semáforo (verde/ámbar/rojo) por umbral. `invertir`=True cuando menor es mejor (payback)."""
+    if v is None: return MUTED
+    if invertir:
+        return GREEN if v <= verde else (AMBER if v <= amarillo else RED)
+    return GREEN if v >= verde else (AMBER if v >= amarillo else RED)
+_SEMLAB = {GREEN: "● saludable", AMBER: "● atención", RED: "● en riesgo", MUTED: "—"}
+
 _SEV={"critica":("#FEF2F2","#FCA5A5","#991B1B","🔴","CRÍTICA"),
       "importante":("#FFFBEB","#FDE68A","#92400E","🟡","IMPORTANTE"),
       "info":("#F0FDF4","#BBF7D0","#14532D","✅","INFO")}
@@ -188,6 +196,24 @@ def consolidado(_keys):
             "tir_eq":_irr_anual(equity),
             "credito_max":max(saldo) if saldo else 0.0,"filas":filas}
 
+@st.cache_data(show_spinner=False)
+def puntos_portafolio(_keys):
+    """Puntos del gráfico de burbujas: un dict por proyecto {nombre, tir, margen, ventas, tipo, und}.
+    _keys = tuple(listar()) → invalida el caché igual que consolidado()."""
+    pts=[]
+    for name in _keys:
+        try:
+            par=cargar(name); R=calcular(copy.deepcopy(par))
+        except Exception:
+            continue
+        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]
+        tir=ap.get("tir_proyecto")
+        if tir is None: tir=ap.get("tir_apalancada_ref")
+        pts.append({"nombre":mt.get("nombre",name),"tir":tir,"margen":pg.get("margen_oper"),
+                    "ventas":pg.get("ventas"),"tipo":mt.get("tipo","No VIS"),
+                    "und":sum(e.get("und",0) or 0 for e in par.get("etapas",[]))})
+    return pts
+
 def nuevo_proyecto():
     return {"meta":{"nombre":"Nuevo proyecto","ubicacion":"","zona":"","tipo":"No VIS","unidades":0,"moneda":"miles COP"},
         "areas":{"m2_vendibles":0.0,"m2_construidos":0.0,"lote_bruta":0.0,"lote_util":0.0},
@@ -220,10 +246,12 @@ with st.sidebar:
         st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
         st.session_state.sel = sel
     par = st.session_state.par
-    MENU=["Inicio","Proyectos activos","Datos del proyecto","Monitor de ejecución","Urbanístico","Cronograma","Ingresos",
-          "Distribución costos","P&G","Reparto","Flujo de caja","Apalancamiento","Valor Ganado","Escenarios","Sensibilidad"]
-    ICONS=["house-door","buildings","pencil-square","clipboard-data","building","calendar3","cash-coin",
-           "bar-chart-line","table","pie-chart","cash-stack","bank","graph-up-arrow","bullseye","sliders"]
+    MENU=["Inicio","Cockpit","Proyectos activos","Portafolio (burbujas)","Datos del proyecto","Monitor de ejecución",
+          "Urbanístico","Cronograma","Ingresos","Distribución costos","P&G","Reparto","Flujo de caja",
+          "Apalancamiento","Valor Ganado","Escenarios","Monte Carlo","Sensibilidad"]
+    ICONS=["house-door","speedometer2","buildings","graph-up","pencil-square","clipboard-data",
+           "building","calendar3","cash-coin","bar-chart-line","table","pie-chart","cash-stack",
+           "bank","graph-up-arrow","bullseye","dice-5","sliders"]
     seccion = option_menu(None, MENU, icons=ICONS, default_index=0, menu_icon="list",
         styles={"container":{"padding":"2px","background-color":"#F7F9FA"},
                 "icon":{"color":TEAL,"font-size":"14px"},
@@ -276,7 +304,7 @@ if seccion == "Proyectos activos":
     kpi(k[4],"VPN @WACC (suma)", fmt_mm(CONS["vpn"]), "preliminar", AMBER)
     kpi(k[5],"Crédito máx (pico)", fmt_mm(CONS["credito_max"]), "preliminar", AMBER)
     st.write("")
-elif seccion != "Inicio":
+elif seccion not in ("Inicio","Cockpit","Portafolio (burbujas)"):
     hc1,hc2 = st.columns([1,9])
     if LOGO.exists(): hc1.image(str(LOGO), width=78)
     hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
@@ -337,6 +365,66 @@ if seccion=="Inicio":
         g[i].markdown(f'<div class="navcard"><h4>{t}</h4><ul>{li}</ul></div>', unsafe_allow_html=True)
     st.write("")
     st.caption("Modelo financiero CG Constructora · estándar FAST de modelación")
+
+# ============ COCKPIT EJECUTIVO (resumen 1-vistazo, por proyecto) ============
+if seccion=="Cockpit":
+    hc1,hc2 = st.columns([1,9])
+    if LOGO.exists(): hc1.image(str(LOGO), width=78)
+    hc2.markdown(f"<h1>Cockpit ejecutivo — {meta.get('nombre','')}</h1>", unsafe_allow_html=True)
+    _audit = ap.get("fiducia_real")
+    hc2.caption("CG Constructora · resumen de comité, 1 vistazo · "
+                + ("TIR/VPN **auditados** (FCL de fiducia)" if _audit else "cifras preliminares del modelo calibrado"))
+    st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
+    _tir=ap.get("tir_proyecto"); _marg=pg.get("margen_oper"); _vpn=ap.get("vpn_proyecto")
+    _tireq=ap.get("tir_equity"); _cred=ap.get("credito_max"); _pb=ap.get("payback_mes"); _V=pg.get("ventas") or 0
+    r1=st.columns(4)
+    _c=_sem(_tir,0.20,0.30);            kpi(r1[0],"TIR del proyecto",fmt_pct(_tir),_SEMLAB[_c],_c)
+    _c=_sem(_marg,0.03,0.05);           kpi(r1[1],"Margen operativo",fmt_pct(_marg),_SEMLAB[_c],_c)
+    _c=_sem(pg.get("util_oper"),_V*0.01,_V*0.03); kpi(r1[2],"Utilidad operativa",fmt_mm(pg.get("util_oper")),_SEMLAB[_c],_c)
+    _c=_sem(_vpn,-10_000_000,0);        kpi(r1[3],"VPN del proyecto",fmt_mm(_vpn),_SEMLAB[_c],_c)
+    r2=st.columns(4)
+    _c=_sem(_tireq,0.20,0.30);          kpi(r2[0],"TIR socio CG (equity)",fmt_pct(_tireq),_SEMLAB[_c],_c)
+    kpi(r2[1],"UDI (a socios)",fmt_mm(pg.get("udi")),"utilidad distribuible",MUTED)
+    kpi(r2[2],"Crédito constructor máx",fmt_mm(_cred),"exposición de deuda",MUTED)
+    _c=_sem(_pb,60,36,invertir=True);   kpi(r2[3],"Payback (caja+)",(f"{_pb} meses" if _pb else "—"),(_SEMLAB[_c] if _pb else "—"),(_c if _pb else MUTED))
+    st.write("")
+    g=st.columns(2)
+    with g[0]:
+        st.plotly_chart(_charts.cockpit_gauge(_tir or 0,"TIR del proyecto",rango=(0,0.6),
+            zonas=((0,0.20,RED),(0.20,0.30,AMBER),(0.30,0.6,GREEN))), width="stretch")
+    with g[1]:
+        st.plotly_chart(_charts.cockpit_gauge(_marg or 0,"Margen operativo",rango=(0,0.12),
+            zonas=((0,0.03,RED),(0.03,0.05,AMBER),(0.05,0.12,GREEN))), width="stretch")
+    if meta.get("nombre","") in _nav.PROYECTOS_CON_MONITOR:
+        _act=[a for a in _nav.NAVARRA_ALERTAS if a["estado"]=="Activa"]
+        if _act:
+            st.markdown(f"##### ⚠️ Alertas activas de obra ({len(_act)})")
+            render_alertas(_nav.NAVARRA_ALERTAS, solo_activas=True, max_items=3)
+    st.caption("Semáforo por umbral de industria (inmobiliario CO): TIR 🟢≥30% / 🟡20–30% · margen 🟢≥5% / "
+               "🟡3–5% · payback 🟢≤36m. Cifras del waterfall calibrado; donde hay FCL de fiducia, TIR/VPN son "
+               "auditados. Detalle en **Apalancamiento**, **Flujo de caja** y **Monte Carlo**.")
+
+# ============ PORTAFOLIO (BURBUJAS — mapa de valor) ============
+if seccion=="Portafolio (burbujas)":
+    hc1,hc2 = st.columns([1,9])
+    if LOGO.exists(): hc1.image(str(LOGO), width=78)
+    hc2.markdown("<h1>Portafolio CG — mapa de valor</h1>", unsafe_allow_html=True)
+    hc2.caption("Compara los proyectos del portafolio en un vistazo: rentabilidad (TIR) vs margen, "
+                "tamaño de burbuja = ventas, color = tipo (VIS / No VIS).")
+    st.markdown('<div class="brandbar"></div>', unsafe_allow_html=True)
+    pts=[p for p in puntos_portafolio(tuple(listar())) if p.get("tir") is not None]
+    if not pts:
+        st.info("No hay proyectos con TIR calculada para comparar. Abre o crea proyectos en 🏢 **Proyectos activos**.")
+    else:
+        st.plotly_chart(_charts.bubbles_portafolio(pts), width="stretch")
+        df=pd.DataFrame([{"Proyecto":p["nombre"],"Tipo":p["tipo"],"Unidades":p["und"],
+                          "TIR":fmt_pct(p["tir"]),"Margen":fmt_pct(p["margen"]),
+                          "Ventas":fmt_mm(p["ventas"])} for p in pts])
+        st.dataframe(df, width="stretch", hide_index=True)
+        st.caption("Cuadrantes: ★ **Estrella** (TIR≥30% y margen≥5%) · **Crecimiento** (TIR alta, margen ajustado) · "
+                   "**Vigilancia** (margen alto, TIR baja) · **Revisar** (ambos bajos). Las burbujas se dimensionan "
+                   "por ventas. Proyectos con TIR negativa (p.ej. greenfield) se recortan y anotan en el borde "
+                   "izquierdo para no aplastar la escala.")
 
 # ============ PROYECTOS ACTIVOS ============
 if seccion=="Proyectos activos":
@@ -768,6 +856,38 @@ if seccion=="Escenarios":
         st.caption("Cada celda = margen operativo resultante al variar precio (eje X) y costo directo "
                    "(eje Y). Verde = sano · blanco = punto de quiebre · rojo = pérdida. La celda central es la base.")
 
+# ============ MONTE CARLO (riesgo probabilístico) ============
+if seccion=="Monte Carlo":
+    from engine import modelo as _modelo
+    st.markdown("### 🎲 Simulación Monte Carlo — riesgo del margen")
+    st.caption("En vez de un solo número, simulamos miles de escenarios variando **precio de venta** y "
+               "**costo directo** al azar, para ver el **rango probable** del margen operativo y la "
+               "probabilidad de que el proyecto sea rentable.")
+    c1,c2,c3 = st.columns(3)
+    n_sims = c1.select_slider("Número de simulaciones", options=[200,500,1000], value=500)
+    rp = c2.slider("Variación de precio (±%)", 5, 25, 15, 1)
+    rc = c3.slider("Variación de costo directo (±%)", 5, 20, 10, 1)
+    @st.cache_data(show_spinner="Simulando escenarios…")
+    def _mc(_parjson, n, dp, dc):
+        return _modelo.montecarlo(json.loads(_parjson), n=n,
+                                  rango_precio=(-dp/100, dp/100), rango_costo=(-dc/100, dc/100))
+    mc=_mc(json.dumps(par, ensure_ascii=False, sort_keys=True, default=str), n_sims, rp, rc)
+    st.plotly_chart(_charts.montecarlo_hist(mc["margenes"], mc["p10"], mc["p50"], mc["p90"]), width="stretch")
+    kk=st.columns(4)
+    kpi(kk[0],"Pesimista (P10)", fmt_pct(mc["p10"]), "1 de cada 10 peor", RED if mc["p10"]<0 else AMBER)
+    kpi(kk[1],"Central (P50)", fmt_pct(mc["p50"]), "mediana", TEAL)
+    kpi(kk[2],"Optimista (P90)", fmt_pct(mc["p90"]), "1 de cada 10 mejor", GREEN)
+    _pp=mc["prob_pos"]
+    kpi(kk[3],"Prob. de margen > 0", f"{_pp*100:.0f}%",
+        ("alta" if _pp>=0.9 else "moderada" if _pp>=0.7 else "baja"),
+        GREEN if _pp>=0.9 else (AMBER if _pp>=0.7 else RED))
+    st.markdown(f"**Lectura:** en **{n_sims}** simulaciones, el margen operativo cae con **80% de probabilidad** "
+                f"entre **{mc['p10']*100:.1f}%** (P10) y **{mc['p90']*100:.1f}%** (P90), con mediana "
+                f"**{mc['p50']*100:.1f}%**. La probabilidad de margen positivo es **{_pp*100:.0f}%**.")
+    st.caption(f"Supuesto: precio de venta ±{rp}% y costo directo ±{rc}% (distribución uniforme), semilla fija "
+               "(reproducible). El motor recalcula el P&G en cada escenario; **no** altera el modelo guardado. "
+               "Para ver el efecto combinado punto a punto, mira el **mapa 2D** en Escenarios.")
+
 # ============ SENSIBILIDAD ============
 if seccion=="Sensibilidad":
     s=R["sensibilidades"]; base=R["pyg"]["util_oper"]
@@ -930,4 +1050,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.24.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.25.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

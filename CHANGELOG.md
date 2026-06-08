@@ -2,6 +2,26 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.25.0] — 2026-06-08
+### Añadido (gráficos ejecutivos de decisión)
+- **Cockpit ejecutivo** (nueva sección, tras *Inicio*): resumen 1-vistazo para comité con **8 KPIs con
+  semáforo** (TIR, margen, utilidad, VPN, TIR equity, UDI, crédito máx, payback) por umbral de industria
+  inmobiliaria CO (TIR 🟢≥30%/🟡20–30%, margen 🟢≥5%/🟡3–5%, payback 🟢≤36m) + **2 velocímetros**
+  Plotly (TIR y margen). Donde hay FCL de fiducia, TIR/VPN son auditados; integra alertas de obra de Navarra.
+- **Portafolio (burbujas)** (nueva sección): mapa de valor de los 3 proyectos — X=TIR, Y=margen,
+  tamaño=ventas, color=tipo (VIS/No VIS), con cuadrantes **Estrella / Crecimiento / Vigilancia / Revisar**.
+  Recorta y anota outliers de TIR negativa (Torres −99,4%) para no aplastar la escala. `charts.bubbles_portafolio`.
+- **Monte Carlo** (nueva sección, junto a Escenarios): simulación probabilística del margen variando
+  precio (±15%) y costo directo (±10%) uniformes; **histograma** con zona de pérdida en rojo + P10/P50/P90,
+  tarjetas de escenarios y **probabilidad de margen > 0**. Sliders de nº de simulaciones (200/500/1000) y
+  rangos, con caché y semilla fija (reproducible). Medido Navarra 500 sims: mediana **4,7%**, P10 **−0,2%**,
+  P90 **9,6%**, prob(+) **89%**. `engine.montecarlo` (motor v1.6.0, fuente única) + `charts.montecarlo_hist`.
+- `charts.cockpit_gauge` (velocímetro `go.Indicator` con zonas de marca CG).
+### Verificación
+- Diseño con panel multi-agente (5 agentes) sobre datos reales; cada gráfico medido contra el motor.
+- AppTest sobre **13 secciones** (incl. las 3 nuevas) con el candado saltado: **0 excepciones**; Cockpit,
+  Monte Carlo y Portafolio renderizan contenido real (Navarra TIR 37,6% auditada; Torres −99,4% recortada).
+
 ## [2.24.0] — 2026-06-07
 ### Añadido (sensibilidad pro + tornado)
 - **Escenarios** ahora con 2 tabs: barras pro (utilidad+margen por escenario) y **mapa de sensibilidad
