@@ -602,6 +602,48 @@ elif seccion=="Datos del proyecto":
             st.session_state.par.setdefault("meta",{})["unidades"]=sum(r["und"] for r in recs)
         tv=sum(r["ventas_miles"] for r in recs)
         st.success(f"**{len(recs)} etapas · {sum(r['und'] for r in recs)} unidades · ventas totales {tv/1000:,.0f} M**")
+        if par.get("tipologias"):
+            st.caption("ℹ️ Este proyecto tiene **tipologías**: las **unidades y el precio** se toman de «3b · Tipologías y "
+                       "producto». Aquí se editan los **tiempos** (ritmo, equilibrio, obra, escrituración).")
+    with st.expander("3b · Tipologías y producto (ingresos)", expanded=bool(par.get("tipologias"))):
+        _tp=par.get("meta",{}).get("tipo","No VIS"); _es_vis=_tp in ("VIS","VIP")
+        st.caption(f"Producto del proyecto **{_tp}**. " + (
+            "En **VIS/VIP** los parqueaderos y depósitos son **comunales** → no se listan como ingreso." if _es_vis
+            else "En **No VIS** los **parqueaderos y depósitos van por separado** → agrégalos como filas con su clase."))
+        _clases=(["apartamento","comercio"] if _es_vis else ["apartamento","comercio","parqueadero","deposito"])
+        _ecods=[e.get("cod") for e in par.get("etapas",[])]
+        _tdf=pd.DataFrame(par.get("tipologias",[]), columns=["etapa","nombre","clase","und","metodo","precio","area_und"])
+        for _c in ["etapa","und"]:   _tdf[_c]=pd.to_numeric(_tdf[_c], errors="coerce").astype("Int64")
+        for _c in ["precio","area_und"]: _tdf[_c]=pd.to_numeric(_tdf[_c], errors="coerce").astype("float64")
+        for _c in ["nombre","clase","metodo"]: _tdf[_c]=_tdf[_c].astype("object")
+        _ted=st.data_editor(_tdf, num_rows="dynamic", width="stretch", key=f"tipo_{sel}",
+            column_config={
+                "etapa": st.column_config.SelectboxColumn("Etapa", options=_ecods, width="small"),
+                "nombre": st.column_config.TextColumn("Nombre / tipo"),
+                "clase": st.column_config.SelectboxColumn("Clase", options=_clases, width="small"),
+                "und": st.column_config.NumberColumn("Unidades", format="%d"),
+                "metodo": st.column_config.SelectboxColumn("Método", options=["$/und","$/m²"], width="small"),
+                "precio": st.column_config.NumberColumn("Precio (COP)", format="%d",
+                    help="Precio por unidad ($/und) o por m² ($/m²), en COP. Vivienda: lleva recaudo completo "
+                         "(separación+cuota inicial+subrogación). Parqueadero/depósito: se paga en la cuota inicial."),
+                "area_und": st.column_config.NumberColumn("Área/und (m²)", format="%.1f")})
+        _newt=[]
+        for r in _ted.to_dict("records"):
+            cl=r.get("clase"); et=r.get("etapa")
+            if cl in (None,"") or et is None or pd.isna(et): continue
+            if _es_vis and str(cl) in ("parqueadero","deposito"): continue   # regla VIS: comunales, no entran
+            _newt.append({"etapa":int(et),"nombre":str(r.get("nombre") or cl),"clase":str(cl),
+                "und":int(r.get("und") or 0),"metodo":(r.get("metodo") or "$/und"),
+                "precio":float(r.get("precio") or 0),"area_und":float(r.get("area_und") or 0)})
+        par["tipologias"]=_newt
+        def _vtip(t): return (t["und"]*t["precio"]/1000 if t["metodo"]=="$/und" else t["und"]*t["precio"]*t["area_und"]/1000)
+        _viv=sum(t["und"] for t in _newt if t["clase"] in ("apartamento","comercio"))
+        _vviv=sum(_vtip(t) for t in _newt if t["clase"] in ("apartamento","comercio"))
+        _vad=sum(_vtip(t) for t in _newt if t["clase"] in ("parqueadero","deposito"))
+        par.setdefault("meta",{})["unidades"]=_viv if _viv else par.get("meta",{}).get("unidades",0)
+        _msg=f"**{len(_newt)} tipologías · {_viv} unidades de vivienda · ventas vivienda {_vviv/1000:,.0f} M**".replace(",", ".")
+        if _vad: _msg+=f" **+ adicionales {_vad/1000:,.0f} M**".replace(",", ".")
+        st.success(_msg)
     with st.expander("4 · Costos"):
         c=par["costos_pct"]; cc1=st.columns(3)
         c["directos"]=cc1[0].slider("Costo directo (% ventas)", 0.30, 0.70, float(c["directos"]), 0.001)
@@ -1175,4 +1217,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.28.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.29.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

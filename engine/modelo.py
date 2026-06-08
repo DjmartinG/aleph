@@ -296,12 +296,51 @@ def montecarlo(par, n=500, rango_precio=(-0.15, 0.15), rango_costo=(-0.10, 0.10)
     }
 
 
+# ----------------------------- tipologías (ingresos por producto) -----------------------------
+HOUSING = ("apartamento", "comercio")        # generan unidad escriturable (separación/CI/subrogación)
+ADICIONAL = ("parqueadero", "deposito")      # ingreso adicional (No VIS); no son unidad de vivienda
+
+def _ventas_tipologia(t):
+    """Ventas (miles COP) de una tipología: und × precio (× área si el método es $/m²)."""
+    und = t.get("und", 0) or 0
+    precio = t.get("precio", 0) or 0
+    if t.get("metodo", "$/und") == "$/m²":
+        return und * precio * (t.get("area_und", 0) or 0) / 1000
+    return und * precio / 1000
+
+def normalizar_tipologias(par):
+    """Si el proyecto trae `par['tipologias']` (lista con {etapa, clase, und, metodo, precio, area_und}),
+    deriva por etapa las ventas (vivienda + adicionales) y las unidades de VIVIENDA. Mutación in situ:
+    fija `e['ventas_miles']` (total) y `e['und']` (solo vivienda) en cada etapa. No-op sin tipologías.
+    Regla CG: en VIS los parqueaderos/depósitos son comunales (no entran); en No VIS van por separado."""
+    tip = par.get("tipologias")
+    if not tip:
+        return
+    por_etapa = {}
+    for t in tip:
+        por_etapa.setdefault(t.get("etapa"), []).append(t)
+    for e in par.get("etapas", []):
+        ts = por_etapa.get(e.get("cod"))
+        if not ts:
+            continue
+        v_total = 0.0; u_viv = 0
+        for t in ts:
+            vt = _ventas_tipologia(t)
+            v_total += vt
+            if t.get("clase", "apartamento") in HOUSING:
+                u_viv += t.get("und", 0) or 0
+        e["ventas_miles"] = v_total
+        if u_viv:
+            e["und"] = u_viv
+
+
 # ----------------------------- orquestador -----------------------------
 def calcular(par):
     """Recibe params de proyecto, devuelve todos los resultados."""
-    # ventas = suma de etapas si no viene explícito
-    if "ventas_miles" not in par:
-        par["ventas_miles"] = sum(e["ventas_miles"] for e in par["etapas"])
+    normalizar_tipologias(par)                  # ingresos por tipología → ventas/und por etapa (no-op sin ellas)
+    # ventas = suma de etapas (recalcular si hay tipologías; si no, respetar override existente)
+    if "ventas_miles" not in par or par.get("tipologias"):
+        par["ventas_miles"] = sum(e.get("ventas_miles", 0) for e in par["etapas"])
     pg = pyg(par)
     hitos = _hitos(par)
     recaudo = _recaudo(par, hitos)

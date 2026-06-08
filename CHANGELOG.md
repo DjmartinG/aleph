@@ -2,6 +2,29 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.29.0] — 2026-06-08
+### Añadido (Ingresos · Fase 2a — ventas por tipología de producto)
+- Los **ingresos** pueden modelarse **por tipología** (`tipologias`: lista con {etapa, nombre, clase,
+  und, metodo, precio, area_und}). El motor (`engine.normalizar_tipologias`) deriva por etapa las ventas
+  (vivienda + adicionales) y las unidades de **vivienda** (las escriturables). Si no hay tipologías,
+  comportamiento anterior intacto. Motor v1.9.0.
+- **Regla CG VIS / No VIS** cableada por `meta.tipo`: en **VIS/VIP** (Navarra, Torres) los parqueaderos y
+  depósitos son **comunales** → no se listan como ingreso; en **No VIS** (Dominica) van **por separado**
+  (clases `parqueadero`/`deposito`). El editor restringe las clases según el tipo de proyecto.
+- Nuevo editor **«3b · Tipologías y producto»** en Datos del proyecto (clase, unidades, método, precio COP,
+  área). La tabla de etapas pasa a definir **tiempos**; las unidades y el precio salen de tipologías.
+- Los 3 proyectos sembrados con 1 tipología «apartamento» por etapa (precio COP = ventas_miles·1000/und),
+  reconciliando **exacto** las ventas auditadas (dif 0): Navarra 229.682 M · Dominica 130.492 M ·
+  Torres 240.823 M; TIR 0,376 / 0,5655 / −0,9936 intactas.
+### Notas
+- Recaudo en esta fase: la **vivienda** lleva separación+cuota inicial+subrogación; los adicionales
+  (No VIS) se aproximan en la cuota inicial (recaudo diferenciado fino → Fase 2b).
+- Corregido: convención de precio de tipología en **COP** (la tabla de etapas tenía el precio en miles,
+  inconsistencia heredada que las tipologías ya dejan bien).
+### Verificación
+- Reconciliación exacta desde Supabase (dif 0 en los 3); AppTest de 19 secciones (incl. editor de
+  tipologías VIS y No VIS): 0 excepciones. Sincronizado a la nube.
+
 ## [2.28.0] — 2026-06-08
 ### Añadido (Egresos · Fase 1 — costo directo a 28 capítulos, bottom-up)
 - El **costo directo** puede modelarse como **presupuesto por capítulos** (`directos_cap`: lista

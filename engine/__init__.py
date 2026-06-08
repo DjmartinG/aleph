@@ -1,5 +1,5 @@
 """Motor financiero de factibilidad CG — fuente única de verdad."""
-from .modelo import calcular, pyg, flujo_caja, escenarios, sensibilidades, montecarlo, calcular_wacc, tir, directos_total
+from .modelo import calcular, pyg, flujo_caja, escenarios, sensibilidades, montecarlo, calcular_wacc, tir, directos_total, normalizar_tipologias
 from . import curvas
 
-__version__ = "1.8.0"
+__version__ = "1.9.0"
