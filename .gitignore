@@ -14,3 +14,12 @@ venv/
 proyectos_privados/
 *_REAL_privado.json
 *_privado.json
+
+# Archivos scratch / temporales (pruebas, auditorías, agentes)
+*.tmp
+.tmp*
+.audit*
+_audit*
+nav_audit.txt
+nav_resultado.txt
+suma_cap.txt
