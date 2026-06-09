@@ -109,15 +109,36 @@ from storage import listar, cargar, es_real, guardar, usando_supabase, diagnosti
 
 # ---------------- control de acceso (Fase 1) ----------------
 def _secret(nombre):
+    # st.secrets (Cloud/local) y, si no está, variable de entorno (Azure App Service / contenedores).
     try:
-        return str(st.secrets.get(nombre, "")) if hasattr(st, "secrets") else ""
+        v = st.secrets.get(nombre, "") if hasattr(st, "secrets") else ""
+        if v:
+            return str(v)
     except Exception:
-        return ""
+        pass
+    import os
+    return str(os.environ.get(nombre, ""))
+
+def _ms_user():
+    """Email del usuario autenticado por Azure App Service Easy Auth (Entra ID), si la app corre
+    detrás de él. App Service inyecta el header X-MS-CLIENT-PRINCIPAL-NAME en cada request autenticado."""
+    try:
+        h = st.context.headers
+        return (h.get("X-MS-CLIENT-PRINCIPAL-NAME") or h.get("x-ms-client-principal-name")) or None
+    except Exception:
+        return None
 
 def gate():
     """Sin CLAVE_EQUIPO -> app abierta (rol editor, local). Con CLAVE_EQUIPO exige clave para ver;
-    CLAVE_EDITOR habilita edicion. Devuelve 'editor' | 'viewer'."""
+    CLAVE_EDITOR habilita edicion. Si corre detrás de Azure Easy Auth (Entra), el login de Microsoft
+    ya autentica -> entra como viewer sin clave (la de editor sigue elevando). Devuelve 'editor' | 'viewer'."""
     clave_eq = _secret("CLAVE_EQUIPO"); clave_ed = _secret("CLAVE_EDITOR")
+    ms = _ms_user()
+    if ms:                                   # autenticado por Microsoft (Entra) — sin fricción de clave
+        st.session_state["_ms_user"] = ms
+        if st.session_state.get("_rol") not in ("viewer", "editor"):
+            st.session_state["_rol"] = "viewer"
+        return st.session_state["_rol"]
     if not clave_eq:
         st.session_state["_rol"] = "editor"; return "editor"
     if st.session_state.get("_rol") in ("viewer", "editor"):
@@ -271,8 +292,10 @@ with st.sidebar:
     seccion = option_menu(None, [s[0] for s in _secs], icons=[s[1] for s in _secs], default_index=0,
         menu_icon="list", key=f"sub_{area}", styles=_smenu)
 
-    if _secret("CLAVE_EQUIPO"):
+    if _secret("CLAVE_EQUIPO") or st.session_state.get("_ms_user"):
         st.divider()
+        if st.session_state.get("_ms_user"):
+            st.caption(f"👤 Conectado como **{st.session_state['_ms_user']}** (Microsoft)")
         if ES_EDITOR:
             st.caption("🟢 Modo **editor** — puedes ingresar datos.")
         else:
@@ -1316,4 +1339,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.33.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.34.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

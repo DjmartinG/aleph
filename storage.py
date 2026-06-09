@@ -23,11 +23,17 @@ _DIAG = "no iniciado"     # motivo legible de por qué hay/no hay conexión a Su
 
 
 def _secret(name):
+    # 1) st.secrets (Streamlit Cloud / secrets.toml local). 2) variables de entorno (Azure App Service,
+    # contenedores, cualquier host). Así la app es portable sin cambiar código.
     try:
         import streamlit as st
-        return str(st.secrets.get(name, "")) if hasattr(st, "secrets") else ""
+        v = st.secrets.get(name, "") if hasattr(st, "secrets") else ""
+        if v:
+            return str(v)
     except Exception:
-        return ""
+        pass
+    import os
+    return str(os.environ.get(name, ""))
 
 
 def _client():

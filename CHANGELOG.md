@@ -2,6 +2,25 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.34.0] — 2026-06-08
+### Añadido (lista para Azure App Service + login de Microsoft, sin fricción)
+- **Secretos portables:** `_secret` (app.py y storage.py) ahora lee de `st.secrets` y, si no está, de
+  **variables de entorno** → la app corre igual en Streamlit Cloud o en cualquier host (Azure App Service,
+  contenedores) sin tocar código.
+- **SSO de Microsoft (Azure Easy Auth / Entra ID) soportado:** si la app corre detrás de App Service
+  Authentication, el header `X-MS-CLIENT-PRINCIPAL-NAME` autentica al usuario → entra como **consulta sin
+  clave** (login corporativo). La **clave de editor** sigue elevando a edición. El panel lateral muestra
+  "Conectado como <email>".
+- **`startup.sh`** (arranque de Streamlit para App Service) y **`DEPLOY_AZURE.md`** (guía paso a paso para
+  TI: App Service B1 sin dormir, deploy desde GitHub, WebSockets, secretos como env vars, Easy Auth a un solo
+  tenant, dominio propio).
+### Contexto
+- Decisión de infraestructura: mover el *frontend* a un hosting estable con login Microsoft (comité ve, 1–2
+  editan), conservando el motor (Python) y los datos (Supabase) intactos. La migración la ejecuta TI con la guía.
+### Verificación
+- Sin regresión: AppTest 19 secciones 0 excepciones; el candado local sigue operativo (Easy Auth cae a
+  fallback fuera de Azure). `startup.sh` validado.
+
 ## [2.33.0] — 2026-06-08
 ### Auditoría integral (multi-agente) + blindaje
 - Auditoría integral del motor tras las fases 1–5 (13 agentes: 10 dimensiones + verificación adversarial +
