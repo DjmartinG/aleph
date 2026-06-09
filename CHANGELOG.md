@@ -2,6 +2,22 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.31.0] — 2026-06-08
+### Añadido (Fase 5 — flujo de caja reconectado + 2 vistas)
+- **Flujo de caja** ahora con **dos vistas en tabs**: **🏗️ FC del Proyecto** (sin financiación — bondad
+  intrínseca: TIR/VPN del proyecto, necesidad máx de caja) y **💰 FC del Inversionista** (apalancado —
+  retorno al equity de CG tras el crédito: TIR del socio, aportes/VPN socio, crédito máx, intereses).
+  Eje en fechas reales hasta 2030; en Navarra (en obra) toggle "solo de aquí en adelante".
+### Cambiado (reconexión del detalle en el flujo apalancado)
+- `apalancamiento.flujo_apalancado` ahora **respeta el carve-out de gastos fijos** (Fase 3): prorratea en
+  obra solo el **indirecto restante** (`indirectos_otros`) y gasta los **gastos fijos mes a mes** en su
+  ventana (los financia el equity, no el crédito); el **valor financiable** del crédito constructor pasa a
+  `directos + indirectos_otros` (los gastos de estructura no son financiables). Motor v1.11.0.
+### Verificación
+- Anclas intactas en los 3 (sin gastos): TIR proyecto 0,376/0,5655/−0,9936 · TIR socio Navarra 0,4172 ·
+  crédito máx Navarra $49.292 M. Carve-out: el costo total del flujo se preserva (solo cambia el timing) y
+  el financiable baja por los gastos. AppTest 19 secciones + 2 vistas (Navarra y greenfield): 0 excepciones.
+
 ## [2.30.0] — 2026-06-08
 ### Añadido (Fase 2b — recaudo diferenciado de adicionales · Fase 3 — gastos fijos)
 - **Fase 2b:** los **parqueaderos/depósitos** de No VIS ahora se recaudan en el **perfil de la cuota

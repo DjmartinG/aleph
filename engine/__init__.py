@@ -2,4 +2,4 @@
 from .modelo import calcular, pyg, flujo_caja, escenarios, sensibilidades, montecarlo, calcular_wacc, tir, directos_total, normalizar_tipologias, gastos_fijos_total
 from . import curvas
 
-__version__ = "1.10.0"
+__version__ = "1.11.0"

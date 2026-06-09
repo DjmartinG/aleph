@@ -780,18 +780,42 @@ if seccion=="Flujo de caja":
             _solo_futuro=st.toggle("Mostrar solo la caja de aquí en adelante (desde hoy)", value=True,
                                    help="Este proyecto ya está en ejecución. Activa para ver solo el flujo futuro.")
             if _solo_futuro: _desde=date(2026,5,1)
-        st.plotly_chart(_charts.flujo_caja_waterfall(
-            _ap["operativo"], _ap["acumulado"], _ap.get("saldo_credito"),
-            fecha_base=_base, tope_anio=2030, desde=_desde), width="stretch")
-        _tramo=("desde hoy (may-2026)" if _desde else f"desde {_base:%b %Y}")
-        st.caption(f"Eje en **fechas reales**, {_tramo} hasta 2030. Barras = flujo neto mensual (🟢 caja positiva / "
-                   "🔴 requiere financiación) · línea oscura = caja acumulada · línea ámbar punteada = saldo de "
-                   "crédito · anotación = exposición máxima.")
-        cc=st.columns(4)
-        kpi(cc[0],"TIR proyecto",fmt_pct(_ap.get("tir_proyecto")))
-        kpi(cc[1],"Crédito constructor máx",fmt_mm(_ap.get("credito_max")))
-        kpi(cc[2],"Necesidad máx de caja",fmt_mm(_ap.get("max_necesidad_caja")))
-        kpi(cc[3],"Intereses",fmt_mm(_ap.get("intereses_total")))
+        _audit=_ap.get("fiducia_real")
+        ft=st.tabs(["🏗️ FC del Proyecto (sin financiación)","💰 FC del Inversionista (apalancado)"])
+        with ft[0]:
+            st.plotly_chart(_charts.flujo_caja_waterfall(
+                _ap["operativo"], _ap["acumulado"], _ap.get("saldo_credito"),
+                fecha_base=_base, tope_anio=2030, desde=_desde,
+                titulo="Flujo de caja del proyecto (operativo, sin apalancar)"), width="stretch")
+            cc=st.columns(4)
+            kpi(cc[0],"TIR del proyecto",fmt_pct(_ap.get("tir_proyecto")),("auditado · fiducia" if _audit else "modelo"),GREEN if _audit else MUTED)
+            kpi(cc[1],"VPN del proyecto",fmt_mm(_ap.get("vpn_proyecto")),("@TIO · auditado" if _audit else "@TIO · prelim."),GREEN if _audit else AMBER)
+            kpi(cc[2],"Necesidad máx de caja",fmt_mm(_ap.get("max_necesidad_caja")))
+            kpi(cc[3],"Crédito constructor máx",fmt_mm(_ap.get("credito_max")))
+            st.caption("**Sin apalancar** — mide la bondad **intrínseca** del proyecto. Barras = flujo neto mensual "
+                       "(🟢 caja / 🔴 requiere financiación) · línea oscura = caja acumulada · ámbar punteada = saldo "
+                       "de crédito. " + ("TIR/VPN **auditados** (FCL de fiducia)." if _audit else "TIR/VPN del modelo (preliminar)."))
+        with ft[1]:
+            _eq=_ap.get("flujo_equity") or []
+            _eqacum=[]; _s=0.0
+            for x in _eq: _s+=x; _eqacum.append(_s)
+            st.plotly_chart(_charts.flujo_caja_waterfall(
+                _eq, _eqacum, _ap.get("saldo_credito"),
+                fecha_base=_base, tope_anio=2030, desde=_desde,
+                titulo="Flujo de caja del inversionista (socio CG, apalancado)"), width="stretch")
+            cc=st.columns(4)
+            kpi(cc[0],"TIR del inversionista",fmt_pct(_ap.get("tir_equity")),("auditado · fiducia" if _audit else "equity apalancado"),GREEN if _audit else MUTED)
+            if _audit and _ap.get("vpn_socio") is not None:
+                kpi(cc[1],"VPN del socio CG",fmt_mm(_ap.get("vpn_socio")),"@TIO · auditado",GREEN)
+            else:
+                kpi(cc[1],"Aportes de equity",fmt_mm(_ap.get("aportes_total")),"capital propio",MUTED)
+            kpi(cc[2],"Crédito constructor máx",fmt_mm(_ap.get("credito_max")))
+            kpi(cc[3],"Intereses del crédito",fmt_mm(_ap.get("intereses_total")))
+            st.caption("**Apalancado** — retorno al **equity de CG** tras el crédito constructor (aportes + crédito "
+                       "neto − intereses). El crédito eleva la TIR del socio por encima de la del proyecto. "
+                       + ("Cifras **auditadas** (waterfall de fiducia)." if _audit else "Modelo preliminar."))
+        st.caption(f"Eje en fechas reales, {'desde hoy (may-2026)' if _desde else f'desde {_base:%b %Y}'} hasta 2030. "
+                   "El detalle del crédito constructor y de la fiducia está en **Apalancamiento**.")
     else:
         st.plotly_chart(_charts.flujo_caja_waterfall(fl["flujo"], fl["acumulado"], fl.get("saldo_credito")), width="stretch")
         st.caption("Flujo mensual del proyecto.")
@@ -1248,4 +1272,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.30.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.31.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

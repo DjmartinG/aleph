@@ -81,6 +81,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     #   honorarios: lineal sobre la obra (IC..FC) — los paga el equity, no el crédito.
     # obra_fin_m = base financiable por el crédito constructor (directos + indirectos de obra).
     costos_m = [0.0] * N; directos_m = [0.0] * N; obra_fin_m = [0.0] * N
+    ind_obra = pg.get("indirectos_otros", pg["indirectos"])   # indirecto tras tallar los gastos fijos
     for e in par.get("etapas", []):
         cod = e.get("cod")
         if cod not in hitos:
@@ -93,11 +94,17 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         for k, val in enumerate(serie):
             if ic + k < N:
                 costos_m[ic + k] += val; directos_m[ic + k] += val; obra_fin_m[ic + k] += val
-        for m in range(ic, min(fc + 1, N)):                                # indirectos sobre obra
-            v = pg["indirectos"] * share / dur
+        for m in range(ic, min(fc + 1, N)):                                # indirectos (resto) sobre obra
+            v = ind_obra * share / dur
             costos_m[m] += v; obra_fin_m[m] += v
         for m in range(ic, min(fc + 1, N)):                                # honorarios sobre obra
             costos_m[m] += pg["honorarios"] * share / dur
+    # gastos fijos de estructura: mensuales sobre su ventana (los financia el equity, no el crédito)
+    for g in par.get("gastos_fijos", []):
+        vm = g.get("valor_mes_miles", 0) or 0; d = int(g.get("desde", 0) or 0)
+        h = g.get("hasta"); h = int(h) if h is not None else d + 1
+        for m in range(max(0, d), min(h, N)):
+            costos_m[m] += vm
 
     # ---- flujo del proyecto (no apalancado): operativo de obra − lote en t0 ----
     operativo = [ingresos_m[m] - costos_m[m] for m in range(N)]
@@ -114,7 +121,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     # Constructor"; average of the positive balance = "Promedio". Equity covers the lote and any
     # construction cost above the cupo.
     cobertura = fin.get("cobertura_cc", fin.get("monto_cc_pct", 0.80))
-    valor_financiable = pg["directos"] + pg["indirectos"]
+    valor_financiable = pg["directos"] + ind_obra             # gastos de estructura no son financiables
     cupo = cobertura * valor_financiable                       # construction-loan ceiling
     subr = recaudo.get("subrogacion", [])
     sub_m = [subr[i] if i < len(subr) else 0.0 for i in range(N)]
