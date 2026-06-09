@@ -2,6 +2,23 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.30.0] — 2026-06-08
+### Añadido (Fase 2b — recaudo diferenciado de adicionales · Fase 3 — gastos fijos)
+- **Fase 2b:** los **parqueaderos/depósitos** de No VIS ahora se recaudan en el **perfil de la cuota
+  inicial** (venta→entrega), **sin subrogación** (no se hipotecan aparte). `normalizar_tipologias` separa
+  por etapa `ventas_vivienda_miles` (recaudo completo) y `ventas_adicional_miles`; `ingresos.recaudo_etapa`
+  recibe `adicional_miles`. Verificado: en Dominica 100 parqueaderos×$35M → +$3.500 M a cuota inicial, $0 a
+  subrogación.
+- **Fase 3:** nuevo capítulo **Gastos fijos de estructura** (`gastos_fijos`: {concepto, valor_mes_miles,
+  desde, hasta}). `engine.gastos_fijos_total`; en el P&G se **tallan dentro de los indirectos** (carve-out:
+  UO sin cambio si no superan el indirecto; el exceso baja la UO) y en el **flujo se gastan mes a mes** en su
+  ventana (no prorrateados en obra). Editor «4b · Gastos fijos» en Datos del proyecto; el P&G desglosa el
+  indirecto en *otros indirectos* + *gastos fijos*. Motor v1.10.0.
+### Verificación
+- Anclas intactas en los 3 (gf=0, adic=0 por ahora): UO 11,36/11,25/6,17 mil M · margen 4,95/8,62/2,56% ·
+  TIR 0,376/0,5655/−0,9936 · VPN exactos. Carve-out probado (gastos ≤ indirecto → UO y flujo sin cambio,
+  dif 0; gastos > indirecto → UO baja por el exceso). AppTest 19 secciones: 0 excepciones.
+
 ## [2.29.0] — 2026-06-08
 ### Añadido (Ingresos · Fase 2a — ventas por tipología de producto)
 - Los **ingresos** pueden modelarse **por tipología** (`tipologias`: lista con {etapa, nombre, clase,

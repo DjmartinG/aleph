@@ -13,11 +13,14 @@ from . import portafolio
 
 
 def recaudo_etapa(unidades, vmes, frec, precio_und, sep_und, pct_ci,
-                  diferido_sep, mes_escrituracion, emes=None, efrec=1, horizonte=180):
+                  diferido_sep, mes_escrituracion, emes=None, efrec=1, horizonte=180,
+                  adicional_miles=0):
     """Devuelve dict con series mensuales (relativas a IV) de ventas, entregas, separación,
     cuota inicial, subrogación y total. 'mes_escrituracion' = mes (desde IV) en que ARRANCAN
     las entregas. 'emes'/'efrec' = ritmo de entregas (unidades por evento cada 'efrec' meses);
-    si emes es None o >= unidades, se entrega todo en el mes de escrituración (modelo previo)."""
+    si emes es None o >= unidades, se entrega todo en el mes de escrituración (modelo previo).
+    'adicional_miles' = ingreso de parqueaderos/depósitos (No VIS): se recauda en el perfil de
+    CUOTA INICIAL (venta→entrega), SIN subrogación (no se hipotecan aparte)."""
     ventas = portafolio.generar_ritmo(unidades, vmes, frec, horizonte)
     sep = [0.0] * horizonte; ci = [0.0] * horizonte; sub = [0.0] * horizonte
     diferido_sep = max(1, int(diferido_sep))
@@ -53,10 +56,20 @@ def recaudo_etapa(unidades, vmes, frec, precio_und, sep_und, pct_ci,
             ci[t] += ci_por_und / nper
         if d < horizonte:                          # subrogación a la entrega de esa unidad
             sub[d] += sub_por_und
+    # --- adicionales (parqueaderos/depósitos): se recaudan con el perfil de la cuota inicial ---
+    if adicional_miles:
+        ci_total = sum(ci)
+        if ci_total > 0:
+            for m in range(horizonte):
+                ci[m] += adicional_miles * (ci[m] / ci_total)
+        else:                                          # sin perfil de CI: lineal 12m desde la 1ª venta
+            first = next((m for m, u in enumerate(ventas) if u), 0)
+            for m in range(first, min(first + 12, horizonte)):
+                ci[m] += adicional_miles / 12
     total = [sep[i] + ci[i] + sub[i] for i in range(horizonte)]
     return {"ventas": ventas, "entregas": entregas, "separacion": sep, "cuota_inicial": ci,
             "subrogacion": sub, "total": total,
-            "contrato_total": unidades * precio_und}
+            "contrato_total": unidades * precio_und + adicional_miles}
 
 
 def recaudo_portafolio(etapas, hitos, horizonte=180):
@@ -76,7 +89,8 @@ def recaudo_portafolio(etapas, hitos, horizonte=180):
         off = offset(hitos[cod]["IV"])
         r = recaudo_etapa(e["unidades"], e["vmes"], e["frec"], e["precio_und"],
                           e["sep_und"], e["pct_ci"], e["diferido_sep"],
-                          e["escrituracion_offset"], e.get("emes"), e.get("efrec", 1), horizonte)
+                          e["escrituracion_offset"], e.get("emes"), e.get("efrec", 1), horizonte,
+                          adicional_miles=e.get("adicional_miles", 0))
         por_etapa[cod] = {"offset": off, **r}
         for m in range(horizonte):
             g = off + m

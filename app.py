@@ -654,6 +654,33 @@ elif seccion=="Datos del proyecto":
         cr=par.setdefault("cronograma",{})
         cr["dur_obra"]=cc2[1].number_input("Duración de obra (meses, global)", value=int(cr.get("dur_obra",40)), step=1)
         c["util_lote"]=cc2[2].slider("Utilidad del lote (% ventas)", 0.0, 0.10, float(c.get("util_lote",0.045)), 0.001)
+    with st.expander("4b · Gastos fijos de estructura (personal, generales, mercadeo)"):
+        st.caption("Gastos **fijos mensuales** del proyecto — **no** escalan con ventas. Se **tallan dentro de "
+                   "los indirectos** (no cambian la utilidad si no superan el indirecto) y en el flujo se gastan "
+                   f"**mes a mes** en su ventana. Indirecto total del proyecto: **{fmt_mm(pg['indirectos'])}**.")
+        _gdf=pd.DataFrame(par.get("gastos_fijos",[]), columns=["concepto","valor_mes_miles","desde","hasta"])
+        _gdf["concepto"]=_gdf["concepto"].astype("object")
+        for _c in ["valor_mes_miles","desde","hasta"]: _gdf[_c]=pd.to_numeric(_gdf[_c],errors="coerce")
+        _ged=st.data_editor(_gdf, num_rows="dynamic", width="stretch", key=f"gf_{sel}",
+            column_config={
+                "concepto": st.column_config.TextColumn("Concepto"),
+                "valor_mes_miles": st.column_config.NumberColumn("Valor mensual (miles COP)", format="%d"),
+                "desde": st.column_config.NumberColumn("Desde (mes)", format="%d", help="Mes de inicio (0 = arranque del proyecto)"),
+                "hasta": st.column_config.NumberColumn("Hasta (mes)", format="%d", help="Mes final (exclusivo)")})
+        _newg=[]
+        for r in _ged.to_dict("records"):
+            con=r.get("concepto"); vm=r.get("valor_mes_miles")
+            if con and vm is not None and not pd.isna(vm):
+                _h=r.get("hasta")
+                _newg.append({"concepto":str(con),"valor_mes_miles":float(vm),
+                    "desde":int(r.get("desde") or 0),
+                    "hasta":(int(_h) if _h is not None and not pd.isna(_h) else None)})
+        par["gastos_fijos"]=_newg
+        if _newg:
+            _gt=sum(g["valor_mes_miles"]*((g["hasta"]-g["desde"]) if g["hasta"] is not None else 1) for g in _newg)
+            _exc=max(_gt-pg["indirectos"],0)
+            st.success(f"**{len(_newg)} gastos · total {fmt_mm(_gt)}** — "
+                       + ("dentro del indirecto · **UO sin cambio**" if _exc<=0 else f"**excede** el indirecto en {fmt_mm(_exc)} · **baja la UO**"))
     with st.expander("5 · Recaudo (condiciones de venta)"):
         f=par["financiero"]; rc1=st.columns(3)
         f["sep_und_miles"]=rc1[0].number_input("Separación por unidad (miles COP)", value=float(f.get("sep_und_miles",5000)), step=500.0, format="%.0f")
@@ -670,12 +697,16 @@ elif seccion=="Datos del proyecto":
 
 # ============ P&G ============
 if seccion=="P&G":
-    df=pd.DataFrame([
-        ("Ingresos por ventas",pg["ventas"]),("(+) Reconocimiento Codensa",pg["recon_codensa"]),
-        ("(-) Costo lote",-pg["costo_lote"]),("(-) Costos directos",-pg["directos"]),
-        ("(-) Costos indirectos",-pg["indirectos"]),("(-) Honorarios",-pg["honorarios"]),
-        ("UTILIDAD OPERATIVA",pg["util_oper"]),("(-) Provisión renta",-pg["renta"]),("UDI",pg["udi"]),
-    ],columns=["Concepto","Miles COP"]); df["% ventas"]=df["Miles COP"]/pg["ventas"] if pg["ventas"] else 0
+    _rows=[("Ingresos por ventas",pg["ventas"]),("(+) Reconocimiento Codensa",pg["recon_codensa"]),
+           ("(-) Costo lote",-pg["costo_lote"]),("(-) Costos directos",-pg["directos"])]
+    if pg.get("gastos_fijos",0)>0:        # desglosar el indirecto en gastos fijos + otros
+        _rows+=[("(-) Otros indirectos",-pg["indirectos_otros"]),
+                ("(-) Gastos fijos (estructura)",-pg["gastos_fijos"])]
+    else:
+        _rows+=[("(-) Costos indirectos",-pg["indirectos"])]
+    _rows+=[("(-) Honorarios",-pg["honorarios"]),("UTILIDAD OPERATIVA",pg["util_oper"]),
+            ("(-) Provisión renta",-pg["renta"]),("UDI",pg["udi"])]
+    df=pd.DataFrame(_rows,columns=["Concepto","Miles COP"]); df["% ventas"]=df["Miles COP"]/pg["ventas"] if pg["ventas"] else 0
     st.dataframe(df.style.format({"Miles COP":"{:,.0f}","% ventas":"{:.1%}"}), width="stretch", hide_index=True)
     costo_total=pg["costo_lote"]+pg["directos"]+pg["indirectos"]
     st.markdown("**Indicadores del Estado de Resultados**")
@@ -1217,4 +1248,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.29.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.30.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

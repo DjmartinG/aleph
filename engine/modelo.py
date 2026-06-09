@@ -51,16 +51,18 @@ def _recaudo(par, hitos):
     et = []
     for i, e in enumerate(par.get("etapas", [])):
         und = e.get("und", 0)
-        vm = e.get("ventas_miles", 0)
+        vm_viv = e.get("ventas_vivienda_miles", e.get("ventas_miles", 0))   # precio por unidad = vivienda
+        adic = e.get("ventas_adicional_miles", 0)                            # parqueaderos/depósitos (No VIS)
         et.append({
             "cod": e.get("cod", i + 1), "unidades": und,
             "vmes": e.get("vmes", 6), "frec": e.get("frec", 1),
-            "precio_und": (vm / und if und else 0),
+            "precio_und": (vm_viv / und if und else 0),
             "sep_und": fin.get("sep_und_miles", 5000),
             "pct_ci": fin.get("pct_ci", 0.30),
             "diferido_sep": par.get("diferido_sep", fin.get("diferido_sep", 4)),
             "escrituracion_offset": e.get("escrituracion", e.get("dur_obra", 24) + 6),
             "emes": e.get("emes"), "efrec": e.get("efrec", 1),
+            "adicional_miles": adic,
         })
     try:
         return ingresos.recaudo_portafolio(et, hitos)
@@ -134,6 +136,18 @@ def directos_total(par, V):
         return sum(x.get("valor_miles", 0) or 0 for x in cap) * scale
     return par["costos_pct"]["directos"] * V * scale
 
+def gastos_fijos_total(par):
+    """Suma de gastos fijos del proyecto (miles COP) = Σ valor_mes × nº de meses activos.
+    `gastos_fijos`: lista {concepto, valor_mes_miles, desde, hasta} (meses sobre la línea del proyecto)."""
+    tot = 0.0
+    for g in par.get("gastos_fijos", []):
+        vm = g.get("valor_mes_miles", 0) or 0
+        d = int(g.get("desde", 0) or 0)
+        h = g.get("hasta")
+        meses = (int(h) - d) if h is not None else 1
+        tot += vm * max(0, meses)
+    return tot
+
 def pyg(par):
     """Estado de resultados (miles COP). par = params['costos_pct'], par['lote_bruto_miles'],
     par['financiero'], y ventas (par['ventas_miles'])."""
@@ -142,11 +156,14 @@ def pyg(par):
     recon = c.get("recon_codensa", 0.002) * V
     total_ingresos = V + recon
     directos   = directos_total(par, V)
-    indirectos = c["indirectos"]* V
+    indirectos = c["indirectos"]* V                              # lump de indirectos (% de ventas)
+    gastos_fijos = gastos_fijos_total(par)                       # personal/generales/mercadeo ($/mes × meses)
+    indirectos_otros = max(indirectos - gastos_fijos, 0.0)       # los fijos se tallan del lump (carve-out)
     honorarios = c["honorarios"]* V
     util_lote  = c["util_lote"] * V
     costo_lote = par["lote_bruto_miles"] + util_lote
-    util_oper  = total_ingresos - costo_lote - directos - indirectos - honorarios
+    # si los gastos fijos exceden el indirecto, el exceso baja la UO (additivo); si no, UO sin cambio
+    util_oper  = total_ingresos - costo_lote - directos - indirectos_otros - gastos_fijos - honorarios
     reint_sin_lote = honorarios + util_oper
     renta = fin.get("renta", 0.35) * reint_sin_lote
     udi   = reint_sin_lote - renta
@@ -160,6 +177,7 @@ def pyg(par):
     return {
         "ventas": V, "recon_codensa": recon, "total_ingresos": total_ingresos,
         "directos": directos, "indirectos": indirectos, "honorarios": honorarios,
+        "gastos_fijos": gastos_fijos, "indirectos_otros": indirectos_otros,
         "util_lote": util_lote, "costo_lote": costo_lote, "lote_bruto": par["lote_bruto_miles"],
         "util_oper": util_oper, "margen_oper": util_oper/V if V else 0,
         "renta": renta, "udi": udi,
@@ -205,8 +223,15 @@ def flujo_caja(par, pg):
         for k,val in enumerate(serie):
             if ini_o+k<N: costos[ini_o+k]+=val
         per=max(1,ent-ini_o)
-        for m in range(ini_o,min(ent,N)): costos[m]+=pg["indirectos"]*share/per
+        # solo el indirecto RESTANTE (tras tallar los gastos fijos) se prorratea en obra
+        ind_obra=pg.get("indirectos_otros", pg["indirectos"])
+        for m in range(ini_o,min(ent,N)): costos[m]+=ind_obra*share/per
         for m in range(ini_o,min(ini_o+dur,N)): costos[m]+=pg["honorarios"]*share/dur
+    # gastos fijos: monto mensual sobre su ventana (timing real, no prorrateado en obra)
+    for g in par.get("gastos_fijos", []):
+        vm=g.get("valor_mes_miles",0) or 0; d=int(g.get("desde",0) or 0)
+        h=g.get("hasta"); h=int(h) if h is not None else d+1
+        for m in range(max(0,d), min(h,N)): costos[m]+=vm
     # lote en t0 (necesidad de caja)
     costos[0]+=pg["costo_lote"]
     flujo=[ingresos[m]-costos[m] for m in range(N)]
@@ -323,13 +348,16 @@ def normalizar_tipologias(par):
         ts = por_etapa.get(e.get("cod"))
         if not ts:
             continue
-        v_total = 0.0; u_viv = 0
+        v_viv = 0.0; v_adic = 0.0; u_viv = 0
         for t in ts:
             vt = _ventas_tipologia(t)
-            v_total += vt
             if t.get("clase", "apartamento") in HOUSING:
-                u_viv += t.get("und", 0) or 0
-        e["ventas_miles"] = v_total
+                v_viv += vt; u_viv += t.get("und", 0) or 0
+            else:                                      # parqueadero / depósito (solo No VIS)
+                v_adic += vt
+        e["ventas_miles"] = v_viv + v_adic             # total (P&G)
+        e["ventas_vivienda_miles"] = v_viv             # vivienda → recaudo completo (sep+CI+subrogación)
+        e["ventas_adicional_miles"] = v_adic           # adicionales → recaudo en cuota inicial (sin subrogación)
         if u_viv:
             e["und"] = u_viv
 
