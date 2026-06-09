@@ -136,6 +136,16 @@ def directos_total(par, V):
         return sum(x.get("valor_miles", 0) or 0 for x in cap) * scale
     return par["costos_pct"]["directos"] * V * scale
 
+def indirectos_total(par, V):
+    """Costo indirecto total (miles COP). Si el proyecto trae presupuesto por capítulos
+    (`par['indirectos_cap']`: diseños, licencias, interventoría, pólizas, comisión fiduciaria, predial,
+    ICA, etc.), es su SUMA (bottom-up); si no, el % de ventas (`costos_pct['indirectos']`)·V (top-down).
+    No escala con `_costo_scale` (el costo directo es el que se sensibiliza)."""
+    cap = par.get("indirectos_cap")
+    if cap:
+        return sum(x.get("valor_miles", 0) or 0 for x in cap)
+    return par["costos_pct"]["indirectos"] * V
+
 def gastos_fijos_total(par):
     """Suma de gastos fijos del proyecto (miles COP) = Σ valor_mes × nº de meses activos.
     `gastos_fijos`: lista {concepto, valor_mes_miles, desde, hasta} (meses sobre la línea del proyecto)."""
@@ -156,7 +166,7 @@ def pyg(par):
     recon = c.get("recon_codensa", 0.002) * V
     total_ingresos = V + recon
     directos   = directos_total(par, V)
-    indirectos = c["indirectos"]* V                              # lump de indirectos (% de ventas)
+    indirectos = indirectos_total(par, V)                        # % de ventas o suma de capítulos (bottom-up)
     gastos_fijos = gastos_fijos_total(par)                       # personal/generales/mercadeo ($/mes × meses)
     indirectos_otros = max(indirectos - gastos_fijos, 0.0)       # los fijos se tallan del lump (carve-out)
     honorarios = c["honorarios"]* V

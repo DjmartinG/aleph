@@ -2,6 +2,24 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.32.0] — 2026-06-08
+### Añadido (Fase 4 — indirectos a detalle + gastos financieros + impuestos)
+- **Costos indirectos por capítulo** (`indirectos_cap`, bottom-up — mismo patrón que los directos):
+  diseños, licencias, interventoría, pólizas, comisión fiduciaria, **predial**, **ICA**, etc. Si existe, el
+  indirecto del P&G es su **suma**; si no, el % de ventas. `engine.indirectos_total`. Editor en
+  Distribución costos; interactúa con el carve-out de gastos fijos. Motor v1.12.0.
+- **Gastos financieros e impuestos (memo)** en el P&G: nuevo bloque que muestra los **intereses del crédito
+  constructor** (no afectan la UO — son del inversionista; se ven en *FC del Inversionista*) y la **provisión
+  de renta** (ya descontada en la UDI). Los impuestos operativos (predial, ICA) se cargan como capítulos del
+  indirecto.
+### Cierre del árbol de egresos
+- Con esto el modelo cubre el árbol completo: **lote · directos (28 cap.) · indirectos (por capítulo) ·
+  gastos fijos · honorarios · financieros · impuestos**, alimentando P&G y las 2 vistas del flujo.
+### Verificación
+- Anclas intactas (sin `indirectos_cap`): UO 11,36/11,25/6,17 mil M · TIR 0,376/0,5655/−0,9936. Indirecto
+  bottom-up reconcilia exacto al total. AppTest 19 secciones + editor de indirectos (editor y consulta) +
+  memo financiero en P&G: 0 excepciones.
+
 ## [2.31.0] — 2026-06-08
 ### Añadido (Fase 5 — flujo de caja reconectado + 2 vistas)
 - **Flujo de caja** ahora con **dos vistas en tabs**: **🏗️ FC del Proyecto** (sin financiación — bondad

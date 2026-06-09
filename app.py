@@ -715,6 +715,17 @@ if seccion=="P&G":
     kpi(e[1],"Margen sobre costo",fmt_pct(pg["util_oper"]/costo_total if costo_total else 0))
     kpi(e[2],"Incidencia directos",fmt_pct(pg["directos"]/costo_total if costo_total else 0))
     kpi(e[3],"Incidencia indirectos+lote",fmt_pct((pg["indirectos"]+pg["costo_lote"])/costo_total if costo_total else 0))
+    # --- Gastos financieros (memo, bajo el operativo) e impuestos ---
+    _int=ap.get("intereses_total")
+    with st.expander("💳 Gastos financieros e impuestos (memo)"):
+        gf1=st.columns(2)
+        kpi(gf1[0],"Gastos financieros (intereses crédito)", fmt_mm(_int) if _int else "—", "no afectan la UO", AMBER)
+        kpi(gf1[1],"Provisión de renta", fmt_mm(pg["renta"]), "impuesto sobre reintegros", MUTED)
+        st.caption("La **utilidad operativa** es **antes de financiación**: los **gastos financieros** (intereses "
+                   "del crédito constructor) impactan el retorno del **inversionista**, no la UO — se ven en la vista "
+                   "*FC del Inversionista* de **Flujo de caja**. La **renta** ya está descontada en la **UDI**. "
+                   "Otros impuestos operativos (**predial, ICA**) se cargan como capítulos del **indirecto** "
+                   "(Distribución costos).")
 
 # ============ REPARTO ============
 if seccion=="Reparto":
@@ -757,6 +768,39 @@ if seccion=="Distribución costos":
         st.info("Este proyecto aún no tiene **presupuesto por capítulos**. El costo directo se calcula como "
                 f"**{fmt_pct(par.get('costos_pct',{}).get('directos',0))} de las ventas** = {fmt_mm(pg['directos'])}. "
                 "Para detallarlo por capítulo (bottom-up), cárgalo en este proyecto.")
+    # --- Costos indirectos por capítulo (bottom-up, opcional) ---
+    st.markdown("#### Costos indirectos — por capítulo")
+    _icap=par.get("indirectos_cap")
+    _ipct=par.get("costos_pct",{}).get("indirectos",0)
+    if ES_EDITOR:
+        st.caption("Desglosa el indirecto en capítulos (diseños, licencias, interventoría, pólizas, comisión "
+                   "fiduciaria, **predial**, **ICA**…). Si lo usas, la **suma** es el indirecto del P&G (bottom-up); "
+                   f"si lo dejas vacío, se usa el **{fmt_pct(_ipct)} de ventas** = {fmt_mm(pg['indirectos'])}.")
+        _idf=pd.DataFrame(_icap or [], columns=["capitulo","valor_miles"])
+        _idf["capitulo"]=_idf["capitulo"].astype("object")
+        _idf["valor_miles"]=pd.to_numeric(_idf["valor_miles"],errors="coerce")
+        _ied=st.data_editor(_idf, num_rows="dynamic", width="stretch", key=f"icap_{sel}",
+            column_config={"capitulo":st.column_config.TextColumn("Capítulo indirecto"),
+                "valor_miles":st.column_config.NumberColumn("Valor (miles COP)", format="%d")})
+        _newi=[]
+        for r in _ied.to_dict("records"):
+            _cap=r.get("capitulo"); _val=r.get("valor_miles")
+            if _cap and _val is not None and not pd.isna(_val):
+                _newi.append({"capitulo":str(_cap),"valor_miles":float(_val)})
+        par["indirectos_cap"]=_newi or None
+        if _newi:
+            _ns=sum(x["valor_miles"] for x in _newi)
+            st.success(f"**{len(_newi)} capítulos · indirecto total {fmt_mm(_ns)}** = base del P&G "
+                       f"(incidencia {fmt_pct(_ns/pg['ventas'] if pg['ventas'] else 0)} sobre ventas).")
+    elif _icap:
+        _itot=sum((x.get('valor_miles',0) or 0) for x in _icap)
+        st.dataframe(pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0),
+            "% del indirecto":f"{(x.get('valor_miles',0) or 0)/_itot*100:.1f}%" if _itot else "—"} for x in _icap]),
+            width="stretch", hide_index=True)
+        st.caption(f"Indirecto total = **{fmt_mm(_itot)}** en {len(_icap)} capítulos.")
+    else:
+        st.info(f"Costo indirecto por **{fmt_pct(_ipct)} de ventas** = {fmt_mm(pg['indirectos'])}. "
+                "Detállalo por capítulo desde el editor del modelo.")
     st.markdown("#### Curva S de avance de obra")
     d=R["distribucion"]
     _h=R.get("hitos") or {}
@@ -1272,4 +1316,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.31.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.32.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
