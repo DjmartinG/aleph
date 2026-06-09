@@ -2,6 +2,15 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.35.0] — 2026-06-09
+### Seguridad (UX quick win 1/7 — blindaje del candado)
+- **El gate nunca abre en modo editor sin clave.** Antes, sin `CLAVE_EQUIPO` ni SSO, caía en silencio a
+  rol `editor` → una app desplegada sin clave quedaba **pública y editable sin contraseña**. Ahora ese caso
+  cae a **modo solo lectura** y muestra un **aviso visible** ("Modo solo lectura · falta configurar clave").
+  La edición requiere CLAVE_EDITOR o SSO de Microsoft. Hallazgo crítico de la auditoría UX (45 agentes).
+### Verificación
+- AppTest sin regresión (editor/viewer 0 excepciones). El cambio solo afecta el caso sin clave configurada.
+
 ## [2.34.0] — 2026-06-08
 ### Añadido (lista para Azure App Service + login de Microsoft, sin fricción)
 - **Secretos portables:** `_secret` (app.py y storage.py) ahora lee de `st.secrets` y, si no está, de

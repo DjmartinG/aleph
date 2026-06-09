@@ -129,9 +129,11 @@ def _ms_user():
         return None
 
 def gate():
-    """Sin CLAVE_EQUIPO -> app abierta (rol editor, local). Con CLAVE_EQUIPO exige clave para ver;
-    CLAVE_EDITOR habilita edicion. Si corre detrás de Azure Easy Auth (Entra), el login de Microsoft
-    ya autentica -> entra como viewer sin clave (la de editor sigue elevando). Devuelve 'editor' | 'viewer'."""
+    """Control de acceso. Con CLAVE_EQUIPO exige clave para ver; CLAVE_EDITOR habilita edición.
+    Si corre detrás de Azure Easy Auth (Entra), el login de Microsoft ya autentica → viewer sin clave
+    (la de editor sigue elevando). **Seguridad:** si NO hay clave ni SSO configurados, NO se abre en
+    modo editor (evita app pública editable sin contraseña) → cae a modo LECTURA con aviso.
+    Devuelve 'editor' | 'viewer'."""
     clave_eq = _secret("CLAVE_EQUIPO"); clave_ed = _secret("CLAVE_EDITOR")
     ms = _ms_user()
     if ms:                                   # autenticado por Microsoft (Entra) — sin fricción de clave
@@ -140,7 +142,10 @@ def gate():
             st.session_state["_rol"] = "viewer"
         return st.session_state["_rol"]
     if not clave_eq:
-        st.session_state["_rol"] = "editor"; return "editor"
+        # Sin clave y sin SSO: NO permitir edición pública. Solo lectura + bandera de aviso.
+        # Para editar: configura CLAVE_EQUIPO/CLAVE_EDITOR en los secretos o usa el SSO de Microsoft.
+        st.session_state["_rol"] = "viewer"; st.session_state["_sin_clave"] = True
+        return "viewer"
     if st.session_state.get("_rol") in ("viewer", "editor"):
         return st.session_state["_rol"]
     c = st.columns([1, 2, 1])[1]
@@ -161,6 +166,10 @@ def gate():
 
 ROL = gate()
 ES_EDITOR = (ROL == "editor")
+if st.session_state.get("_sin_clave"):
+    st.warning("🔒 **Modo solo lectura.** No hay clave de acceso configurada, así que la edición de datos "
+               "está deshabilitada por seguridad. Para ingresar datos, define **CLAVE_EQUIPO** y **CLAVE_EDITOR** "
+               "en los secretos del despliegue (o activa el acceso de Microsoft).")
 
 def _irr_anual(flujos):
     """TIR anualizada de un flujo mensual (bisección robusta). None si no hay cambio de signo."""
@@ -1339,4 +1348,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.34.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.35.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
