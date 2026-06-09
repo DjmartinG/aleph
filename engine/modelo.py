@@ -219,7 +219,7 @@ def flujo_caja(par, pg):
     PCT_CI=fin.get("pct_ci",0.30); PCT_SUB=1-PCT_CI; SEP=fin.get("sep_und_miles",5000.0)
     for e in etapas:
         und=e["und"]; vent=e["ventas_miles"]; share=vent/V if V else 0
-        ini_o=e.get("ini_obra",0); dur=e.get("dur_obra",24); ent=e.get("entrega",dur+ini_o)
+        ini_o=e.get("ini_obra",0); dur=max(1, int(e.get("dur_obra") or 24)); ent=e.get("entrega",dur+ini_o)
         ini_v=e.get("ini_venta",0)
         precio=vent/und if und else 0
         fase=max(1,ent-ini_v)
@@ -351,6 +351,9 @@ def normalizar_tipologias(par):
     tip = par.get("tipologias")
     if not tip:
         return
+    # Regla CG (en el MOTOR, fuente única): en VIS/VIP los parqueaderos y depósitos son comunales →
+    # ingreso CERO; en No VIS van por separado. No se confía solo en el filtro de la UI.
+    es_vis = str(par.get("meta", {}).get("tipo", "")).strip().upper() in ("VIS", "VIP")
     por_etapa = {}
     for t in tip:
         por_etapa.setdefault(t.get("etapa"), []).append(t)
@@ -360,11 +363,10 @@ def normalizar_tipologias(par):
             continue
         v_viv = 0.0; v_adic = 0.0; u_viv = 0
         for t in ts:
-            vt = _ventas_tipologia(t)
             if t.get("clase", "apartamento") in HOUSING:
-                v_viv += vt; u_viv += t.get("und", 0) or 0
-            else:                                      # parqueadero / depósito (solo No VIS)
-                v_adic += vt
+                v_viv += _ventas_tipologia(t); u_viv += t.get("und", 0) or 0
+            elif not es_vis:                           # parqueadero/depósito: solo suman en No VIS
+                v_adic += _ventas_tipologia(t)
         e["ventas_miles"] = v_viv + v_adic             # total (P&G)
         e["ventas_vivienda_miles"] = v_viv             # vivienda → recaudo completo (sep+CI+subrogación)
         e["ventas_adicional_miles"] = v_adic           # adicionales → recaudo en cuota inicial (sin subrogación)

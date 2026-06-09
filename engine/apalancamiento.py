@@ -86,7 +86,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
         cod = e.get("cod")
         if cod not in hitos:
             continue
-        share = e.get("ventas_miles", 0) / V
+        share = e.get("ventas_miles", 0) / (V or 1)
         ic = max(0, _offset(hitos[cod]["IC"], base))
         fc = max(ic, _offset(hitos[cod]["FC"], base))
         dur = max(1, fc - ic + 1)

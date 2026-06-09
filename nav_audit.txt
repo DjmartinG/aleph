@@ -1,0 +1,19 @@
+=== P&G ===
+ventas: 229682047
+directos: 143473596
+indirectos: 34253206
+util_oper: 11362332
+margen_oper: 0.0495
+gastos_fijos: 0
+indirectos_otros: 34253206
+costo_lote: 29104859
+honorarios: 23283887
+=== Apalancamiento ===
+tir_proyecto: 0.376
+vpn_proyecto: 18280687
+tir_equity: 0.4172
+credito_max: 49292016
+intereses_total: 16867740
+fiducia_real: True
+=== WACC ===
+WACC: 0.2154

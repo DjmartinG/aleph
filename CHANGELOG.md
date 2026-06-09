@@ -2,6 +2,22 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.33.0] — 2026-06-08
+### Auditoría integral (multi-agente) + blindaje
+- Auditoría integral del motor tras las fases 1–5 (13 agentes: 10 dimensiones + verificación adversarial +
+  síntesis). **Veredicto: reconciliación OK** — las 3 cifras auditadas reconcilian exacto; todas las fases
+  correctas. 2 bugs **latentes** confirmados y corregidos:
+### Corregido
+- **Regla VIS/No VIS movida al motor** (fuente única): `normalizar_tipologias` ahora lee `meta.tipo` y en
+  **VIS/VIP** excluye parqueaderos/depósitos del ingreso (antes solo la UI filtraba → un JSON cargado por
+  API/import inflaba ventas). Verificado: Navarra (VIS) + parqueaderos → ventas sin cambio; Dominica (No VIS)
+  → suman.
+- **`dur_obra=0` ya no rompe** `flujo_caja` (`dur=max(1, int(dur_obra or 24))`) — evita ZeroDivisionError
+  ante una etapa con duración 0.
+- Guarda local `V>0` en `apalancamiento` (`share = ventas/(V or 1)`), robustez ante ventas=0.
+### Verificación
+- Anclas intactas (dif 0 en los 3); los 2 fixes probados; AppTest 19 secciones: 0 excepciones. Motor v1.12.1.
+
 ## [2.32.0] — 2026-06-08
 ### Añadido (Fase 4 — indirectos a detalle + gastos financieros + impuestos)
 - **Costos indirectos por capítulo** (`indirectos_cap`, bottom-up — mismo patrón que los directos):
