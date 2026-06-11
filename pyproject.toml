@@ -1,16 +1,29 @@
-# Configuración del proyecto (Fase 0 de la reestructuración).
-# Por ahora solo declara metadatos + pytest + ruff. El empaquetado del motor como
-# paquete instalable (cg_engine) llega en la Fase 1.
+# Configuración del proyecto.
+# Fase 1: el motor (cg_engine) es ahora un PAQUETE instalable — una futura integración
+# ERP/CRM puede reutilizarlo como dependencia (pip install) sin copiar lógica financiera.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "cg-factibilidad"
-version = "2.36.0"
+version = "2.37.0"
 description = "Evaluación financiera de proyectos inmobiliarios — CG Constructora"
 requires-python = ">=3.12"
+dependencies = [
+    "python-dateutil>=2.8",   # cg_engine/portafolio.py (relativedelta)
+    "scipy>=1.13",            # cg_engine: TIR/optimización (con fallback si falta)
+]
+
+# Solo se empaqueta el MOTOR. La UI (app.py, charts.py, storage.py…) es la aplicación,
+# no la librería: no entra en el paquete distribuible.
+[tool.setuptools]
+packages = ["cg_engine"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]            # para importar engine/ y app.py desde la raíz del repo
+pythonpath = ["."]            # importa cg_engine y app.py desde la raíz del repo
 addopts = "-q"
 
 [tool.ruff]
@@ -18,7 +31,5 @@ target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
-# Fase 0: solo reglas de CORRECTITUD (errores reales), no estilo. Se endurece en fases
-# posteriores cuando el código esté modularizado. Estas atrapan: errores de sintaxis (E9),
-# nombres indefinidos / f-strings rotas / comparaciones inválidas (F).
+# Fase 0/1: solo reglas de CORRECTITUD (errores reales), no estilo. Se endurece más adelante.
 select = ["E9", "F63", "F7", "F82"]

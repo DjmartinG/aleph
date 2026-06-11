@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Aplicativo de Prefactibilidad / Factibilidad — CG Constructora.
-Capa de presentación (Streamlit). NO contiene lógica financiera: usa engine/ (fuente única).
+Capa de presentación (Streamlit). NO contiene lógica financiera: usa cg_engine/ (fuente única).
 Navegación por menú lateral con tablero de Inicio. Data 100% en plataforma. v2.0.0
 """
 import json, io, copy
@@ -12,8 +12,8 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.io as pio
 from streamlit_option_menu import option_menu
-from engine import calcular, __version__ as ENGINE_V
-from engine import evm as _evm   # Valor Ganado (EVM)
+from cg_engine import calcular, __version__ as ENGINE_V
+from cg_engine import evm as _evm   # Valor Ganado (EVM)
 import charts as _charts   # gráficos financieros pro (marca CG)
 import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
 
@@ -898,7 +898,7 @@ if seccion=="Flujo de caja":
 
 # ============ COSTO DE CAPITAL (WACC) ============
 if seccion=="Costo de capital":
-    from engine import modelo as _modelo
+    from cg_engine import modelo as _modelo
     st.markdown("### 📐 Costo de Capital (WACC)")
     st.caption("Rentabilidad mínima exigida al proyecto. Build-up CAPM de mercado emergente "
                "(metodología Damodaran / CESLA): beta del sector comparable EE.UU. → desapalancar con "
@@ -1144,7 +1144,7 @@ if seccion=="Escenarios":
         st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo. "
                    "Barras = utilidad operativa; etiqueta = utilidad y margen.")
     with et[1]:
-        from engine import modelo as _modelo
+        from cg_engine import modelo as _modelo
         _pe=copy.deepcopy(par)
         _pe.setdefault("ventas_miles", sum(e.get("ventas_miles",0) for e in _pe.get("etapas",[])))
         pasos=[-0.10,-0.05,0.0,0.05,0.10]
@@ -1156,7 +1156,7 @@ if seccion=="Escenarios":
 
 # ============ MONTE CARLO (riesgo probabilístico) ============
 if seccion=="Monte Carlo":
-    from engine import modelo as _modelo
+    from cg_engine import modelo as _modelo
     st.markdown("### 🎲 Simulación Monte Carlo — riesgo de la TIR y el VPN")
     st.caption("En vez de un solo número, simulamos miles de escenarios variando al azar **precio de venta**, "
                "**costo directo** y **ritmo de ventas (unidades/mes)**. La salida es la **TIR** y el **VPN del "
