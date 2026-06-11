@@ -1,6 +1,6 @@
 {
   "_nota": "Proyecto activo CG (plantilla). Cifras ilustrativas — ingresa los datos reales en la plataforma.",
-  "meta": {"nombre": "Dominica", "ubicacion": "Pereira", "zona": "Cuba Huertas", "tipo": "No VIS", "unidades": 240, "moneda": "miles COP"},
+  "meta": {"nombre": "Dominica", "ubicacion": "Pereira", "zona": "Cuba Huertas", "tipo": "No VIS", "unidades": 240, "moneda": "miles COP", "estado": "construccion"},
   "areas": {"m2_vendibles": 19200, "m2_construidos": 28000, "lote_bruta": 16500, "lote_util": 13000},
   "etapas": [
     {"cod": 1, "nom": "ET1 (Torre 1+5)", "und": 93, "metodo": "$/m²", "precio": 5200000, "area_und": 80, "ventas_miles": 38688000, "vmes": 6, "frec": 1, "pe_pct": 0.60, "fecha_inicio": "2026-01-01", "sucesora": null, "desfase": 0, "obra_offset": 1, "dur_obra": 26, "escrituracion": 30, "emes": 20, "efrec": 1},

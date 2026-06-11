@@ -27,3 +27,28 @@ SPLIT_CG = 0.70               # reparto CG de la utilidad operativa (resto al so
 # corte de Navarra). El corte correcto debe venir del dato; esto es solo el respaldo. Cambiarlo a
 # date.today() rompería el EVM (compararía datos viejos contra un plan de hoy → SPI falso).
 FECHA_CORTE_EVM = date(2026, 5, 1)
+
+# --- Ciclo de vida del proyecto (estados del pipeline / embudo) ---
+# El estado es el EJE RECTOR de la UI (ver NORTE_TABLEROS.md §0): gobierna el pipeline, el filtro
+# del portafolio y QUÉ secciones se muestran por proyecto. NO afecta el cálculo financiero.
+ESTADO_PREFACT = "prefactibilidad"   # candidato en evaluación; lote = supuesto; foco decisión ir/no-ir
+ESTADO_APROBADO = "aprobado"         # evaluado + lote adquirido; obra aún no inicia
+ESTADO_CONSTRUCCION = "construccion" # en ejecución / obra; con seguimiento plan vs real
+ESTADO_ENTREGADO = "entregado"       # proyecto cerrado / entregado
+# Orden del embudo (de candidato a cerrado). Es también el conjunto válido del contrato (schema).
+ESTADOS = (ESTADO_PREFACT, ESTADO_APROBADO, ESTADO_CONSTRUCCION, ESTADO_ENTREGADO)
+ESTADO_LABEL = {
+    ESTADO_PREFACT: "Pre-factibilidad",
+    ESTADO_APROBADO: "Aprobado",
+    ESTADO_CONSTRUCCION: "Construcción",
+    ESTADO_ENTREGADO: "Entregado",
+}
+ESTADO_DEFAULT = ESTADO_CONSTRUCCION                  # respaldo si un proyecto no declara estado
+ESTADOS_CON_SEGUIMIENTO = (ESTADO_CONSTRUCCION, ESTADO_ENTREGADO)  # tienen datos reales (ex-post)
+
+# --- Umbrales de aprobación (gate Pre-factibilidad → Aprobado) ---
+# Un candidato se APRUEBA solo si cumple los TRES criterios (checklist multicriterio).
+# OJO: valores PROVISIONALES — confirmar con el comité al construir la "Decisión de inversión" (Paso 4).
+UMBRAL_TIR_EQUITY = 0.18      # TIR del inversionista (apalancada) mínima exigida
+UMBRAL_VPN_MIN = 0.0          # VPN del proyecto > 0 descontado a la TIO
+UMBRAL_MARGEN_MIN = 0.08      # margen operacional mínimo (utilidad operativa / ventas)

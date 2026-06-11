@@ -1,6 +1,6 @@
 {
   "_nota": "Proyecto activo CG (plantilla). Cifras ilustrativas — ingresa los datos reales en la plataforma.",
-  "meta": {"nombre": "Torres de Campiñas", "ubicacion": "Pereira", "zona": "Campiñas", "tipo": "VIS", "unidades": 913, "moneda": "miles COP"},
+  "meta": {"nombre": "Torres de Campiñas", "ubicacion": "Pereira", "zona": "Campiñas", "tipo": "VIS", "unidades": 913, "moneda": "miles COP", "estado": "aprobado"},
   "areas": {"m2_vendibles": 47476, "m2_construidos": 65000, "lote_bruta": 33000, "lote_util": 26000},
   "etapas": [
     {"cod": 1, "nom": "Etapa 1", "und": 305, "metodo": "$/m²", "precio": 3850000, "area_und": 52, "ventas_miles": 61061000, "vmes": 12, "frec": 1, "pe_pct": 0.60, "fecha_inicio": "2026-01-01", "sucesora": null, "desfase": 0, "obra_offset": 1, "dur_obra": 24, "escrituracion": 30, "emes": 45, "efrec": 1},
