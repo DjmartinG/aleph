@@ -24,6 +24,7 @@ SECCION_AREA = {
     "Cockpit": "Tablero",
     "P&G": "Factibilidad",
     "Flujo de caja": "Factibilidad",
+    "Costo de capital": "Factibilidad",   # usa calcular_wacc(detalle=True)
     "Apalancamiento": "Factibilidad",
     "Monte Carlo": "Factibilidad",
 }
