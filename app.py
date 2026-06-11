@@ -1157,34 +1157,96 @@ if seccion=="Escenarios":
 # ============ MONTE CARLO (riesgo probabilístico) ============
 if seccion=="Monte Carlo":
     from engine import modelo as _modelo
-    st.markdown("### 🎲 Simulación Monte Carlo — riesgo del margen")
-    st.caption("En vez de un solo número, simulamos miles de escenarios variando **precio de venta** y "
-               "**costo directo** al azar, para ver el **rango probable** del margen operativo y la "
-               "probabilidad de que el proyecto sea rentable.")
-    c1,c2,c3 = st.columns(3)
-    n_sims = c1.select_slider("Número de simulaciones", options=[200,500,1000], value=500)
-    rp = c2.slider("Variación de precio (±%)", 5, 25, 15, 1)
-    rc = c3.slider("Variación de costo directo (±%)", 5, 20, 10, 1)
-    @st.cache_data(show_spinner="Simulando escenarios…")
-    def _mc(_parjson, n, dp, dc):
-        return _modelo.montecarlo(json.loads(_parjson), n=n,
-                                  rango_precio=(-dp/100, dp/100), rango_costo=(-dc/100, dc/100))
-    mc=_mc(json.dumps(par, ensure_ascii=False, sort_keys=True, default=str), n_sims, rp, rc)
-    st.plotly_chart(_charts.montecarlo_hist(mc["margenes"], mc["p10"], mc["p50"], mc["p90"]), width="stretch")
-    kk=st.columns(4)
-    kpi(kk[0],"Pesimista (P10)", fmt_pct(mc["p10"]), "1 de cada 10 peor", RED if mc["p10"]<0 else AMBER)
-    kpi(kk[1],"Central (P50)", fmt_pct(mc["p50"]), "mediana", TEAL)
-    kpi(kk[2],"Optimista (P90)", fmt_pct(mc["p90"]), "1 de cada 10 mejor", GREEN)
-    _pp=mc["prob_pos"]
-    kpi(kk[3],"Prob. de margen > 0", f"{_pp*100:.0f}%",
-        ("alta" if _pp>=0.9 else "moderada" if _pp>=0.7 else "baja"),
-        GREEN if _pp>=0.9 else (AMBER if _pp>=0.7 else RED))
-    st.markdown(f"**Lectura:** en **{n_sims}** simulaciones, el margen operativo cae con **80% de probabilidad** "
-                f"entre **{mc['p10']*100:.1f}%** (P10) y **{mc['p90']*100:.1f}%** (P90), con mediana "
-                f"**{mc['p50']*100:.1f}%**. La probabilidad de margen positivo es **{_pp*100:.0f}%**.")
-    st.caption(f"Supuesto: precio de venta ±{rp}% y costo directo ±{rc}% (distribución uniforme), semilla fija "
-               "(reproducible). El motor recalcula el P&G en cada escenario; **no** altera el modelo guardado. "
-               "Para ver el efecto combinado punto a punto, mira el **mapa 2D** en Escenarios.")
+    st.markdown("### 🎲 Simulación Monte Carlo — riesgo de la TIR y el VPN")
+    st.caption("En vez de un solo número, simulamos miles de escenarios variando al azar **precio de venta**, "
+               "**costo directo** y **ritmo de ventas (unidades/mes)**. La salida es la **TIR** y el **VPN del "
+               "proyecto** — lo que mueve la decisión del comité — con su rango probable y la probabilidad de "
+               "superar la tasa objetivo (TIO).")
+    _audit = bool((par.get("fiducia") or {}).get("fcl_proyecto"))
+    if _audit:
+        st.info("ℹ️ Este proyecto tiene **TIR auditada de fiducia** (cifra fija). La simulación usa la **TIR del "
+                "modelo** (que sí responde a las variables), no la auditada — sirve para ver el **riesgo relativo**, "
+                "no para reemplazar la cifra de decisión.")
+    c1,c2,c3,c4 = st.columns(4)
+    n_sims = c1.select_slider("Simulaciones", options=[200,300,500,1000], value=300)
+    rp = c2.slider("Precio (±%)", 5, 25, 15, 1)
+    rc = c3.slider("Costo directo (±%)", 5, 20, 10, 1)
+    rv = c4.slider("Ritmo de ventas (±%)", 0, 40, 25, 5,
+                   help="Variación de las unidades vendidas por mes. Más ventas/mes → equilibrio y obra antes "
+                        "→ escrituración antes → la caja entra antes → la TIR sube.")
+    @st.cache_data(show_spinner="Simulando escenarios (TIR/VPN)…")
+    def _mc(_parjson, n, dp, dc, dv):
+        return _modelo.montecarlo_tir(json.loads(_parjson), n=n,
+                                      rango_precio=(-dp/100, dp/100), rango_costo=(-dc/100, dc/100),
+                                      rango_ventas=(-dv/100, dv/100))
+    mc=_mc(json.dumps(par, ensure_ascii=False, sort_keys=True, default=str), n_sims, rp, rc, rv)
+    st_t = mc["stats_tir"]; sv = mc["stats_vpn"]; se = mc["stats_equity"]; hurdle = mc["hurdle"]
+
+    if not st_t.get("n"):
+        st.warning("No se pudo simular la TIR: el proyecto necesita **etapas con fecha de inicio y ritmo de "
+                   "ventas** (hitos) para construir el flujo. Revisa **Cronograma** y **Datos del proyecto**.")
+    else:
+        tT, tV, tE = st.tabs(["📈 TIR del proyecto", "💵 VPN del proyecto", "🏦 TIR del inversionista (socio)"])
+        # ---- TIR del proyecto ----
+        with tT:
+            st.plotly_chart(_charts.montecarlo_hist(
+                mc["tir_proyecto"], st_t["p10"], st_t["p50"], st_t["p90"], umbral=hurdle, es_pct=True,
+                titulo="Monte Carlo — distribución de la TIR del proyecto",
+                nombre_x="TIR", label_umbral=f"Bajo la TIO ({hurdle*100:.0f}%)"), width="stretch")
+            kk=st.columns(4)
+            kpi(kk[0],"Pesimista (P10)", fmt_pct(st_t["p10"]), "1 de cada 10 peor",
+                RED if st_t["p10"]<hurdle else AMBER)
+            kpi(kk[1],"Central (P50)", fmt_pct(st_t["p50"]), "mediana", TEAL)
+            kpi(kk[2],"Optimista (P90)", fmt_pct(st_t["p90"]), "1 de cada 10 mejor", GREEN)
+            _ph=mc["prob_tir_hurdle"]
+            kpi(kk[3],f"Prob. TIR > TIO ({hurdle*100:.0f}%)", f"{_ph*100:.0f}%",
+                ("alta" if _ph>=0.9 else "moderada" if _ph>=0.7 else "baja"),
+                GREEN if _ph>=0.9 else (AMBER if _ph>=0.7 else RED))
+            st.markdown(f"**Lectura:** en **{st_t['n']}** simulaciones, la TIR del proyecto cae con ~80% de "
+                        f"probabilidad entre **{st_t['p10']*100:.1f}%** (P10) y **{st_t['p90']*100:.1f}%** (P90), "
+                        f"con mediana **{st_t['p50']*100:.1f}%**. Probabilidad de superar la TIO "
+                        f"({hurdle*100:.0f}%): **{_ph*100:.0f}%**.")
+        # ---- VPN del proyecto ----
+        with tV:
+            _vmm=[v/1_000_000 for v in mc["vpn_proyecto"]]      # miles COP → mil M para el eje
+            st.plotly_chart(_charts.montecarlo_hist(
+                _vmm, sv["p10"]/1e6, sv["p50"]/1e6, sv["p90"]/1e6, umbral=0.0, es_pct=False,
+                titulo="Monte Carlo — distribución del VPN del proyecto (@TIO)",
+                nombre_x="VPN", unidad="mil M", label_umbral="VPN negativo"), width="stretch")
+            kk=st.columns(4)
+            kpi(kk[0],"Pesimista (P10)", fmt_mm(sv["p10"]), "1 de cada 10 peor",
+                RED if sv["p10"]<0 else AMBER)
+            kpi(kk[1],"Central (P50)", fmt_mm(sv["p50"]), "mediana", TEAL)
+            kpi(kk[2],"Optimista (P90)", fmt_mm(sv["p90"]), "1 de cada 10 mejor", GREEN)
+            _pv=mc["prob_vpn_pos"]
+            kpi(kk[3],"Prob. VPN > 0", f"{_pv*100:.0f}%",
+                ("alta" if _pv>=0.9 else "moderada" if _pv>=0.7 else "baja"),
+                GREEN if _pv>=0.9 else (AMBER if _pv>=0.7 else RED))
+            st.markdown(f"**Lectura:** el VPN @TIO cae con ~80% de probabilidad entre **{fmt_mm(sv['p10'])}** (P10) "
+                        f"y **{fmt_mm(sv['p90'])}** (P90), con mediana **{fmt_mm(sv['p50'])}**. "
+                        f"Probabilidad de VPN positivo: **{_pv*100:.0f}%**.")
+        # ---- TIR del inversionista (equity apalancado) ----
+        with tE:
+            if se.get("n"):
+                st.plotly_chart(_charts.montecarlo_hist(
+                    mc["tir_equity"], se["p10"], se["p50"], se["p90"], umbral=hurdle, es_pct=True,
+                    titulo="Monte Carlo — distribución de la TIR del inversionista (socio, apalancado)",
+                    nombre_x="TIR socio", label_umbral=f"Bajo la TIO ({hurdle*100:.0f}%)"), width="stretch")
+                kk=st.columns(3)
+                kpi(kk[0],"Pesimista (P10)", fmt_pct(se["p10"]), "1 de cada 10 peor",
+                    RED if (se["p10"] or 0)<hurdle else AMBER)
+                kpi(kk[1],"Central (P50)", fmt_pct(se["p50"]), "mediana", TEAL)
+                kpi(kk[2],"Optimista (P90)", fmt_pct(se["p90"]), "1 de cada 10 mejor", GREEN)
+                st.caption("TIR del **socio apalancado** (equity): es más volátil que la del proyecto porque el "
+                           "crédito constructor amplifica el resultado (apalancamiento).")
+            else:
+                st.info("La TIR del inversionista no converge en este proyecto (flujo de equity sin cambio de signo).")
+
+        st.caption(f"Supuestos: precio ±{rp}%, costo directo ±{rc}% y ritmo de ventas ±{rv}% (distribución "
+                   "uniforme), semilla fija (reproducible). Al variar el ritmo de ventas, la **escrituración sigue "
+                   "a la obra** (entregas tras construir), por eso vender más rápido adelanta la caja y sube la TIR. "
+                   "El motor recalcula hitos→recaudo→flujo apalancado en cada escenario; **no** altera el modelo "
+                   "guardado ni la cifra auditada.")
 
 # ============ SENSIBILIDAD ============
 if seccion=="Sensibilidad":
@@ -1348,4 +1410,4 @@ if seccion != "Inicio":
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
 _diag = "" if usando_supabase() else f" · ⚠️ {diagnostico()}"
-st.caption(f"Aplicativo v2.35.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")
+st.caption(f"Aplicativo v2.36.0 · motor v{ENGINE_V} · datos: {_origen}{_diag} · CG Constructora")

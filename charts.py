@@ -501,32 +501,41 @@ def bubbles_portafolio(puntos, tir_refs=(0.20, 0.30), margen_refs=(0.03, 0.05),
 
 # ----------------------------------------------------------------------------- monte carlo (histograma)
 def montecarlo_hist(muestras, p10, p50, p90, umbral=0.0, es_pct=True,
-                    titulo="Monte Carlo — distribución del margen operativo"):
-    """Histograma de la distribución simulada. Resalta la zona < `umbral` (pérdida) en rojo y marca
-    P10 (ámbar) / P50 (tinta) / P90 (verde). `muestras` en fracción (margen 0..1) si `es_pct`,
-    o en miles COP si no. Los bins se alinean entre la serie completa y la zona de pérdida."""
+                    titulo="Monte Carlo — distribución del margen operativo",
+                    nombre_x="Margen operativo", unidad="", label_umbral="Zona de pérdida"):
+    """Histograma de la distribución simulada. Resalta la zona < `umbral` en rojo (`label_umbral`)
+    y marca P10 (ámbar) / P50 (tinta) / P90 (verde). Si `es_pct`, las muestras son fracción (0..1)
+    y se formatean como %; si no, son números en `unidad` (p. ej. 'mil M'). `nombre_x` rotula el
+    eje y el hover. Los bins se alinean entre la serie completa y la zona resaltada."""
     datos = list(muestras)
     if not datos:
         return go.Figure().update_layout(title=titulo, height=430)
     lo, hi = min(datos), max(datos)
     size = (hi - lo) / 40 if hi > lo else (abs(hi) or 1) / 40 or 1
     binargs = dict(start=lo, end=hi + size, size=size)
-    perdida = [v for v in datos if v < umbral]
-    hov = ("Margen %{x:.1%}" if es_pct else "%{x:,.0f}") + "<br>%{y} escenarios<extra></extra>"
+    bajo = [v for v in datos if v < umbral]
+    hov = (f"{nombre_x} %{{x:.1%}}" if es_pct else f"{nombre_x} %{{x:,.1f}} {unidad}".rstrip()) \
+        + "<br>%{y} escenarios<extra></extra>"
     fig = go.Figure()
     fig.add_histogram(x=datos, xbins=binargs, marker_color=TEAL, opacity=0.75,
                       name="Escenarios", hovertemplate=hov)
-    if perdida:
-        fig.add_histogram(x=perdida, xbins=binargs, marker_color=RED, opacity=0.85,
-                          name="Zona de pérdida", hovertemplate=hov)
-    _f = (lambda v: f"{v*100:.1f}%") if es_pct else (lambda v: f"{v/1000:,.0f} mil M".replace(",", "."))
+    if bajo:
+        fig.add_histogram(x=bajo, xbins=binargs, marker_color=RED, opacity=0.85,
+                          name=label_umbral, hovertemplate=hov)
+    _f = (lambda v: f"{v*100:.1f}%") if es_pct else (lambda v: f"{v:,.1f} {unidad}".strip().replace(",", "."))
     for val, col, lab in [(p10, AMBER, "P10"), (p50, INK, "P50"), (p90, GREEN, "P90")]:
+        if val is None:
+            continue
         fig.add_vline(x=val, line=dict(color=col, width=2, dash="dash"),
                       annotation_text=f"{lab} {_f(val)}", annotation_position="top",
                       annotation_font_color=col, annotation_font_size=10)
+    if umbral not in (None, 0) or not es_pct:
+        fig.add_vline(x=umbral, line=dict(color=MUTED, width=1.5, dash="dot"),
+                      annotation_text=(f"Umbral {_f(umbral)}"), annotation_position="bottom",
+                      annotation_font_color=MUTED, annotation_font_size=9)
     fig.update_layout(
         title=titulo, height=430, barmode="overlay",
-        xaxis=dict(title=("Margen operativo" if es_pct else "Utilidad operativa (miles COP)"),
-                   tickformat=(".0%" if es_pct else ",.0f")),
+        xaxis=dict(title=(nombre_x + (f" ({unidad})" if unidad else "")),
+                   tickformat=(".0%" if es_pct else ",.1f")),
         yaxis_title="Frecuencia (nº de escenarios)")
     return fig
