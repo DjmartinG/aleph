@@ -16,6 +16,8 @@ from cg_engine import calcular, __version__ as ENGINE_V
 from cg_engine import evm as _evm   # Valor Ganado (EVM)
 import charts as _charts   # gráficos financieros pro (marca CG)
 import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
+from ui.format import fmt_cop, fmt_mm, fmt_pct   # formato único (fuente única de presentación)
+from ui.auth import is_admin                     # autorización por persona (admins por email/SSO)
 
 # ---------------- marca CG ----------------
 TEAL="#004854"; AMBER="#F09C00"; INK="#13262B"; MUTED="#6B7280"
@@ -64,13 +66,7 @@ h2,h3 { color:#13262B; font-weight:700; }
 </style>
 """, unsafe_allow_html=True)
 
-def fmt_mm(x):
-    # x viene en MILES COP. ≥ mil millones → "mil M" (miles de millones); si no → "M" (millones).
-    if not x: return "$0"
-    if abs(x) >= 1_000_000:
-        return f"${x/1_000_000:,.1f} mil M".replace(",", ".")
-    return f"${x/1000:,.0f} M".replace(",", ".")
-def fmt_pct(x): return f"{x*100:.2f}%" if x is not None else "n/d"
+# fmt_cop/fmt_mm y fmt_pct viven ahora en ui/format.py (fuente única; importados arriba).
 def kpi(col, label, value, sub="", sub_color=MUTED):
     s = f'<div class="s" style="color:{sub_color}">{sub}</div>' if sub else ''
     col.markdown(f'<div class="kpi"><div class="l">{label}</div><div class="v">{value}</div>{s}</div>', unsafe_allow_html=True)
@@ -166,6 +162,9 @@ def gate():
 
 ROL = gate()
 ES_EDITOR = (ROL == "editor")
+# Admin por PERSONA (no por clave compartida): True solo si el email del SSO de Microsoft está en
+# la lista ADMINS (secreto). Habilitará la pestaña "Ingreso de datos" (Paso 1b). Sin SSO → False.
+ES_ADMIN = is_admin(st.session_state.get("_ms_user"), _secret("ADMINS"))
 if st.session_state.get("_sin_clave"):
     st.warning("🔒 **Modo solo lectura.** No hay clave de acceso configurada, así que la edición de datos "
                "está deshabilitada por seguridad. Para ingresar datos, define **CLAVE_EQUIPO** y **CLAVE_EDITOR** "
