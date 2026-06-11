@@ -2,6 +2,25 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.38.0] — 2026-06-11
+### Reestructuración Fase 1 — motor a paquete profesional (sin cambios de cifras)
+Cada paso verificado contra las anclas auditadas (EXACTAS) + CI verde antes de fusionar.
+- **Paso 1** — `engine/` → paquete instalable **`cg_engine`** (pyproject build-system).
+- **Paso 2** — **`finanzas.py`**: una sola TIR/VPN/WACC (antes duplicada 3-4 veces); elimina el
+  ciclo de importación modelo↔apalancamiento.
+- **Paso 3** — **`config.py`** (horizontes y defaults financieros, antes "números mágicos") +
+  **`errors.py`** (excepciones de dominio); los `except Exception: return {}` silenciosos ahora
+  registran un warning. Fecha de corte EVM centralizada (sin cambiarla a `date.today()`).
+- **Paso 4** — **`schema.py`** (Pydantic): contrato del proyecto **validable en el borde** — base
+  para la futura integración ERP/CRM. No transforma datos (el motor recibe el mismo dict).
+- **Paso 5** — **`flujo.py`**: extrae lo literalmente idéntico (gastos fijos, acumulado) entre los
+  dos flujos; **decisión de experto de NO fusionar** dos modelos intencionalmente distintos
+  (`flujo_caja` simple/PERT vs `flujo_apalancado` waterfall auditado/Gauss).
+- **Paso 6** — **versión unificada**: `cg_engine.__version__` como fuente única (pyproject `dynamic`
+  + pie de la app); README alineado.
+### Verificación
+- Suite de tests ampliada (anclas auditadas + regresión + humo de UI + finanzas + contrato).
+
 ## [2.37.0] — 2026-06-11
 ### Reestructuración Fase 0 — Red de seguridad (golden tests + CI). NO cambia lógica.
 - **`tests/test_anclas.py`** — golden/regression tests que **clavan las cifras del motor**: cifras
