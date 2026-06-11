@@ -14,6 +14,7 @@ requires-python = ">=3.12"
 dependencies = [
     "python-dateutil>=2.8",   # cg_engine/portafolio.py (relativedelta)
     "scipy>=1.13",            # cg_engine: TIR/optimización (con fallback si falta)
+    "pydantic>=2",            # cg_engine/schema.py (validación del contrato de datos)
 ]
 
 # Solo se empaqueta el MOTOR. La UI (app.py, charts.py, storage.py…) es la aplicación,
