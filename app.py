@@ -263,6 +263,92 @@ def nuevo_proyecto():
                       "wacc":{"beta_us":1.29,"kd_us":9.335,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,"rf":0.12,
                               "rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}}}
 
+# ---------------- editores reubicados al Ingreso (Paso 1b-ii) ----------------
+# El INGRESO de estos datos vivía disperso en las secciones de consumo (Distribución costos,
+# Costo de capital). Se extrajeron a estas funciones para centralizar la captura en la pestaña
+# admin "Ingreso de datos"; las secciones de consumo quedan en SOLO LECTURA. Código verbatim.
+def _editor_presupuesto(par, sel, pg):
+    """Presupuesto bottom-up por capítulo (costo directo e indirecto). Escribe par[...]_cap."""
+    _dcap = par.get("directos_cap")
+    st.markdown("**Costo directo — por capítulo (bottom-up)**")
+    if _dcap:
+        _dfc=pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0)} for x in _dcap])
+        _ed=st.data_editor(_dfc, num_rows="dynamic", width="stretch", key=f"dcap_{sel}",
+            column_config={"Capítulo":st.column_config.TextColumn("Capítulo"),
+                "Valor (miles COP)":st.column_config.NumberColumn("Valor (miles COP)", format="%d",
+                    help="Presupuesto del capítulo. La SUMA de capítulos es el costo directo del P&G (bottom-up).")})
+        _new=[]
+        for r in _ed.to_dict("records"):
+            _cap=r.get("Capítulo"); _val=r.get("Valor (miles COP)")
+            if _cap and _val is not None and not pd.isna(_val):
+                _new.append({"capitulo":str(_cap),"valor_miles":float(_val)})
+        if _new:
+            par["directos_cap"]=_new
+            st.success(f"**{len(_new)} capítulos · costo directo total {fmt_mm(sum(x['valor_miles'] for x in _new))}** "
+                       f"= base del P&G y de la curva S. (Incidencia {fmt_pct(sum(x['valor_miles'] for x in _new)/pg['ventas'] if pg['ventas'] else 0)} sobre ventas.)")
+    else:
+        st.caption(f"Sin presupuesto por capítulos: el costo directo se calcula como "
+                   f"**{fmt_pct(par.get('costos_pct',{}).get('directos',0))} de ventas** = {fmt_mm(pg['directos'])}.")
+    st.markdown("**Costo indirecto — por capítulo (bottom-up, opcional)**")
+    _icap=par.get("indirectos_cap"); _ipct=par.get("costos_pct",{}).get("indirectos",0)
+    st.caption("Desglosa el indirecto en capítulos (diseños, licencias, interventoría, pólizas, comisión "
+               "fiduciaria, **predial**, **ICA**…). Si lo usas, la **suma** es el indirecto del P&G (bottom-up); "
+               f"si lo dejas vacío, se usa el **{fmt_pct(_ipct)} de ventas** = {fmt_mm(pg['indirectos'])}.")
+    _idf=pd.DataFrame(_icap or [], columns=["capitulo","valor_miles"])
+    _idf["capitulo"]=_idf["capitulo"].astype("object")
+    _idf["valor_miles"]=pd.to_numeric(_idf["valor_miles"],errors="coerce")
+    _ied=st.data_editor(_idf, num_rows="dynamic", width="stretch", key=f"icap_{sel}",
+        column_config={"capitulo":st.column_config.TextColumn("Capítulo indirecto"),
+            "valor_miles":st.column_config.NumberColumn("Valor (miles COP)", format="%d")})
+    _newi=[]
+    for r in _ied.to_dict("records"):
+        _cap=r.get("capitulo"); _val=r.get("valor_miles")
+        if _cap and _val is not None and not pd.isna(_val):
+            _newi.append({"capitulo":str(_cap),"valor_miles":float(_val)})
+    par["indirectos_cap"]=_newi or None
+    if _newi:
+        _ns=sum(x["valor_miles"] for x in _newi)
+        st.success(f"**{len(_newi)} capítulos · indirecto total {fmt_mm(_ns)}** = base del P&G "
+                   f"(incidencia {fmt_pct(_ns/pg['ventas'] if pg['ventas'] else 0)} sobre ventas).")
+
+def _editor_wacc(par):
+    """Parámetros del costo de capital (CAPM build-up). Escribe par['financiero']['wacc']."""
+    wcfg = par.setdefault("financiero",{}).setdefault("wacc",{})
+    _defw = {"beta_us":1.29,"kd_us":9.335,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,
+             "rf":0.12,"rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}
+    for _k,_v in _defw.items(): wcfg.setdefault(_k,_v)
+    st.markdown("**Comparable EE.UU.** (sector Engineering/Construction · fuente: Damodaran)")
+    e1=st.columns(4)
+    wcfg["beta_us"]=e1[0].number_input("Beta apalancado βl (US)", value=float(wcfg["beta_us"]), step=0.01, format="%.4f")
+    wcfg["kd_us"]=e1[1].number_input("Costo deuda US kd (%)", value=float(wcfg["kd_us"]), step=0.05, format="%.3f",
+        help="De aquí sale la beta de la deuda βd = (kd − Rf)/(Rm − Rf).")
+    wcfg["tax_us"]=e1[2].number_input("Impuesto US (%)", value=float(wcfg["tax_us"]), step=0.1, format="%.1f")
+    wcfg["de_us"]=e1[3].number_input("Estructura D/E US (%)", value=float(wcfg["de_us"]), step=0.5, format="%.2f")
+    st.markdown("**Mercado**")
+    e2=st.columns(2)
+    wcfg["rm"]=e2[0].number_input("Rentabilidad del mercado Rm (%)", value=float(wcfg["rm"]), step=0.1, format="%.2f")
+    wcfg["rf"]=e2[1].number_input("Tasa libre de riesgo Rf (%)", value=float(wcfg["rf"]), step=0.01, format="%.2f")
+    st.markdown("**Colombia**")
+    e3=st.columns(4)
+    _eq=e3[0].number_input("Equity en la estructura (%)", value=float(wcfg.get("eq_w",30.0)), step=1.0,
+        min_value=1.0, max_value=99.0, format="%.1f",
+        help="Peso del capital propio. Deuda y D/E se derivan (Equity 30% → Deuda 70% → D/E 233%).")
+    wcfg["eq_w"]=_eq; wcfg["de_col"]=((100-_eq)/_eq*100 if _eq else 0.0)
+    wcfg["tax_col"]=e3[1].number_input("Impuesto Colombia (%)", value=float(wcfg["tax_col"]), step=0.5, format="%.1f")
+    wcfg["tasa_d"]=e3[2].number_input("Tasa deuda Colombia (%)", value=float(wcfg["tasa_d"]), step=0.5, format="%.2f")
+    wcfg["spread"]=e3[3].number_input("Spread deuda (%)", value=float(wcfg["spread"]), step=0.1, format="%.2f")
+    e4=st.columns(2)
+    wcfg["inf_col"]=e4[0].number_input("Inflación Colombia EA (%)", value=float(wcfg["inf_col"]), step=0.1, format="%.2f")
+    wcfg["inf_us"]=e4[1].number_input("Inflación EE.UU. EA (%)", value=float(wcfg["inf_us"]), step=0.1, format="%.2f")
+    st.markdown("**Riesgo país — EMBI Colombia**")
+    wcfg["rp"]=st.number_input("Riesgo país (EMBI, %)", value=float(wcfg["rp"]), step=0.01, format="%.2f",
+        help="Spread EMBI Colombia (JP Morgan). 1% = 100 puntos básicos.")
+    st.info("📡 **EMBI Colombia de referencia:** ~**2,0%** (≈200 pb; en abril-2026 tocó 219 pb, mínimo en 5 años). "
+            "El valor de la hoja era 3,14% (314 pb, may-2023). "
+            "Fuentes: [Banco de la República](https://www.banrep.gov.co/es/taxonomy/term/7611) · "
+            "[BCRP serie diaria](https://estadisticas.bcrp.gob.pe/estadisticas/series/diarias/resultados/PD04715XD/html) · "
+            "[CESLA](https://www.cesla.com). Actualízalo con el dato vigente al día de la evaluación.")
+
 # ---------------- sidebar: proyecto + menú ----------------
 with st.sidebar:
     if LOGO.exists(): st.image(str(LOGO), width=150)
@@ -741,6 +827,12 @@ elif seccion=="Ingreso de datos":
         fc2=st.columns(3)
         f["renta"]=fc2[0].slider("Provisión renta", 0.0, 0.40, float(f.get("renta",0.35)), 0.01)
         f["tir_apalancada_ref"]=fc2[1].number_input("TIR apalancada de referencia", value=float(f.get("tir_apalancada_ref",0.20)), step=0.01, format="%.4f")
+    with st.expander("4c · Presupuesto de costos por capítulo (bottom-up, opcional)"):
+        st.caption("Detalle del costo directo/indirecto por capítulo. Si lo usas, su SUMA reemplaza el % de ventas.")
+        _editor_presupuesto(par, sel, pg)
+    with st.expander("7 · Costo de capital (WACC)"):
+        st.caption("Parámetros del build-up CAPM. El cálculo y el resultado se ven en *Factibilidad → Costo de capital*.")
+        _editor_wacc(par)
 
 # ============ P&G ============
 if seccion=="P&G":
@@ -791,26 +883,11 @@ if seccion=="Distribución costos":
         kpi(kk[0],"Costo directo total", fmt_mm(_tot), f"{len(_dcap)} capítulos · bottom-up", TEAL)
         kpi(kk[1],"Costo directo /m² const", (f"${_tot*1000/_ac:,.0f}".replace(",", ".") if _ac else "—"), "por m² construido", MUTED)
         kpi(kk[2],"Incidencia s/ ventas", fmt_pct(_tot/pg["ventas"] if pg["ventas"] else 0), "del directo en ventas", MUTED)
-        if PUEDE_INGRESAR:
-            _dfc=pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0)} for x in _dcap])
-            _ed=st.data_editor(_dfc, num_rows="dynamic", width="stretch", key=f"dcap_{sel}",
-                column_config={"Capítulo":st.column_config.TextColumn("Capítulo"),
-                    "Valor (miles COP)":st.column_config.NumberColumn("Valor (miles COP)", format="%d",
-                        help="Presupuesto del capítulo. La SUMA de capítulos es el costo directo del P&G (bottom-up).")})
-            _new=[]
-            for r in _ed.to_dict("records"):
-                _cap=r.get("Capítulo"); _val=r.get("Valor (miles COP)")
-                if _cap and _val is not None and not pd.isna(_val):
-                    _new.append({"capitulo":str(_cap),"valor_miles":float(_val)})
-            if _new:
-                par["directos_cap"]=_new
-                st.success(f"**{len(_new)} capítulos · costo directo total {fmt_mm(sum(x['valor_miles'] for x in _new))}** "
-                           f"= base del P&G y de la curva S. (Incidencia {fmt_pct(sum(x['valor_miles'] for x in _new)/pg['ventas'] if pg['ventas'] else 0)} sobre ventas.)")
-        else:
-            _dfc=pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0),
-                               "% del directo":f"{(x.get('valor_miles',0) or 0)/_tot*100:.1f}%" if _tot else "—"} for x in _dcap])
-            st.dataframe(_dfc, width="stretch", hide_index=True)
-            st.caption(f"Costo directo total = **{fmt_mm(_tot)}** en {len(_dcap)} capítulos. Es la base del P&G y de la curva S de obra.")
+        _dfc=pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0),
+                           "% del directo":f"{(x.get('valor_miles',0) or 0)/_tot*100:.1f}%" if _tot else "—"} for x in _dcap])
+        st.dataframe(_dfc, width="stretch", hide_index=True)
+        st.caption(f"Costo directo total = **{fmt_mm(_tot)}** en {len(_dcap)} capítulos. Es la base del P&G y de la curva S de obra. "
+                   "Se edita en 🗂️ Ingreso de datos.")
     else:
         st.info("Este proyecto aún no tiene **presupuesto por capítulos**. El costo directo se calcula como "
                 f"**{fmt_pct(par.get('costos_pct',{}).get('directos',0))} de las ventas** = {fmt_mm(pg['directos'])}. "
@@ -819,35 +896,15 @@ if seccion=="Distribución costos":
     st.markdown("#### Costos indirectos — por capítulo")
     _icap=par.get("indirectos_cap")
     _ipct=par.get("costos_pct",{}).get("indirectos",0)
-    if PUEDE_INGRESAR:
-        st.caption("Desglosa el indirecto en capítulos (diseños, licencias, interventoría, pólizas, comisión "
-                   "fiduciaria, **predial**, **ICA**…). Si lo usas, la **suma** es el indirecto del P&G (bottom-up); "
-                   f"si lo dejas vacío, se usa el **{fmt_pct(_ipct)} de ventas** = {fmt_mm(pg['indirectos'])}.")
-        _idf=pd.DataFrame(_icap or [], columns=["capitulo","valor_miles"])
-        _idf["capitulo"]=_idf["capitulo"].astype("object")
-        _idf["valor_miles"]=pd.to_numeric(_idf["valor_miles"],errors="coerce")
-        _ied=st.data_editor(_idf, num_rows="dynamic", width="stretch", key=f"icap_{sel}",
-            column_config={"capitulo":st.column_config.TextColumn("Capítulo indirecto"),
-                "valor_miles":st.column_config.NumberColumn("Valor (miles COP)", format="%d")})
-        _newi=[]
-        for r in _ied.to_dict("records"):
-            _cap=r.get("capitulo"); _val=r.get("valor_miles")
-            if _cap and _val is not None and not pd.isna(_val):
-                _newi.append({"capitulo":str(_cap),"valor_miles":float(_val)})
-        par["indirectos_cap"]=_newi or None
-        if _newi:
-            _ns=sum(x["valor_miles"] for x in _newi)
-            st.success(f"**{len(_newi)} capítulos · indirecto total {fmt_mm(_ns)}** = base del P&G "
-                       f"(incidencia {fmt_pct(_ns/pg['ventas'] if pg['ventas'] else 0)} sobre ventas).")
-    elif _icap:
+    if _icap:
         _itot=sum((x.get('valor_miles',0) or 0) for x in _icap)
         st.dataframe(pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0),
             "% del indirecto":f"{(x.get('valor_miles',0) or 0)/_itot*100:.1f}%" if _itot else "—"} for x in _icap]),
             width="stretch", hide_index=True)
-        st.caption(f"Indirecto total = **{fmt_mm(_itot)}** en {len(_icap)} capítulos.")
+        st.caption(f"Indirecto total = **{fmt_mm(_itot)}** en {len(_icap)} capítulos. Se edita en 🗂️ Ingreso de datos.")
     else:
         st.info(f"Costo indirecto por **{fmt_pct(_ipct)} de ventas** = {fmt_mm(pg['indirectos'])}. "
-                "Detállalo por capítulo desde el editor del modelo.")
+                "Detállalo por capítulo en 🗂️ Ingreso de datos.")
     st.markdown("#### Curva S de avance de obra")
     d=R["distribucion"]
     _h=R.get("hitos") or {}
@@ -923,41 +980,8 @@ if seccion=="Costo de capital":
     _defw = {"beta_us":1.29,"kd_us":9.335,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,
              "rf":0.12,"rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}
     for _k,_v in _defw.items(): wcfg.setdefault(_k,_v)
-    if PUEDE_INGRESAR:
-        with st.expander("✏️ Parámetros del costo de capital (editar)", expanded=True):
-            st.markdown("**Comparable EE.UU.** (sector Engineering/Construction · fuente: Damodaran)")
-            e1=st.columns(4)
-            wcfg["beta_us"]=e1[0].number_input("Beta apalancado βl (US)", value=float(wcfg["beta_us"]), step=0.01, format="%.4f")
-            wcfg["kd_us"]=e1[1].number_input("Costo deuda US kd (%)", value=float(wcfg["kd_us"]), step=0.05, format="%.3f",
-                help="De aquí sale la beta de la deuda βd = (kd − Rf)/(Rm − Rf).")
-            wcfg["tax_us"]=e1[2].number_input("Impuesto US (%)", value=float(wcfg["tax_us"]), step=0.1, format="%.1f")
-            wcfg["de_us"]=e1[3].number_input("Estructura D/E US (%)", value=float(wcfg["de_us"]), step=0.5, format="%.2f")
-            st.markdown("**Mercado**")
-            e2=st.columns(2)
-            wcfg["rm"]=e2[0].number_input("Rentabilidad del mercado Rm (%)", value=float(wcfg["rm"]), step=0.1, format="%.2f")
-            wcfg["rf"]=e2[1].number_input("Tasa libre de riesgo Rf (%)", value=float(wcfg["rf"]), step=0.01, format="%.2f")
-            st.markdown("**Colombia**")
-            e3=st.columns(4)
-            _eq=e3[0].number_input("Equity en la estructura (%)", value=float(wcfg.get("eq_w",30.0)), step=1.0,
-                min_value=1.0, max_value=99.0, format="%.1f",
-                help="Peso del capital propio. Deuda y D/E se derivan (Equity 30% → Deuda 70% → D/E 233%).")
-            wcfg["eq_w"]=_eq; wcfg["de_col"]=((100-_eq)/_eq*100 if _eq else 0.0)
-            wcfg["tax_col"]=e3[1].number_input("Impuesto Colombia (%)", value=float(wcfg["tax_col"]), step=0.5, format="%.1f")
-            wcfg["tasa_d"]=e3[2].number_input("Tasa deuda Colombia (%)", value=float(wcfg["tasa_d"]), step=0.5, format="%.2f")
-            wcfg["spread"]=e3[3].number_input("Spread deuda (%)", value=float(wcfg["spread"]), step=0.1, format="%.2f")
-            e4=st.columns(2)
-            wcfg["inf_col"]=e4[0].number_input("Inflación Colombia EA (%)", value=float(wcfg["inf_col"]), step=0.1, format="%.2f")
-            wcfg["inf_us"]=e4[1].number_input("Inflación EE.UU. EA (%)", value=float(wcfg["inf_us"]), step=0.1, format="%.2f")
-            st.markdown("**Riesgo país — EMBI Colombia**")
-            wcfg["rp"]=st.number_input("Riesgo país (EMBI, %)", value=float(wcfg["rp"]), step=0.01, format="%.2f",
-                help="Spread EMBI Colombia (JP Morgan). 1% = 100 puntos básicos.")
-            st.info("📡 **EMBI Colombia de referencia:** ~**2,0%** (≈200 pb; en abril-2026 tocó 219 pb, mínimo en 5 años). "
-                    "El valor de la hoja era 3,14% (314 pb, may-2023). "
-                    "Fuentes: [Banco de la República](https://www.banrep.gov.co/es/taxonomy/term/7611) · "
-                    "[BCRP serie diaria](https://estadisticas.bcrp.gob.pe/estadisticas/series/diarias/resultados/PD04715XD/html) · "
-                    "[CESLA](https://www.cesla.com). Actualízalo con el dato vigente al día de la evaluación.")
-    else:
-        st.info("🔒 Modo consulta: los parámetros del costo de capital los edita el editor del modelo.")
+    st.caption("Los parámetros del costo de capital se **editan** en 🗂️ *Ingreso de datos → 7 · Costo de capital (WACC)*. "
+               "Aquí se ve la **cadena de cálculo** y el resultado (solo lectura).")
     d=_modelo.calcular_wacc(wcfg, detalle=True)
     st.markdown("#### Cadena de cálculo")
     col=st.columns(2)

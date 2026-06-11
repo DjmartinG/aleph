@@ -24,6 +24,7 @@ SECCION_AREA = {
     "Cockpit": "Tablero",
     "P&G": "Factibilidad",
     "Flujo de caja": "Factibilidad",
+    "Distribución costos": "Factibilidad",  # solo-lectura tras 1b-ii (editores movidos a Ingreso)
     "Costo de capital": "Factibilidad",   # usa calcular_wacc(detalle=True)
     "Apalancamiento": "Factibilidad",
     "Monte Carlo": "Factibilidad",
