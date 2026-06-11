@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cg-factibilidad"
-version = "2.37.0"
+dynamic = ["version"]                       # la versión sale de cg_engine.__version__ (fuente única)
 description = "Evaluación financiera de proyectos inmobiliarios — CG Constructora"
 requires-python = ">=3.12"
 dependencies = [
@@ -21,6 +21,9 @@ dependencies = [
 # no la librería: no entra en el paquete distribuible.
 [tool.setuptools]
 packages = ["cg_engine"]
+
+[tool.setuptools.dynamic]
+version = { attr = "cg_engine.__version__" }   # fuente única de versión
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
