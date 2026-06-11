@@ -14,6 +14,7 @@ from . import ingresos
 from . import apalancamiento
 from . import finanzas
 from . import config
+from .flujo import aplicar_gastos_fijos, acumular
 # TIR/WACC/VPN: fuente única en finanzas.py. Re-export de calcular_wacc y tir (periódica) para
 # mantener estable la API pública (cg_engine.calcular_wacc / cg_engine.tir vía __init__).
 from .finanzas import calcular_wacc, irr_periodo as tir
@@ -193,16 +194,12 @@ def flujo_caja(par, pg):
         ind_obra=pg.get("indirectos_otros", pg["indirectos"])
         for m in range(ini_o,min(ent,N)): costos[m]+=ind_obra*share/per
         for m in range(ini_o,min(ini_o+dur,N)): costos[m]+=pg["honorarios"]*share/dur
-    # gastos fijos: monto mensual sobre su ventana (timing real, no prorrateado en obra)
-    for g in par.get("gastos_fijos", []):
-        vm=g.get("valor_mes_miles",0) or 0; d=int(g.get("desde",0) or 0)
-        h=g.get("hasta"); h=int(h) if h is not None else d+1
-        for m in range(max(0,d), min(h,N)): costos[m]+=vm
+    # gastos fijos: monto mensual sobre su ventana (helper compartido con flujo_apalancado)
+    aplicar_gastos_fijos(costos, par, N)
     # lote en t0 (necesidad de caja)
     costos[0]+=pg["costo_lote"]
     flujo=[ingresos[m]-costos[m] for m in range(N)]
-    acum=[]; s=0
-    for x in flujo: s+=x; acum.append(s)
+    acum=acumular(flujo)
     # crédito constructor (tope = ancla)
     cap=fin.get("credito_cap_miles", config.COBERTURA_CC*pg["directos"])
     tasa_m=(1+fin.get("tasa_credito_ea",config.TASA_CREDITO_EA))**(1/12)-1
