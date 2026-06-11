@@ -14,6 +14,7 @@ import plotly.io as pio
 from streamlit_option_menu import option_menu
 from cg_engine import calcular, __version__ as ENGINE_V
 from cg_engine import evm as _evm   # Valor Ganado (EVM)
+from cg_engine import schema as _schema   # validación del contrato de datos en el borde (antes de guardar)
 import charts as _charts   # gráficos financieros pro (marca CG)
 import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
 from ui.format import fmt_cop, fmt_mm, fmt_pct   # formato único (fuente única de presentación)
@@ -101,7 +102,7 @@ def render_alertas(alertas, solo_activas=True, modulo=None, max_items=None):
             f'border-radius:99px;margin-left:12px;white-space:nowrap;">{lb}</span></div></div>',
             unsafe_allow_html=True)
 # Almacenamiento: Supabase si hay credenciales, si no archivos locales (capa storage.py)
-from storage import listar, cargar, es_real, guardar, usando_supabase, diagnostico, probar_conexion
+from storage import listar, cargar, es_real, guardar, usando_supabase, diagnostico, probar_conexion, slugify
 
 # ---------------- control de acceso (Fase 1) ----------------
 def _secret(nombre):
@@ -1434,16 +1435,41 @@ if seccion != "Inicio":
                 json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
                 file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
                 help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-    # Guardar en la nube (compartir con el equipo) — solo quien puede ingresar y solo si hay Supabase
-    if PUEDE_INGRESAR and usando_supabase() and sel and sel != "➕ Nuevo proyecto":
-        if st.button("☁️ Guardar en la nube (compartir con el equipo)", type="primary", width="stretch"):
+    # Guardar / crear en la nube — solo quien puede ingresar y solo si hay Supabase.
+    if PUEDE_INGRESAR and usando_supabase():
+        _es_nuevo = (not sel) or sel == "➕ Nuevo proyecto"
+        if st.button("☁️ Crear en la nube" if _es_nuevo else "☁️ Guardar en la nube (compartir con el equipo)",
+                     type="primary", width="stretch"):
+            _ok = True
+            # 1) Validación del contrato en el BORDE: un dato mal escrito NO se persiste en silencio.
             try:
-                guardar(sel, par, nombre=meta.get("nombre", sel), es_real_flag=es_real(sel),
-                        by=(st.session_state.get("_ms_user") or "editor"))
-                st.cache_data.clear()        # refresca el consolidado
-                st.success("Guardado. El equipo verá estos datos al recargar.")
+                _schema.parse(par)
             except Exception as e:
-                st.error(f"No se pudo guardar en la nube: {e}")
+                st.error(f"Los datos no pasan la validación, no se guardó: {e}"); _ok = False
+            _nom = (par.get("meta", {}) or {}).get("nombre", "").strip()
+            if _ok and _es_nuevo and (not _nom or _nom == "Nuevo proyecto"):
+                st.warning("Ponle un **nombre** al proyecto (en ① Datos generales del Ingreso) antes de crearlo."); _ok = False
+            if _ok:
+                # 2) Slug: el proyecto NUEVO genera su clave desde el nombre (antes no se podía crear en la nube).
+                if _es_nuevo:
+                    _slug = slugify(_nom); _existentes = set(listar()); _i = 2
+                    while _slug in _existentes:               # no pisar otro proyecto existente
+                        _slug = f"{slugify(_nom)}_{_i}"; _i += 1
+                else:
+                    _slug = sel
+                # 3) Persistir
+                try:
+                    guardar(_slug, par, nombre=_nom or _slug,
+                            es_real_flag=(False if _es_nuevo else es_real(sel)),
+                            by=(st.session_state.get("_ms_user") or "editor"))
+                    st.cache_data.clear()        # refresca el consolidado/listado
+                    if _es_nuevo:
+                        st.session_state["_pending_proj"] = _slug   # selecciónalo tras el rerun
+                        st.success(f"Proyecto creado como «{_slug}». Recargando…"); st.rerun()
+                    else:
+                        st.success("Guardado. El equipo verá estos datos al recargar.")
+                except Exception as e:
+                    st.error(f"No se pudo guardar en la nube: {e}")
     elif PUEDE_INGRESAR and not usando_supabase():
         st.caption("ℹ️ Sin base de datos compartida configurada: los cambios viven en tu sesión. "
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")

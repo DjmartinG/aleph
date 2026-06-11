@@ -17,6 +17,17 @@ HERE = Path(__file__).parent
 PROY_DIR = HERE / "proyectos"            # ilustrativos (repo público)
 PRIV_DIR = HERE / "proyectos_privados"   # reales (gitignored, local)
 
+
+def slugify(s):
+    """Convierte un nombre en un slug seguro para clave de almacenamiento (PK de la tabla).
+    'Torres de Campiñas' -> 'torres_de_campinas'. Vacío / no alfanumérico -> 'proyecto'."""
+    import re
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(s)).encode("ascii", "ignore").decode("ascii")
+    s = re.sub(r"[^a-zA-Z0-9]+", "_", s).strip("_").lower()
+    return s or "proyecto"
+
+
 _CLIENT = None
 _TRIED = False
 _DIAG = "no iniciado"     # motivo legible de por qué hay/no hay conexión a Supabase
