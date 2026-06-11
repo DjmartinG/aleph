@@ -32,7 +32,7 @@ jobs:
         run: ruff check .
 
       - name: Compilar (atrapa errores de sintaxis antes de desplegar)
-        run: python -m compileall -q app.py charts.py storage.py navarra_data.py cg_engine
+        run: python -m compileall -q app.py charts.py storage.py navarra_data.py cg_engine ui
 
       - name: Tests (regresión de cifras + humo de UI)
         run: pytest
