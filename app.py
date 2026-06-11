@@ -201,12 +201,12 @@ def _irr_anual(flujos):
     except Exception: return None
 
 @st.cache_data(show_spinner=False)
-def consolidado(_keys):
-    """Consolidado del portafolio. _keys = tuple(listar()) → invalida el caché si cambia el set."""
+def consolidado(keys):
+    """Consolidado del portafolio. keys = tuple(listar()) → invalida el caché si cambia el set."""
     # eje GLOBAL absoluto (epoch ene-2022) para alinear proyectos que arrancan en años distintos
     EPOCH=2022; N=240; oper=[0.0]*N; equity=[0.0]*N; saldo=[0.0]*N
     ventas=util=udi=vpn=und=0.0; n=0; filas=[]; tir_num=tir_den=0.0
-    for name in _keys:
+    for name in keys:
         try:
             par=cargar(name); R=calcular(copy.deepcopy(par))
         except Exception:
@@ -237,11 +237,11 @@ def consolidado(_keys):
             "credito_max":max(saldo) if saldo else 0.0,"filas":filas}
 
 @st.cache_data(show_spinner=False)
-def puntos_portafolio(_keys):
+def puntos_portafolio(keys):
     """Puntos del gráfico de burbujas: un dict por proyecto {nombre, tir, margen, ventas, tipo, und}.
-    _keys = tuple(listar()) → invalida el caché igual que consolidado()."""
+    keys = tuple(listar()) → invalida el caché igual que consolidado()."""
     pts=[]
-    for name in _keys:
+    for name in keys:
         try:
             par=cargar(name); R=calcular(copy.deepcopy(par))
         except Exception:
@@ -255,23 +255,51 @@ def puntos_portafolio(_keys):
     return pts
 
 @st.cache_data(show_spinner="Cargando pipeline…")
-def pipeline_datos(_keys):
-    """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline.
-    {nombre, estado, tir, vpn, ventas, und}. _keys=tuple(listar()) invalida el caché."""
+def pipeline_datos(keys):
+    """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline y
+    las tarjetas del Portafolio. {slug, nombre, estado, tir, vpn, ventas, und, ubicacion, tipo}.
+    keys=tuple(listar()) invalida el caché (parámetro sin guion bajo → entra al hash de st.cache_data)."""
     out=[]
-    for name in _keys:
+    for name in keys:
         try:
             par=cargar(name); R=calcular(copy.deepcopy(par))
         except Exception:
             continue
-        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]
-        estado=(par.get("meta",{}) or {}).get("estado") or _cfg.ESTADO_DEFAULT
+        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]; _m=par.get("meta",{}) or {}
+        estado=_m.get("estado") or _cfg.ESTADO_DEFAULT
         if estado not in _cfg.ESTADOS: estado=_cfg.ESTADO_DEFAULT
         tir=ap.get("tir_apalancada_ref") or ap.get("tir_proyecto")
-        out.append({"nombre":mt.get("nombre",name),"estado":estado,"tir":tir,
+        out.append({"slug":name,"nombre":mt.get("nombre",name),"estado":estado,"tir":tir,
                     "vpn":ap.get("vpn_proyecto"),"ventas":pg.get("ventas"),
-                    "und":sum(e.get("und",0) or 0 for e in par.get("etapas",[]))})
+                    "und":sum(e.get("und",0) or 0 for e in par.get("etapas",[])),
+                    "ubicacion":_m.get("ubicacion",""),"tipo":_m.get("tipo","")})
     return out
+
+def tarjeta_proyecto(d, activo=False):
+    """Tarjeta moderna de proyecto (Portafolio): nombre, ubicación, badge de estado sólido y 4 KPIs.
+    `d` es un dict de pipeline_datos(). `activo`=el proyecto abierto en el selector."""
+    _ec = _ESTADO_COLOR.get(d.get("estado"), MUTED)
+    _borde = TEAL if activo else BORDER
+    _abierto = ' <span style="color:#1E874B;font-weight:600;">· abierto</span>' if activo else ''
+    _sub = (d.get("ubicacion") or "—") + ((" · " + d.get("tipo", "")) if d.get("tipo") else "")
+    _badge = (_cfg.ESTADO_LABEL.get(d.get("estado")) or d.get("estado") or "").upper()
+    _und = f'{d.get("und", 0)} uds'
+    def _k(lbl, val):
+        return (f'<div><div style="font-size:.58rem;letter-spacing:.04em;text-transform:uppercase;'
+                f'color:#6B7280;font-weight:600;">{lbl}</div>'
+                f'<div style="font-size:1.08rem;font-weight:700;color:#13262B;line-height:1.25;">{val}</div></div>')
+    _kpis = _k("TIR", fmt_pct(d.get("tir"))) + _k("VPN", fmt_mm(d.get("vpn") or 0)) \
+        + _k("Ventas", fmt_mm(d.get("ventas") or 0)) + _k("Unidades", _und)
+    st.markdown(
+        f'<div style="background:#fff;border:1px solid {_borde};border-radius:14px;padding:15px 17px;'
+        f'box-shadow:0 1px 2px rgba(16,24,40,.05);min-height:170px;">'
+        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+        f'<div><div style="font-weight:700;font-size:.97rem;color:#13262B;line-height:1.2;">{d.get("nombre","")}{_abierto}</div>'
+        f'<div style="color:#6B7280;font-size:.78rem;margin-top:2px;">{_sub}</div></div>'
+        f'<span style="background:{_ec};color:white;font-size:9px;font-weight:700;letter-spacing:.02em;'
+        f'padding:3px 9px;border-radius:99px;white-space:nowrap;">{_badge}</span></div>'
+        f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;margin-top:14px;">{_kpis}</div>'
+        f'</div>', unsafe_allow_html=True)
 
 def nuevo_proyecto():
     return {"meta":{"nombre":"Nuevo proyecto","ubicacion":"","zona":"","tipo":"No VIS","unidades":0,"moneda":"miles COP"},
@@ -647,20 +675,24 @@ if seccion=="Proyectos activos":
     if not _proys:
         st.info("No hay proyectos. Crea uno con «➕ Nuevo proyecto» en el menú lateral.")
     else:
-        gc=st.columns(3)
-        for i,nombre in enumerate(_proys):
-            p=cargar(nombre); mp=p.get("meta",{})
-            und=sum(e.get("und",0) or 0 for e in p.get("etapas",[]))
-            activo = (nombre==sel)
-            with gc[i%3]:
-                borde = TEAL if activo else "#E6E9EF"
-                st.markdown(f'<div class="navcard" style="border:2px solid {borde}">'
-                    f'<h4>{mp.get("nombre",nombre)} {"· abierto" if activo else ""}</h4>'
-                    f'<div style="color:#6B7280;font-size:.84rem">{mp.get("ubicacion","")} · {mp.get("zona","")} · {mp.get("tipo","")}</div>'
-                    f'<div style="margin-top:10px;font-weight:600;color:#13262B">{und} unidades · {len(p.get("etapas",[]))} etapas</div></div>',
-                    unsafe_allow_html=True)
-                if st.button("Abrir proyecto", key=f"open_{nombre}", width="stretch", disabled=activo):
-                    st.session_state["_pending_proj"]=nombre; st.rerun()
+        _datos = pipeline_datos(tuple(_proys))
+        # Filtro por estado del ciclo de vida (chips). "Todos" o sin selección → muestra todos.
+        _labels = ["Todos"] + [_cfg.ESTADO_LABEL[e] for e in _cfg.ESTADOS]
+        _fsel = st.segmented_control("Filtrar por estado", _labels, default="Todos",
+                                     selection_mode="single", key="filtro_estado_portafolio")
+        _l2e = {_cfg.ESTADO_LABEL[e]: e for e in _cfg.ESTADOS}
+        _festado = _l2e.get(_fsel)
+        _items = [d for d in _datos if (_festado is None or d["estado"] == _festado)]
+        if not _items:
+            st.caption("No hay proyectos en ese estado.")
+        else:
+            gc = st.columns(3)
+            for i, d in enumerate(_items):
+                with gc[i % 3]:
+                    tarjeta_proyecto(d, activo=(d["slug"] == sel))
+                    if st.button("Abrir proyecto", key=f"open_{d['slug']}", width="stretch", disabled=(d["slug"] == sel)):
+                        st.session_state["_pending_proj"] = d["slug"]; st.rerun()
+                    st.write("")
         st.write("")
         st.markdown("##### Resumen financiero del portafolio")
         filas=list(CONS["filas"]) if CONS else []
