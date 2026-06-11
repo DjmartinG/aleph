@@ -10,10 +10,11 @@ de escrituración; la i-ésima unidad vendida es la i-ésima entregada (FIFO).
 Series en línea de tiempo local (mes 0 = inicio de ventas de la etapa, IV).
 """
 from . import portafolio
+from . import config
 
 
 def recaudo_etapa(unidades, vmes, frec, precio_und, sep_und, pct_ci,
-                  diferido_sep, mes_escrituracion, emes=None, efrec=1, horizonte=180,
+                  diferido_sep, mes_escrituracion, emes=None, efrec=1, horizonte=config.HORIZONTE_RECAUDO,
                   adicional_miles=0):
     """Devuelve dict con series mensuales (relativas a IV) de ventas, entregas, separación,
     cuota inicial, subrogación y total. 'mes_escrituracion' = mes (desde IV) en que ARRANCAN
@@ -72,7 +73,7 @@ def recaudo_etapa(unidades, vmes, frec, precio_und, sep_und, pct_ci,
             "contrato_total": unidades * precio_und + adicional_miles}
 
 
-def recaudo_portafolio(etapas, hitos, horizonte=180):
+def recaudo_portafolio(etapas, hitos, horizonte=config.HORIZONTE_RECAUDO):
     """Consolida el recaudo del portafolio en una línea de tiempo GLOBAL (mes 0 = IV de la
     etapa raíz). etapas: lista con cod, unidades, vmes, frec, precio_und, sep_und, pct_ci,
     diferido_sep, escrituracion_offset. hitos: salida de portafolio.calcular_portafolio

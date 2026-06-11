@@ -5,6 +5,7 @@ Toma un dict de parámetros de proyecto y devuelve P&G, reparto, distribución d
 flujo de caja, escenarios, sensibilidades e indicadores. Metodología validada contra
 prefactibilidades reales. Enfoque híbrido: TIR apalancada de referencia es un parámetro.
 """
+import logging
 import random
 from datetime import datetime
 from . import curvas
@@ -12,9 +13,12 @@ from . import portafolio
 from . import ingresos
 from . import apalancamiento
 from . import finanzas
+from . import config
 # TIR/WACC/VPN: fuente única en finanzas.py. Re-export de calcular_wacc y tir (periódica) para
 # mantener estable la API pública (cg_engine.calcular_wacc / cg_engine.tir vía __init__).
 from .finanzas import calcular_wacc, irr_periodo as tir
+
+_log = logging.getLogger(__name__)
 
 
 def _hitos(par):
@@ -38,7 +42,8 @@ def _hitos(par):
         return {}
     try:
         return portafolio.calcular_portafolio(plist)
-    except Exception:
+    except Exception as e:
+        _log.warning("No se pudieron calcular los hitos del portafolio: %s", e)
         return {}
 
 
@@ -56,16 +61,17 @@ def _recaudo(par, hitos):
             "cod": e.get("cod", i + 1), "unidades": und,
             "vmes": e.get("vmes", 6), "frec": e.get("frec", 1),
             "precio_und": (vm_viv / und if und else 0),
-            "sep_und": fin.get("sep_und_miles", 5000),
-            "pct_ci": fin.get("pct_ci", 0.30),
-            "diferido_sep": par.get("diferido_sep", fin.get("diferido_sep", 4)),
+            "sep_und": fin.get("sep_und_miles", config.SEP_UND_MILES),
+            "pct_ci": fin.get("pct_ci", config.PCT_CI),
+            "diferido_sep": par.get("diferido_sep", fin.get("diferido_sep", config.DIFERIDO_SEP)),
             "escrituracion_offset": e.get("escrituracion", e.get("dur_obra", 24) + 6),
             "emes": e.get("emes"), "efrec": e.get("efrec", 1),
             "adicional_miles": adic,
         })
     try:
         return ingresos.recaudo_portafolio(et, hitos)
-    except Exception:
+    except Exception as e:
+        _log.warning("No se pudo calcular el recaudo del portafolio: %s", e)
         return {}
 
 
@@ -125,10 +131,10 @@ def pyg(par):
     # si los gastos fijos exceden el indirecto, el exceso baja la UO (additivo); si no, UO sin cambio
     util_oper  = total_ingresos - costo_lote - directos - indirectos_otros - gastos_fijos - honorarios
     reint_sin_lote = honorarios + util_oper
-    renta = fin.get("renta", 0.35) * reint_sin_lote
+    renta = fin.get("renta", config.RENTA) * reint_sin_lote
     udi   = reint_sin_lote - renta
     # reparto CG / socio
-    split = fin.get("split_cg", 0.70)
+    split = fin.get("split_cg", config.SPLIT_CG)
     hc = c.get("hon_construccion", 0.035) * V
     hg = c.get("hon_gerencia",     0.030) * V
     hv = c.get("hon_ventas",       0.015) * V
@@ -163,10 +169,10 @@ def distribucion_costos(par, directos_miles):
 
 # ----------------------------- flujo de caja (proyecto) -----------------------------
 def flujo_caja(par, pg):
-    fin = par["financiero"]; N = 96
+    fin = par["financiero"]; N = config.HORIZONTE_FLUJO
     etapas = par["etapas"]; V = pg["ventas"]
     ingresos=[0.0]*N; costos=[0.0]*N
-    PCT_CI=fin.get("pct_ci",0.30); PCT_SUB=1-PCT_CI; SEP=fin.get("sep_und_miles",5000.0)
+    PCT_CI=fin.get("pct_ci",config.PCT_CI); PCT_SUB=1-PCT_CI; SEP=fin.get("sep_und_miles",config.SEP_UND_MILES)
     for e in etapas:
         und=e["und"]; vent=e["ventas_miles"]; share=vent/V if V else 0
         ini_o=e.get("ini_obra",0); dur=max(1, int(e.get("dur_obra") or 24)); ent=e.get("entrega",dur+ini_o)
@@ -198,8 +204,8 @@ def flujo_caja(par, pg):
     acum=[]; s=0
     for x in flujo: s+=x; acum.append(s)
     # crédito constructor (tope = ancla)
-    cap=fin.get("credito_cap_miles", 0.8*pg["directos"])
-    tasa_m=(1+fin.get("tasa_credito_ea",0.155))**(1/12)-1
+    cap=fin.get("credito_cap_miles", config.COBERTURA_CC*pg["directos"])
+    tasa_m=(1+fin.get("tasa_credito_ea",config.TASA_CREDITO_EA))**(1/12)-1
     saldo=0.0; saldo_serie=[0.0]*N; intereses=0.0
     for m in range(N):
         interes=saldo*tasa_m; intereses+=interes
@@ -307,7 +313,7 @@ def montecarlo_tir(par, n=300, rango_precio=(-0.15, 0.15), rango_costo=(-0.10, 0
     base.pop("fiducia", None)                          # usar la TIR del MODELO, no la auditada (es fija)
     base_etapas = par.get("etapas", []) or []
     base_tip = par.get("tipologias")
-    hurdle = (par.get("financiero", {}) or {}).get("tio", 0.15)
+    hurdle = (par.get("financiero", {}) or {}).get("tio", config.TIO)
     # --- línea base de hitos: para que la escrituración SIGA a la obra hay que mantener fija la
     #     brecha (equilibrio→escrituración). Capturamos el PE de cada etapa con el ritmo base y la
     #     escrituración base; en cada escenario desplazamos la escrituración por el mismo Δ de PE. ---

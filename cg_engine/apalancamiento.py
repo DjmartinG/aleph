@@ -12,6 +12,7 @@ indicadores (TIR proyecto, TIR equity, VPN, máxima necesidad de caja).
 """
 from . import curvas
 from . import finanzas
+from . import config
 
 
 def _offset(d, base):
@@ -28,7 +29,7 @@ _tir_periodo = finanzas.irr_biseccion   # bisección robusta (serie anual audita
 _vpn = finanzas.vpn
 
 
-def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
+def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO):
     if not hitos or not recaudo or not recaudo.get("total"):
         return {}
     fin = par.get("financiero", {})
@@ -93,12 +94,12 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     # escrituración). Interest accrues on the outstanding balance. Peak balance = "Vr. Max Credito
     # Constructor"; average of the positive balance = "Promedio". Equity covers the lote and any
     # construction cost above the cupo.
-    cobertura = fin.get("cobertura_cc", fin.get("monto_cc_pct", 0.80))
+    cobertura = fin.get("cobertura_cc", fin.get("monto_cc_pct", config.COBERTURA_CC))
     valor_financiable = pg["directos"] + ind_obra             # gastos de estructura no son financiables
     cupo = cobertura * valor_financiable                       # construction-loan ceiling
     subr = recaudo.get("subrogacion", [])
     sub_m = [subr[i] if i < len(subr) else 0.0 for i in range(N)]
-    tasa_cc = (1 + fin.get("tasa_credito_ea", 0.155)) ** (1 / 12) - 1
+    tasa_cc = (1 + fin.get("tasa_credito_ea", config.TASA_CREDITO_EA)) ** (1 / 12) - 1
     saldo = 0.0; intereses = 0.0; desemb_acum = 0.0
     saldo_serie = [0.0] * N; flujo_equity = [0.0] * N
     for m in range(N):
@@ -134,7 +135,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
     # tasa de descuento = TIO (tasa de oportunidad). Por defecto 15% EA (criterio CG); si el proyecto
     # define financiero.tio se usa esa. (El WACC Damodaran queda disponible pero no es el descuento CG.)
     wacc = finanzas.calcular_wacc(fin["wacc"]) if fin.get("wacc") else 0.0
-    tio = fin.get("tio", 0.15)
+    tio = fin.get("tio", config.TIO)
     tio_m = (1 + tio) ** (1 / 12) - 1
     wacc_m = tio_m                              # descuento usado para VPN del retorno
 
