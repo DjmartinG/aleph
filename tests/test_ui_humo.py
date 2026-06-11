@@ -22,6 +22,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECCION_AREA = {
     "Inicio": "Tablero",
     "Pipeline / Embudo": "Tablero",   # embudo por estado del ciclo de vida (1c-2)
+    "Proyectos activos": "Tablero",   # filtro por estado + tarjetas modernas (1c-3)
     "Cockpit": "Tablero",
     "P&G": "Factibilidad",
     "Flujo de caja": "Factibilidad",
