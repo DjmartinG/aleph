@@ -21,6 +21,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # sección -> área (capa) a la que pertenece, para el menú de 2 niveles
 SECCION_AREA = {
     "Inicio": "Tablero",
+    "Pipeline / Embudo": "Tablero",   # embudo por estado del ciclo de vida (1c-2)
     "Cockpit": "Tablero",
     "P&G": "Factibilidad",
     "Flujo de caja": "Factibilidad",

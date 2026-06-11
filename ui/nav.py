@@ -13,7 +13,7 @@ from __future__ import annotations
 from cg_engine import config as _cfg
 
 # Secciones por área (etiqueta, icono bootstrap). Estáticas; el estado decide cuáles se muestran.
-SECCIONES_TABLERO = [("Inicio", "house-door"), ("Cockpit", "speedometer2"),
+SECCIONES_TABLERO = [("Inicio", "house-door"), ("Pipeline / Embudo", "funnel"), ("Cockpit", "speedometer2"),
                      ("Proyectos activos", "buildings"), ("Portafolio (burbujas)", "graph-up")]
 SECCIONES_FACTIBILIDAD = [("Datos del proyecto", "pencil-square"), ("Urbanístico", "building"),
                           ("Cronograma", "calendar3"), ("Ingresos", "cash-coin"),
