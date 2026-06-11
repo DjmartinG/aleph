@@ -1,6 +1,6 @@
 {
   "_nota": "Proyecto activo CG (plantilla). Cifras ilustrativas — ingresa los datos reales en la plataforma.",
-  "meta": {"nombre": "Navarra Apartamentos", "ubicacion": "Bogotá", "zona": "Fontibón", "tipo": "VIS", "unidades": 951, "moneda": "miles COP"},
+  "meta": {"nombre": "Navarra Apartamentos", "ubicacion": "Bogotá", "zona": "Fontibón", "tipo": "VIS", "unidades": 951, "moneda": "miles COP", "estado": "construccion"},
   "areas": {"m2_vendibles": 49452, "m2_construidos": 68000, "lote_bruta": 35000, "lote_util": 28000},
   "etapas": [
     {"cod": 1, "nom": "Etapa 1", "und": 317, "metodo": "$/m²", "precio": 3850000, "area_und": 52, "ventas_miles": 63463400, "vmes": 15, "frec": 1, "pe_pct": 0.60, "fecha_inicio": "2026-01-01", "sucesora": null, "desfase": 0, "obra_offset": 1, "dur_obra": 26, "escrituracion": 30, "emes": 45, "efrec": 1},

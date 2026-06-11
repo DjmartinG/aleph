@@ -19,7 +19,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .config import ESTADOS as _ESTADOS  # fuente única del conjunto válido de estados
 
 # Permisivo: acepta claves extra (el shape varía entre proyectos y crece con el tiempo).
 _PERMISIVO = ConfigDict(extra="allow")
@@ -30,7 +32,17 @@ class Meta(BaseModel):
     nombre: str
     tipo: Optional[str] = None            # "VIS" | "VIP" | "No VIS" (regla de parqueaderos/depósitos)
     unidades: Optional[int] = None
+    estado: Optional[str] = None          # ciclo de vida (config.ESTADOS): prefactibilidad|aprobado|construccion|entregado
     # ubicacion, zona, moneda, propietario, socios… → extra
+
+    @field_validator("estado")
+    @classmethod
+    def _estado_valido(cls, v: Optional[str]) -> Optional[str]:
+        """Rechaza estados mal escritos (p.ej. 'construcion') antes de que lleguen a la UI.
+        None es válido: el respaldo (config.ESTADO_DEFAULT) lo resuelve la capa de presentación."""
+        if v is not None and v not in _ESTADOS:
+            raise ValueError(f"estado '{v}' inválido; debe ser uno de {_ESTADOS}")
+        return v
 
 
 class Wacc(BaseModel):
