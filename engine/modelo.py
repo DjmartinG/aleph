@@ -331,6 +331,100 @@ def montecarlo(par, n=500, rango_precio=(-0.15, 0.15), rango_costo=(-0.10, 0.10)
     }
 
 
+def montecarlo_tir(par, n=300, rango_precio=(-0.15, 0.15), rango_costo=(-0.10, 0.10),
+                   rango_ventas=(-0.30, 0.30), seed=42, escrituracion_sigue_obra=True):
+    """Monte Carlo de la TIR y el VPN del PROYECTO (criterio de decisión del comité).
+
+    Varía de forma uniforme tres fuentes de riesgo y, para cada escenario, recalcula la
+    cadena hitos → recaudo → flujo apalancado:
+      - precio de venta (`rango_precio`): escala las ventas de cada etapa,
+      - costo directo (`rango_costo`): escala el directo (vía `_costo_scale`, respeta capítulos o %),
+      - ritmo de ventas (`rango_ventas`): escala las unidades/mes (`vmes`) de cada etapa → mueve
+        los hitos (PE→IC→FC) y el calendario de recaudo → cambia cuándo entra la caja → cambia
+        la TIR/VPN y los intereses. (El margen operativo NO depende del ritmo; por eso aquí la
+        salida es TIR/VPN, no margen.)
+
+    Captura por escenario: `tir_proyecto` (sobre los reintegros, @TIO), `tir_equity` (socio
+    apalancado) y `vpn_proyecto` (@TIO). IMPORTANTE: ignora el override de FCL de fiducia
+    (`par['fiducia']`) y usa la TIR del MODELO — la cifra auditada es fija y no respondería a las
+    variables. Determinística por `seed` (reproducible). NO muta `par`.
+
+    Devuelve: distribuciones (`tir_proyecto`/`tir_equity`/`vpn_proyecto`), sus estadísticos
+    (`stats_tir`/`stats_equity`/`stats_vpn` con p10/p50/p90/media/std/n), el `hurdle` (=TIO),
+    la prob. de TIR > TIO y de VPN > 0, y los rangos usados.
+    """
+    base = dict(par)
+    base.pop("fiducia", None)                          # usar la TIR del MODELO, no la auditada (es fija)
+    base_etapas = par.get("etapas", []) or []
+    base_tip = par.get("tipologias")
+    hurdle = (par.get("financiero", {}) or {}).get("tio", 0.15)
+    # --- línea base de hitos: para que la escrituración SIGA a la obra hay que mantener fija la
+    #     brecha (equilibrio→escrituración). Capturamos el PE de cada etapa con el ritmo base y la
+    #     escrituración base; en cada escenario desplazamos la escrituración por el mismo Δ de PE. ---
+    base_pe = {}; base_esc = {}
+    if escrituracion_sigue_obra:
+        try:
+            hb = _hitos(par)
+            for e in base_etapas:
+                cod = e.get("cod")
+                if cod in hb:
+                    base_pe[cod] = hb[cod].get("pe_idx", 0)
+                    base_esc[cod] = e.get("escrituracion", e.get("dur_obra", 24) + 6)
+        except Exception:
+            base_pe = {}
+    rng = random.Random(seed)
+    tir_p = []; tir_e = []; vpn_p = []
+    for _ in range(int(n)):
+        dp = rng.uniform(*rango_precio); dc = rng.uniform(*rango_costo); dv = rng.uniform(*rango_ventas)
+        p = dict(base)
+        p["etapas"] = [dict(e) for e in base_etapas]   # copia superficial: solo mutamos escalares
+        if base_tip is not None:
+            p["tipologias"] = [dict(t) for t in base_tip]
+        p["_costo_scale"] = base.get("_costo_scale", 1.0) * (1 + dc)
+        for e in p["etapas"]:                          # ritmo de ventas: ±dv sobre vmes (mín 1 und/mes)
+            vm = e.get("vmes", 6) or 6
+            e["vmes"] = max(1, int(round(vm * (1 + dv))))
+        normalizar_tipologias(p)                       # ventas/und por etapa (no-op sin tipologías)
+        f = 1 + dp
+        for e in p["etapas"]:                          # precio: ±dp sobre las ventas de cada etapa
+            e["ventas_miles"] = (e.get("ventas_miles", 0) or 0) * f
+            if e.get("ventas_vivienda_miles") is not None: e["ventas_vivienda_miles"] *= f
+            if e.get("ventas_adicional_miles") is not None: e["ventas_adicional_miles"] *= f
+        p["ventas_miles"] = sum(e.get("ventas_miles", 0) for e in p["etapas"])
+        pg = pyg(p); hitos = _hitos(p)
+        if base_pe:                                    # escrituración sigue a la obra (entregas tras construir)
+            for e in p["etapas"]:
+                cod = e.get("cod")
+                if cod in hitos and cod in base_pe:
+                    delta = hitos[cod].get("pe_idx", 0) - base_pe[cod]
+                    e["escrituracion"] = max(1, base_esc[cod] + delta)
+        recaudo = _recaudo(p, hitos)
+        ap = apalancamiento.flujo_apalancado(p, pg, hitos, recaudo)
+        tp = ap.get("tir_proyecto"); te = ap.get("tir_equity"); vp = ap.get("vpn_proyecto")
+        if tp is not None: tir_p.append(tp)
+        if te is not None: tir_e.append(te)
+        if vp is not None: vpn_p.append(vp)
+
+    def _stats(serie):
+        s = sorted(serie)
+        if not s:
+            return {"p10": None, "p50": None, "p90": None, "media": None, "std": None, "n": 0}
+        media = sum(serie) / len(serie)
+        var = sum((x - media) ** 2 for x in serie) / len(serie)
+        return {"p10": _percentil(s, 0.10), "p50": _percentil(s, 0.50), "p90": _percentil(s, 0.90),
+                "media": media, "std": var ** 0.5, "n": len(serie)}
+
+    prob_hurdle = (sum(1 for x in tir_p if x > hurdle) / len(tir_p)) if tir_p else 0.0
+    prob_vpn_pos = (sum(1 for x in vpn_p if x > 0) / len(vpn_p)) if vpn_p else 0.0
+    return {
+        "tir_proyecto": tir_p, "tir_equity": tir_e, "vpn_proyecto": vpn_p,
+        "stats_tir": _stats(tir_p), "stats_equity": _stats(tir_e), "stats_vpn": _stats(vpn_p),
+        "hurdle": hurdle, "prob_tir_hurdle": prob_hurdle, "prob_vpn_pos": prob_vpn_pos,
+        "n": int(n), "n_validas": len(tir_p),
+        "rango_precio": rango_precio, "rango_costo": rango_costo, "rango_ventas": rango_ventas,
+    }
+
+
 # ----------------------------- tipologías (ingresos por producto) -----------------------------
 HOUSING = ("apartamento", "comercio")        # generan unidad escriturable (separación/CI/subrogación)
 ADICIONAL = ("parqueadero", "deposito")      # ingreso adicional (No VIS); no son unidad de vivienda
