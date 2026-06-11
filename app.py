@@ -25,6 +25,9 @@ from ui import nav as _uinav                     # menú lateral adaptado al est
 # ---------------- marca CG ----------------
 TEAL="#004854"; AMBER="#F09C00"; INK="#13262B"; MUTED="#6B7280"
 GREEN="#1E874B"; RED="#C0392B"; BORDER="#E6E9EF"
+# Color por estado del ciclo de vida (badge del sidebar + embudo del pipeline)
+_ESTADO_COLOR = {_cfg.ESTADO_PREFACT:AMBER, _cfg.ESTADO_APROBADO:"#0E7C86",
+                 _cfg.ESTADO_CONSTRUCCION:TEAL, _cfg.ESTADO_ENTREGADO:GREEN}
 HERE=Path(__file__).parent; PROY_DIR=HERE/"proyectos"; PRIV_DIR=HERE/"proyectos_privados"; LOGO=HERE/"assets"/"logo_cg.png"
 _icon = str(LOGO) if LOGO.exists() else "🏗️"
 st.set_page_config(page_title="Factibilidad CG", page_icon=_icon, layout="wide",
@@ -251,6 +254,25 @@ def puntos_portafolio(_keys):
                     "und":sum(e.get("und",0) or 0 for e in par.get("etapas",[]))})
     return pts
 
+@st.cache_data(show_spinner="Cargando pipeline…")
+def pipeline_datos(_keys):
+    """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline.
+    {nombre, estado, tir, vpn, ventas, und}. _keys=tuple(listar()) invalida el caché."""
+    out=[]
+    for name in _keys:
+        try:
+            par=cargar(name); R=calcular(copy.deepcopy(par))
+        except Exception:
+            continue
+        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]
+        estado=(par.get("meta",{}) or {}).get("estado") or _cfg.ESTADO_DEFAULT
+        if estado not in _cfg.ESTADOS: estado=_cfg.ESTADO_DEFAULT
+        tir=ap.get("tir_apalancada_ref") or ap.get("tir_proyecto")
+        out.append({"nombre":mt.get("nombre",name),"estado":estado,"tir":tir,
+                    "vpn":ap.get("vpn_proyecto"),"ventas":pg.get("ventas"),
+                    "und":sum(e.get("und",0) or 0 for e in par.get("etapas",[]))})
+    return out
+
 def nuevo_proyecto():
     return {"meta":{"nombre":"Nuevo proyecto","ubicacion":"","zona":"","tipo":"No VIS","unidades":0,"moneda":"miles COP"},
         "areas":{"m2_vendibles":0.0,"m2_construidos":0.0,"lote_bruta":0.0,"lote_util":0.0},
@@ -373,8 +395,7 @@ with st.sidebar:
     # Lee primero el selector del Ingreso (key estado_<sel>) para reaccionar sin lag al cambiarlo; si no, el de par.
     _estado = st.session_state.get(f"estado_{sel}") or (par.get("meta",{}) or {}).get("estado") or _cfg.ESTADO_DEFAULT
     if _estado not in _cfg.ESTADOS: _estado = _cfg.ESTADO_DEFAULT
-    _est_color = {_cfg.ESTADO_PREFACT:AMBER, _cfg.ESTADO_APROBADO:"#0E7C86",
-                  _cfg.ESTADO_CONSTRUCCION:TEAL, _cfg.ESTADO_ENTREGADO:GREEN}.get(_estado, MUTED)
+    _est_color = _ESTADO_COLOR.get(_estado, MUTED)
     st.markdown(f'<div style="margin:.2rem 0 .3rem;"><span style="background:{_est_color};color:white;'
                 f'font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:2px 10px;border-radius:99px;">'
                 f'{_cfg.ESTADO_LABEL.get(_estado,_estado).upper()}</span></div>', unsafe_allow_html=True)
@@ -507,6 +528,36 @@ if seccion=="Inicio":
         g[i].markdown(f'<div class="navcard"><h4>{t}</h4><ul>{li}</ul></div>', unsafe_allow_html=True)
     st.write("")
     st.caption("Modelo financiero CG Constructora · estándar FAST de modelación")
+
+# ============ PIPELINE / EMBUDO (portafolio por estado del ciclo de vida) ============
+if seccion=="Pipeline / Embudo":
+    st.markdown("### 🪜 Pipeline / Embudo de proyectos")
+    st.caption("Vista de comité: cuántos proyectos hay en cada etapa del ciclo de vida y su valor agregado. "
+               "El estado se fija por proyecto en 🗂️ **Ingreso de datos**.")
+    _datos = pipeline_datos(tuple(listar()))
+    if not _datos:
+        st.info("Aún no hay proyectos para mostrar. Crea uno en 🗂️ Ingreso de datos.")
+    else:
+        _por = {e:[d for d in _datos if d["estado"]==e] for e in _cfg.ESTADOS}
+        _cols = st.columns(len(_cfg.ESTADOS))
+        for _i,_e in enumerate(_cfg.ESTADOS):
+            _it=_por[_e]; _v=sum((d["ventas"] or 0) for d in _it); _vpn=sum((d["vpn"] or 0) for d in _it)
+            kpi(_cols[_i], _cfg.ESTADO_LABEL[_e], f"{len(_it)} proy.",
+                f"Ventas {fmt_mm(_v)}" + (f" · VPN {fmt_mm(_vpn)}" if _vpn else ""), _ESTADO_COLOR.get(_e, MUTED))
+        _fig=go.Figure(go.Funnel(y=[_cfg.ESTADO_LABEL[e] for e in _cfg.ESTADOS],
+            x=[len(_por[e]) for e in _cfg.ESTADOS], textinfo="value",
+            marker={"color":[_ESTADO_COLOR.get(e, MUTED) for e in _cfg.ESTADOS]}))
+        _fig.update_layout(height=300, margin=dict(l=10,r=10,t=36,b=10),
+                           title="Embudo por estado (nº de proyectos)")
+        st.plotly_chart(_fig, width="stretch")
+        _orden={e:i for i,e in enumerate(_cfg.ESTADOS)}
+        _filas=sorted(_datos, key=lambda d:_orden.get(d["estado"],99))
+        _df=pd.DataFrame([{"Estado":_cfg.ESTADO_LABEL.get(d["estado"],d["estado"]),"Proyecto":d["nombre"],
+                           "Unidades":d["und"],"Ventas":fmt_mm(d["ventas"] or 0),
+                           "TIR":fmt_pct(d["tir"]),"VPN":fmt_mm(d["vpn"] or 0)} for d in _filas])
+        st.dataframe(_df, width="stretch", hide_index=True)
+        st.caption("La TIR mostrada es la **apalancada de referencia** del proyecto. El embudo decrece de "
+                   "candidatos (pre-factibilidad) a proyectos entregados.")
 
 # ============ COCKPIT EJECUTIVO (resumen 1-vistazo, por proyecto) ============
 if seccion=="Cockpit":
