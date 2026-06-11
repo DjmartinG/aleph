@@ -1,0 +1,24 @@
+# Configuración del proyecto (Fase 0 de la reestructuración).
+# Por ahora solo declara metadatos + pytest + ruff. El empaquetado del motor como
+# paquete instalable (cg_engine) llega en la Fase 1.
+
+[project]
+name = "cg-factibilidad"
+version = "2.36.0"
+description = "Evaluación financiera de proyectos inmobiliarios — CG Constructora"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]            # para importar engine/ y app.py desde la raíz del repo
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Fase 0: solo reglas de CORRECTITUD (errores reales), no estilo. Se endurece en fases
+# posteriores cuando el código esté modularizado. Estas atrapan: errores de sintaxis (E9),
+# nombres indefinidos / f-strings rotas / comparaciones inválidas (F).
+select = ["E9", "F63", "F7", "F82"]
