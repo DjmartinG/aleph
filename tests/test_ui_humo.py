@@ -44,3 +44,25 @@ def test_seccion_renderiza_sin_excepcion(seccion, monkeypatch):
     at.run()
 
     assert not at.exception, f"La sección '{seccion}' lanzó excepción: {at.exception}"
+
+
+def test_ingreso_datos_admin_renderiza(monkeypatch):
+    """La pestaña admin 'Ingreso de datos' (Paso 1b) renderiza sin excepción para un administrador.
+
+    Admin por PERSONA: se simula un usuario SSO cuyo email está en ADMINS (variable de entorno, que
+    `_secret` lee como respaldo). Sin esto, PUEDE_INGRESAR sería False y la sección no aparecería.
+    """
+    monkeypatch.setenv("ADMINS", "mgomez@cgconstructora.com")
+
+    def fake_option_menu(menu_title, options, **kw):
+        return "Administración" if "Tablero" in options else "Ingreso de datos"
+
+    monkeypatch.setattr(_som, "option_menu", fake_option_menu)
+
+    at = AppTest.from_file(os.path.join(RAIZ, "app.py"), default_timeout=120)
+    at.session_state["proj_sel"] = "1_navarra"
+    at.session_state["_rol"] = "viewer"
+    at.session_state["_ms_user"] = "mgomez@cgconstructora.com"   # identidad SSO de un admin
+    at.run()
+
+    assert not at.exception, f"'Ingreso de datos' lanzó excepción: {at.exception}"
