@@ -47,6 +47,40 @@ def test_seccion_renderiza_sin_excepcion(seccion, monkeypatch):
     assert not at.exception, f"La sección '{seccion}' lanzó excepción: {at.exception}"
 
 
+def test_proyecto_aprobado_renderiza(monkeypatch):
+    """Un proyecto en estado 'aprobado' (Torres de Campiñas) renderiza una sección de Factibilidad
+    sin excepción (ejercita el badge de estado y la UI adaptativa, donde Seguimiento se oculta)."""
+    def fake_option_menu(menu_title, options, **kw):
+        return "Factibilidad" if "Tablero" in options else "P&G"
+
+    monkeypatch.setattr(_som, "option_menu", fake_option_menu)
+
+    at = AppTest.from_file(os.path.join(RAIZ, "app.py"), default_timeout=120)
+    at.session_state["proj_sel"] = "3_torres_campinas"   # estado 'aprobado' (sin Seguimiento)
+    at.session_state["_rol"] = "viewer"
+    at.run()
+
+    assert not at.exception, f"Proyecto aprobado lanzó excepción: {at.exception}"
+
+
+def test_area_stale_degrada_sin_romper(monkeypatch):
+    """Si el área persistida ('Seguimiento') ya no existe para el proyecto (aprobado → sin Seguimiento),
+    la app cae al primer área en vez de romper con KeyError. Regresión del bug hallado en 1c-1."""
+    def fake_option_menu(menu_title, options, **kw):
+        if "Tablero" in options:        # menú de áreas: simula una selección STALE fuera de las opciones
+            return "Seguimiento"
+        return options[0] if options else "Inicio"
+
+    monkeypatch.setattr(_som, "option_menu", fake_option_menu)
+
+    at = AppTest.from_file(os.path.join(RAIZ, "app.py"), default_timeout=120)
+    at.session_state["proj_sel"] = "3_torres_campinas"   # aprobado → 'Seguimiento' NO está en el menú
+    at.session_state["_rol"] = "viewer"
+    at.run()
+
+    assert not at.exception, f"El área stale rompió la app: {at.exception}"
+
+
 def test_ingreso_datos_admin_renderiza(monkeypatch):
     """La pestaña admin 'Ingreso de datos' (Paso 1b) renderiza sin excepción para un administrador.
 

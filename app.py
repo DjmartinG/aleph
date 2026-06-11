@@ -15,10 +15,12 @@ from streamlit_option_menu import option_menu
 from cg_engine import calcular, __version__ as ENGINE_V
 from cg_engine import evm as _evm   # Valor Ganado (EVM)
 from cg_engine import schema as _schema   # validación del contrato de datos en el borde (antes de guardar)
+from cg_engine import config as _cfg   # estados del ciclo de vida (UI adaptativa al estado)
 import charts as _charts   # gráficos financieros pro (marca CG)
 import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
 from ui.format import fmt_cop, fmt_mm, fmt_pct   # formato único (fuente única de presentación)
 from ui.auth import is_admin                     # autorización por persona (admins por email/SSO)
+from ui import nav as _uinav                     # menú lateral adaptado al estado (NO confundir con navarra_data _nav)
 
 # ---------------- marca CG ----------------
 TEAL="#004854"; AMBER="#F09C00"; INK="#13262B"; MUTED="#6B7280"
@@ -367,21 +369,18 @@ with st.sidebar:
         st.session_state.par = nuevo_proyecto() if sel == "➕ Nuevo proyecto" else cargar(sel)
         st.session_state.sel = sel
     par = st.session_state.par
-    # --- navegación en 3 capas (Tablero / Factibilidad / Seguimiento) ---
-    # Cada capa agrupa secciones EXISTENTES (sin renombrar). Las hojas "K." son el motor (engine), no menú.
-    GRUPOS = {
-        "Tablero": [("Inicio","house-door"),("Cockpit","speedometer2"),
-                    ("Proyectos activos","buildings"),("Portafolio (burbujas)","graph-up")],
-        "Factibilidad": [("Datos del proyecto","pencil-square"),("Urbanístico","building"),("Cronograma","calendar3"),
-                         ("Ingresos","cash-coin"),("Distribución costos","bar-chart-line"),
-                         ("P&G","table"),("Reparto","pie-chart"),("Flujo de caja","cash-stack"),
-                         ("Costo de capital","percent"),("Apalancamiento","bank"),
-                         ("Escenarios","bullseye"),("Monte Carlo","dice-5"),("Sensibilidad","sliders")],
-        "Seguimiento": [("Monitor de ejecución","clipboard-data"),("Valor Ganado","graph-up-arrow")],
-    }
-    if PUEDE_INGRESAR:   # área de ADMINISTRACIÓN: único punto de captura, reservado a administradores
-        GRUPOS["Administración"] = [("Ingreso de datos","pencil-square")]
-    _AREA_ICON={"Tablero":"grid-1x2-fill","Factibilidad":"calculator","Seguimiento":"activity","Administración":"shield-lock"}
+    # --- estado del ciclo de vida del proyecto (EJE RECTOR) ---
+    # Lee primero el selector del Ingreso (key estado_<sel>) para reaccionar sin lag al cambiarlo; si no, el de par.
+    _estado = st.session_state.get(f"estado_{sel}") or (par.get("meta",{}) or {}).get("estado") or _cfg.ESTADO_DEFAULT
+    if _estado not in _cfg.ESTADOS: _estado = _cfg.ESTADO_DEFAULT
+    _est_color = {_cfg.ESTADO_PREFACT:AMBER, _cfg.ESTADO_APROBADO:"#0E7C86",
+                  _cfg.ESTADO_CONSTRUCCION:TEAL, _cfg.ESTADO_ENTREGADO:GREEN}.get(_estado, MUTED)
+    st.markdown(f'<div style="margin:.2rem 0 .3rem;"><span style="background:{_est_color};color:white;'
+                f'font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:2px 10px;border-radius:99px;">'
+                f'{_cfg.ESTADO_LABEL.get(_estado,_estado).upper()}</span></div>', unsafe_allow_html=True)
+    # --- navegación ADAPTATIVA al estado (ver ui/nav.py: Seguimiento solo en construcción/entregado) ---
+    GRUPOS = _uinav.grupos(_estado, PUEDE_INGRESAR)
+    _AREA_ICON = _uinav.AREA_ICON
     _smenu={"container":{"padding":"2px","background-color":"#F7F9FA"},
             "icon":{"color":TEAL,"font-size":"14px"},
             "nav-link":{"font-size":"13.5px","color":INK,"--hover-color":"#EAF0F2","margin":"1px 0"},
@@ -390,6 +389,8 @@ with st.sidebar:
         menu_icon="list", key="area_menu",
         styles={**_smenu, "nav-link":{**_smenu["nav-link"],"font-size":"13px","font-weight":"600"},
                 "nav-link-selected":{"background-color":INK,"color":"white","font-weight":"700"}})
+    if area not in GRUPOS:   # el área seleccionada dejó de existir (p.ej. Seguimiento al pasar a un proyecto pre-fact/aprobado)
+        area = next(iter(GRUPOS))
     _secs=GRUPOS[area]
     seccion = option_menu(None, [s[0] for s in _secs], icons=[s[1] for s in _secs], default_index=0,
         menu_icon="list", key=f"sub_{area}", styles=_smenu)
@@ -668,6 +669,12 @@ elif seccion=="Ingreso de datos":
             _raiz["fecha_inicio"]=str(cg2[1].date_input("Fecha de inicio de ventas (etapa raíz)", value=_fi, key=f"fi_{sel}"))
         _tot_und=int(sum(e.get("und",0) or 0 for e in par.get("etapas",[])))
         cg2[2].metric("Unidades totales", _tot_und, help="Suma automática de las unidades por etapa. Ajústalas en «3 · Etapas».")
+        cg3=st.columns([2,1])
+        meta_e["estado"]=cg3[0].selectbox("Estado del proyecto (ciclo de vida)", list(_cfg.ESTADOS),
+            index=(_cfg.ESTADOS.index(meta_e["estado"]) if meta_e.get("estado") in _cfg.ESTADOS else _cfg.ESTADOS.index(_cfg.ESTADO_DEFAULT)),
+            format_func=lambda e: _cfg.ESTADO_LABEL.get(e,e), key=f"estado_{sel}",
+            help="Pre-factibilidad → Aprobado → Construcción → Entregado. Gobierna qué secciones aparecen (Seguimiento solo en obra/entrega).")
+        cg3[1].caption("Mueve el proyecto por el pipeline. Pre-fact/Aprobado ocultan Seguimiento.")
     with st.expander("2 · Áreas y lote (m²)", expanded=True):
         a=par.setdefault("areas",{}); ac=st.columns(4)
         a["m2_vendibles"]=ac[0].number_input("Área vendible total", value=float(a.get("m2_vendibles",0)), step=100.0, format="%.0f")
