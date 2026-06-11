@@ -13,6 +13,7 @@ indicadores (TIR proyecto, TIR equity, VPN, máxima necesidad de caja).
 from . import curvas
 from . import finanzas
 from . import config
+from .flujo import aplicar_gastos_fijos, acumular
 
 
 def _offset(d, base):
@@ -73,12 +74,8 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
             costos_m[m] += v; obra_fin_m[m] += v
         for m in range(ic, min(fc + 1, N)):                                # honorarios sobre obra
             costos_m[m] += pg["honorarios"] * share / dur
-    # gastos fijos de estructura: mensuales sobre su ventana (los financia el equity, no el crédito)
-    for g in par.get("gastos_fijos", []):
-        vm = g.get("valor_mes_miles", 0) or 0; d = int(g.get("desde", 0) or 0)
-        h = g.get("hasta"); h = int(h) if h is not None else d + 1
-        for m in range(max(0, d), min(h, N)):
-            costos_m[m] += vm
+    # gastos fijos de estructura: mensuales sobre su ventana (helper compartido con flujo_caja)
+    aplicar_gastos_fijos(costos_m, par, N)
 
     # ---- flujo del proyecto (no apalancado): operativo de obra − lote en t0 ----
     operativo = [ingresos_m[m] - costos_m[m] for m in range(N)]
@@ -114,9 +111,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
         flujo_equity[m] = operativo[m] + desembolso - amort - interes
     cap = cupo
 
-    acum = []; s = 0.0
-    for x in operativo:
-        s += x; acum.append(s)
+    acum = acumular(operativo)
 
     # ---- flujo de RETORNO AL DESARROLLADOR (criterio CG para TIR/VPN) ----
     # CG evalúa el proyecto sobre los REINTEGROS = honorarios + utilidad operativa + utilidad lote
