@@ -19,6 +19,7 @@ Convenciones (todo en miles COP, mensual, acumulado):
   EAC = BAC/CPI (estimación del costo final al ritmo actual) · ETC = EAC−AC · VAC = BAC−EAC
 """
 from datetime import date
+from . import config
 
 
 def _curva_planeada(distribucion):
@@ -77,7 +78,7 @@ def calcular_evm(par, R, hoy=None):
 
     # ---- PV a la fecha de corte = costo planeado acumulado al mes de corte ----
     # mes de corte = meses transcurridos de obra desde base_obra hasta hoy
-    hoy = hoy or date(2026, 5, 1)
+    hoy = hoy or config.FECHA_CORTE_EVM
     pv = 0.0; mes_corte = None
     if base_obra:
         mes_corte = (hoy.year - base_obra.year) * 12 + (hoy.month - base_obra.month)

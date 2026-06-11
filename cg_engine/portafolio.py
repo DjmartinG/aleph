@@ -10,6 +10,7 @@ Validado contra el modelo financiero maestro (portafolio Torre Eco E1..E5).
 """
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from . import config
 
 
 def eomonth(d, n=0):
@@ -33,7 +34,7 @@ def generar_ritmo(total, por_evento, frecuencia, horizonte):
     return serie
 
 
-def hitos_ventas(unidades, vmes, frec, pe_pct, iv: date, horizonte=120):
+def hitos_ventas(unidades, vmes, frec, pe_pct, iv: date, horizonte=config.HORIZONTE_HITOS):
     """Calcula IV, PE y FV a partir del ritmo de ventas desde la fecha de inicio (iv).
     Punto de equilibrio: se alcanza al vender INT(unidades*pe%)+1 unidades
     (pe% es propio de cada etapa, de C.iniciales!J). Devuelve hitos + índices."""

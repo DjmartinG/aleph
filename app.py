@@ -1031,7 +1031,7 @@ if seccion=="Valor Ganado":
     st.markdown("### 📈 Valor Ganado (EVM)")
     st.caption("Earned Value Management — estándar PMI. Compara lo **planeado** (PV), lo **ejecutado** "
                "(EV) y lo **gastado** (AC) para medir eficiencia de costo (CPI) y cronograma (SPI).")
-    ev=_evm.calcular_evm(par, R, hoy=date(2026,5,1))
+    ev=_evm.calcular_evm(par, R)   # fecha de corte por defecto (cg_engine.config.FECHA_CORTE_EVM)
     if not ev:
         st.info("Para ver el Valor Ganado, ingresa el **% de avance real** y el **costo real** de cada etapa "
                 "en 📝 **Datos del proyecto → ③ Etapas** (columnas *Avance real* y *Costo real*).")
