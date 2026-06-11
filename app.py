@@ -165,6 +165,11 @@ ES_EDITOR = (ROL == "editor")
 # Admin por PERSONA (no por clave compartida): True solo si el email del SSO de Microsoft está en
 # la lista ADMINS (secreto). Habilitará la pestaña "Ingreso de datos" (Paso 1b). Sin SSO → False.
 ES_ADMIN = is_admin(st.session_state.get("_ms_user"), _secret("ADMINS"))
+# Quién puede INGRESAR datos. Detrás del SSO de Microsoft TODOS entran como 'viewer', así que el
+# permiso de captura es ES_ADMIN (por email). En local / sin SSO, cae al rol 'editor' por clave
+# (no hay identidad por persona que verificar). El ingreso vive en ADMINISTRACIÓN → Ingreso de datos.
+_SSO = bool(st.session_state.get("_ms_user"))
+PUEDE_INGRESAR = ES_ADMIN or (ES_EDITOR and not _SSO)
 if st.session_state.get("_sin_clave"):
     st.warning("🔒 **Modo solo lectura.** No hay clave de acceso configurada, así que la edición de datos "
                "está deshabilitada por seguridad. Para ingresar datos, define **CLAVE_EQUIPO** y **CLAVE_EDITOR** "
@@ -264,7 +269,7 @@ with st.sidebar:
     st.markdown("##### Proyecto")
     proys = listar()
     nombres = {p: cargar(p).get("meta",{}).get("nombre", p) for p in proys}
-    opciones = (["➕ Nuevo proyecto"] + proys) if ES_EDITOR else (proys or ["➕ Nuevo proyecto"])
+    opciones = (["➕ Nuevo proyecto"] + proys) if PUEDE_INGRESAR else (proys or ["➕ Nuevo proyecto"])
     if st.session_state.get("_pending_proj") in opciones:
         st.session_state["proj_sel"] = st.session_state.pop("_pending_proj")
     if "proj_sel" not in st.session_state or st.session_state["proj_sel"] not in opciones:
@@ -287,7 +292,9 @@ with st.sidebar:
                          ("Escenarios","bullseye"),("Monte Carlo","dice-5"),("Sensibilidad","sliders")],
         "Seguimiento": [("Monitor de ejecución","clipboard-data"),("Valor Ganado","graph-up-arrow")],
     }
-    _AREA_ICON={"Tablero":"grid-1x2-fill","Factibilidad":"calculator","Seguimiento":"activity"}
+    if PUEDE_INGRESAR:   # área de ADMINISTRACIÓN: único punto de captura, reservado a administradores
+        GRUPOS["Administración"] = [("Ingreso de datos","pencil-square")]
+    _AREA_ICON={"Tablero":"grid-1x2-fill","Factibilidad":"calculator","Seguimiento":"activity","Administración":"shield-lock"}
     _smenu={"container":{"padding":"2px","background-color":"#F7F9FA"},
             "icon":{"color":TEAL,"font-size":"14px"},
             "nav-link":{"font-size":"13.5px","color":INK,"--hover-color":"#EAF0F2","margin":"1px 0"},
@@ -304,9 +311,10 @@ with st.sidebar:
         st.divider()
         if st.session_state.get("_ms_user"):
             st.caption(f"👤 Conectado como **{st.session_state['_ms_user']}** (Microsoft)")
-        if ES_EDITOR:
-            st.caption("🟢 Modo **editor** — puedes ingresar datos.")
-        else:
+        if PUEDE_INGRESAR:
+            _quien = "administrador" if ES_ADMIN else "editor"
+            st.caption(f"🟢 Modo **{_quien}** — ingresa datos en *Administración → Ingreso de datos*.")
+        elif not _SSO:
             st.caption("🔒 Modo **consulta** (solo lectura).")
             _ed = st.text_input("Clave de editor", type="password", key="_elevar_pwd",
                                 label_visibility="collapsed", placeholder="Clave de editor…")
@@ -315,6 +323,8 @@ with st.sidebar:
                     st.session_state["_rol"] = "editor"; st.rerun()
                 else:
                     st.error("Clave de editor incorrecta.")
+        else:
+            st.caption("🔒 Modo **consulta** (solo lectura). El ingreso de datos está reservado a los administradores.")
         if st.button("Cerrar sesión", width="stretch"):
             st.session_state.pop("_rol", None); st.rerun()
 
@@ -390,8 +400,8 @@ if seccion=="Inicio":
                   '<li>Navarra · Dominica · Torres de Campiñas</li>'
                   '<li>o crea uno nuevo desde el menú lateral</li></ul></div>', unsafe_allow_html=True)
     s[1].markdown('<div class="navcard"><h4>2 · Ingresa los datos</h4><ul>'
-                  '<li>En <b>📝 Datos del proyecto</b></li>'
-                  '<li>Generales · áreas · etapas · costos · recaudo</li>'
+                  '<li>En <b>🗂️ Administración → Ingreso de datos</b> (admins)</li>'
+                  '<li>Desde la cabida del lote · áreas · etapas · costos · recaudo</li>'
                   '<li>Todo se digita aquí (sin importar archivos)</li></ul></div>', unsafe_allow_html=True)
     s[2].markdown('<div class="navcard"><h4>3 · Revisa resultados</h4><ul>'
                   '<li>P&G · Flujo · Apalancamiento</li>'
@@ -400,7 +410,7 @@ if seccion=="Inicio":
     st.write("")
     st.markdown("#### Módulos del modelo")
     g=st.columns(4)
-    mods=[("🏢 Portafolio",["Proyectos activos","Datos del proyecto"]),
+    mods=[("🏢 Portafolio",["Proyectos activos","Ingreso de datos (admin)"]),
           ("📐 Definición",["Urbanístico (áreas e índices)","Cronograma de hitos","Ingresos (recaudo)"]),
           ("📊 Resultados",["Distribución de costos","P&G (Estado de Resultados)","Reparto CG / socio"]),
           ("💵 Flujo & Análisis",["Flujo de caja","Apalancamiento (crédito)","Escenarios","Sensibilidad"])]
@@ -528,13 +538,19 @@ if seccion=="Proyectos activos":
                    + ("Datos reales (privados)." if _proys and es_real(_proys[0]) else "Cifras ilustrativas."))
 
 # ============ DATOS DEL PROYECTO ============
-if seccion=="Datos del proyecto" and not ES_EDITOR:
+if seccion=="Datos del proyecto":
+    # La EDICIÓN se trasladó a ADMINISTRACIÓN → Ingreso de datos (admin-only). Aquí queda la CONSULTA.
     st.markdown("### 📝 Datos del proyecto")
-    st.info("🔒 **Modo solo lectura.** El ingreso de datos está restringido al editor del modelo. "
-            "Activa la **clave de editor** en el panel lateral para modificar datos.")
-    st.caption("El resto del tablero (resultados, flujo, apalancamiento, cronograma) está disponible para consulta.")
-elif seccion=="Datos del proyecto":
-    st.markdown("### 📝 Datos del proyecto")
+    st.info("🔒 **Solo lectura.** El ingreso de datos se hace en **Administración → Ingreso de datos** "
+            "(reservado a los administradores). El resto del tablero está disponible para consulta.")
+    st.caption("Resultados, flujo, apalancamiento y cronograma se calculan automáticamente desde esos datos.")
+elif seccion=="Ingreso de datos" and not PUEDE_INGRESAR:
+    st.markdown("### 🗂️ Ingreso de datos")
+    st.error("🔒 Sección restringida a **administradores** (acceso por login de Microsoft).")
+elif seccion=="Ingreso de datos":
+    st.markdown("### 🗂️ Ingreso de datos")
+    st.caption("Pestaña de **administración**: único punto de captura. Empieza por la **cabida del lote** "
+               "y sigue el orden de los bloques. No se importan archivos — todo se digita aquí.")
     with st.expander("🔌 Diagnóstico de conexión a la nube (Supabase)"):
         d = probar_conexion()
         ok = d.get("refs_coinciden")
@@ -775,7 +791,7 @@ if seccion=="Distribución costos":
         kpi(kk[0],"Costo directo total", fmt_mm(_tot), f"{len(_dcap)} capítulos · bottom-up", TEAL)
         kpi(kk[1],"Costo directo /m² const", (f"${_tot*1000/_ac:,.0f}".replace(",", ".") if _ac else "—"), "por m² construido", MUTED)
         kpi(kk[2],"Incidencia s/ ventas", fmt_pct(_tot/pg["ventas"] if pg["ventas"] else 0), "del directo en ventas", MUTED)
-        if ES_EDITOR:
+        if PUEDE_INGRESAR:
             _dfc=pd.DataFrame([{"Capítulo":x.get("capitulo",""),"Valor (miles COP)":int(x.get("valor_miles",0) or 0)} for x in _dcap])
             _ed=st.data_editor(_dfc, num_rows="dynamic", width="stretch", key=f"dcap_{sel}",
                 column_config={"Capítulo":st.column_config.TextColumn("Capítulo"),
@@ -803,7 +819,7 @@ if seccion=="Distribución costos":
     st.markdown("#### Costos indirectos — por capítulo")
     _icap=par.get("indirectos_cap")
     _ipct=par.get("costos_pct",{}).get("indirectos",0)
-    if ES_EDITOR:
+    if PUEDE_INGRESAR:
         st.caption("Desglosa el indirecto en capítulos (diseños, licencias, interventoría, pólizas, comisión "
                    "fiduciaria, **predial**, **ICA**…). Si lo usas, la **suma** es el indirecto del P&G (bottom-up); "
                    f"si lo dejas vacío, se usa el **{fmt_pct(_ipct)} de ventas** = {fmt_mm(pg['indirectos'])}.")
@@ -907,7 +923,7 @@ if seccion=="Costo de capital":
     _defw = {"beta_us":1.29,"kd_us":9.335,"tax_us":13.3,"de_us":21.56,"tax_col":33.0,"de_col":233.3,
              "rf":0.12,"rm":12.44,"rp":3.14,"inf_col":5.1,"inf_us":2.9,"tasa_d":15.0,"spread":10.43,"eq_w":30.0}
     for _k,_v in _defw.items(): wcfg.setdefault(_k,_v)
-    if ES_EDITOR:
+    if PUEDE_INGRESAR:
         with st.expander("✏️ Parámetros del costo de capital (editar)", expanded=True):
             st.markdown("**Comparable EE.UU.** (sector Engineering/Construction · fuente: Damodaran)")
             e1=st.columns(4)
@@ -1033,7 +1049,7 @@ if seccion=="Valor Ganado":
     ev=_evm.calcular_evm(par, R)   # fecha de corte por defecto (cg_engine.config.FECHA_CORTE_EVM)
     if not ev:
         st.info("Para ver el Valor Ganado, ingresa el **% de avance real** y el **costo real** de cada etapa "
-                "en 📝 **Datos del proyecto → ③ Etapas** (columnas *Avance real* y *Costo real*).")
+                "en 🗂️ **Ingreso de datos → ③ Etapas** (columnas *Avance real* y *Costo real*).")
     else:
         _verde=GREEN; _rojo=RED; _amb=AMBER
         k=st.columns(4)
@@ -1060,7 +1076,7 @@ if seccion=="Valor Ganado":
 if seccion=="Cronograma":
     h=R.get("hitos",{})
     if not h:
-        st.info("Completa los datos de etapas (en 📝 Datos del proyecto) para ver el cronograma.")
+        st.info("Completa los datos de etapas (en 🗂️ Ingreso de datos) para ver el cronograma.")
     else:
         st.markdown("#### Hitos por etapa")
         rows=[{"Etapa":h[c]["nombre"],"Und":h[c]["unidades"],"Inicio Ventas":h[c]["IV"],"Pto Equilibrio":h[c]["PE"],
@@ -1073,7 +1089,7 @@ if seccion=="Cronograma":
         # -------- Ritmo de ventas y entregas (estilo R.ventas) --------
         st.markdown("#### Ritmo de ventas y entregas")
         st.caption("El ritmo de ventas y de entregas **mueve los números**: de aquí salen el equilibrio, el fin de "
-                   "ventas y el recaudo. Se ajusta por etapa en 📝 Datos del proyecto.")
+                   "ventas y el recaudo. Se ajusta por etapa en 🗂️ Ingreso de datos.")
         rec=[]
         for i,e in enumerate(par.get("etapas",[])):
             und=e.get("und",0) or 0
@@ -1183,7 +1199,7 @@ if seccion=="Monte Carlo":
 
     if not st_t.get("n"):
         st.warning("No se pudo simular la TIR: el proyecto necesita **etapas con fecha de inicio y ritmo de "
-                   "ventas** (hitos) para construir el flujo. Revisa **Cronograma** y **Datos del proyecto**.")
+                   "ventas** (hitos) para construir el flujo. Revisa **Cronograma** e **Ingreso de datos**.")
     else:
         tT, tV, tE = st.tabs(["📈 TIR del proyecto", "💵 VPN del proyecto", "🏦 TIR del inversionista (socio)"])
         # ---- TIR del proyecto ----
@@ -1388,23 +1404,23 @@ if seccion != "Inicio":
             file_name=f"Factibilidad_{meta.get('nombre','proyecto')}_{date.today():%Y%m%d}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     with a2:
-        if ES_EDITOR:
+        if PUEDE_INGRESAR:
             par["_fecha"]=str(date.today())
             st.download_button("💾 Descargar proyecto (.json, respaldo)",
                 json.dumps(par,ensure_ascii=False,indent=2).encode("utf-8"),
                 file_name=f"{meta.get('nombre','proyecto')}.json", mime="application/json",
                 help="Respaldo de tu proyecto para guardarlo localmente. No es fuente de entrada.")
-    # Guardar en la nube (compartir con el equipo) — solo editor y solo si hay Supabase
-    if ES_EDITOR and usando_supabase() and sel and sel != "➕ Nuevo proyecto":
+    # Guardar en la nube (compartir con el equipo) — solo quien puede ingresar y solo si hay Supabase
+    if PUEDE_INGRESAR and usando_supabase() and sel and sel != "➕ Nuevo proyecto":
         if st.button("☁️ Guardar en la nube (compartir con el equipo)", type="primary", width="stretch"):
             try:
                 guardar(sel, par, nombre=meta.get("nombre", sel), es_real_flag=es_real(sel),
-                        by=_secret("CLAVE_EDITOR") and "editor")
+                        by=(st.session_state.get("_ms_user") or "editor"))
                 st.cache_data.clear()        # refresca el consolidado
                 st.success("Guardado. El equipo verá estos datos al recargar.")
             except Exception as e:
                 st.error(f"No se pudo guardar en la nube: {e}")
-    elif ES_EDITOR and not usando_supabase():
+    elif PUEDE_INGRESAR and not usando_supabase():
         st.caption("ℹ️ Sin base de datos compartida configurada: los cambios viven en tu sesión. "
                    "Configura Supabase (SUPABASE_URL/SUPABASE_KEY) para compartir con el equipo.")
 _origen = "☁️ nube (compartido)" if usando_supabase() else "💾 local"
