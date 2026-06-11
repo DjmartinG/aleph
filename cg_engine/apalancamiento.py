@@ -11,48 +11,21 @@ Salidas: flujo operativo/equity mensual, saldo de crédito, intereses, crédito 
 indicadores (TIR proyecto, TIR equity, VPN, máxima necesidad de caja).
 """
 from . import curvas
-
-try:
-    from scipy import optimize
-    _SCIPY = True
-except Exception:
-    _SCIPY = False
+from . import finanzas
 
 
 def _offset(d, base):
     return (d.year - base.year) * 12 + (d.month - base.month)
 
 
+# TIR/VPN: una sola implementación, en finanzas.py. Estos son alias finos que preservan la API
+# interna de este módulo (firmas idénticas a las funciones que vivían aquí).
 def _tir(flujos, anual=True):
-    if not _SCIPY:
-        return None
-    def vpn(r): return sum(f / (1 + r) ** t for t, f in enumerate(flujos))
-    r = -0.6; prev = vpn(r)
-    while r < 5.0:
-        r2 = r + 0.005; cur = vpn(r2)
-        if prev * cur < 0:
-            try:
-                m = optimize.brentq(vpn, r, r2, xtol=1e-10)
-                return ((1 + m) ** 12 - 1) if anual else m
-            except Exception:
-                pass
-        prev = cur; r = r2
-    return None
+    return finanzas.irr_anual(flujos) if anual else finanzas.irr_periodo(flujos)
 
-def _tir_periodo(flujos):
-    """TIR por periodo (la serie ya viene en su periodicidad, p.ej. anual). Bisección robusta."""
-    def vpn(r): return sum(f / (1 + r) ** t for t, f in enumerate(flujos))
-    lo, hi = -0.95, 5.0
-    if vpn(lo) * vpn(hi) > 0:
-        return None
-    for _ in range(300):
-        mid = (lo + hi) / 2
-        if vpn(lo) * vpn(mid) <= 0: hi = mid
-        else: lo = mid
-    return (lo + hi) / 2
 
-def _vpn(flujos, r):
-    return sum(f / (1 + r) ** t for t, f in enumerate(flujos))
+_tir_periodo = finanzas.irr_biseccion   # bisección robusta (serie anual auditada de fiducia)
+_vpn = finanzas.vpn
 
 
 def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
@@ -160,8 +133,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=180):
 
     # tasa de descuento = TIO (tasa de oportunidad). Por defecto 15% EA (criterio CG); si el proyecto
     # define financiero.tio se usa esa. (El WACC Damodaran queda disponible pero no es el descuento CG.)
-    from .modelo import calcular_wacc          # import diferido: evita ciclo de importación
-    wacc = calcular_wacc(fin["wacc"]) if fin.get("wacc") else 0.0
+    wacc = finanzas.calcular_wacc(fin["wacc"]) if fin.get("wacc") else 0.0
     tio = fin.get("tio", 0.15)
     tio_m = (1 + tio) ** (1 / 12) - 1
     wacc_m = tio_m                              # descuento usado para VPN del retorno
