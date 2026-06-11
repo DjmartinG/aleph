@@ -1,0 +1,38 @@
+name: CI
+
+# Red de seguridad de la reestructuración (Fase 0). Corre en cada push/PR a main:
+# lint de correctitud -> compilación (atrapa SyntaxError) -> tests (anclas + humo de UI).
+# Los tests de anclas AUDITADAS se saltan en CI (los JSON reales son confidenciales/gitignored);
+# corren los de REGRESIÓN (proyectos ilustrativos del repo) y el humo de la UI.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest ruff
+
+      - name: Lint (ruff — solo errores de correctitud)
+        run: ruff check .
+
+      - name: Compilar (atrapa errores de sintaxis antes de desplegar)
+        run: python -m compileall -q app.py charts.py storage.py navarra_data.py engine
+
+      - name: Tests (regresión de cifras + humo de UI)
+        run: pytest

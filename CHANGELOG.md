@@ -2,6 +2,45 @@
 
 Versionado semántico (MAJOR.MINOR.PATCH).
 
+## [2.37.0] — 2026-06-11
+### Reestructuración Fase 0 — Red de seguridad (golden tests + CI). NO cambia lógica.
+- **`tests/test_anclas.py`** — golden/regression tests que **clavan las cifras del motor**: cifras
+  AUDITADAS de los 3 proyectos reales (Navarra UO 11.362.332 / TIR 0,376 / VPN 18.280.687 / crédito
+  49.292.016; Dominica TIR 0,5655; Torres TIR −0,9936) con skip automático en CI (datos confidenciales,
+  gitignored) + REGRESIÓN sobre los 3 proyectos ilustrativos del repo (corre en CI).
+- **`tests/test_ui_humo.py`** — AppTest: 6 secciones renderizan con 0 excepciones (patrón rol+monkeypatch
+  de `option_menu`). Atrapa el incidente real de un `app.py` con SyntaxError llegando a producción.
+- **`.github/workflows/ci.yml`** — en push/PR a `main`: `ruff check` → `compileall` → `pytest`.
+- **`pyproject.toml`** — pytest (`pythonpath=["."]`) + ruff (Fase 0: solo reglas de correctitud E9/F).
+- **`.dockerignore`** — excluye `tests/`, `.github/`, `_REAL` y cachés de la imagen.
+- Plan completo en **`REESTRUCTURACION.md`** (6 fases, diagnóstico multi-agente del código real).
+### Verificación
+- **12/12 tests en verde** contra el código actual (3 anclas + 3 regresión + 6 humo de UI, ~15s);
+  `ruff` y `compileall` limpios. Es la red de seguridad para tocar el motor en la Fase 1.
+
+## [2.36.0] — 2026-06-10
+### Monte Carlo de TIR/VPN con ritmo de ventas (trabajo con José Alfonso, experto)
+- **Nueva salida: TIR y VPN del proyecto** (antes solo el margen). El Monte Carlo ahora simula la
+  **TIR del proyecto, la TIR del inversionista (socio apalancado) y el VPN @TIO**, en pestañas, con
+  P10/P50/P90 y **probabilidad de superar la TIO** y de VPN > 0. Motor: `engine.montecarlo_tir`.
+- **Nueva variable de riesgo: ritmo de ventas (unidades/mes).** Además de precio y costo, varía el
+  `vmes` de cada etapa → mueve los hitos (PE→IC→FC) y el recaudo → cambia el calendario de caja → cambia
+  la TIR. (El **margen** no depende del ritmo; por eso la salida pasó a TIR/VPN, que sí responde.)
+### Corregido (hallazgo del propio Monte Carlo)
+- **La escrituración ahora sigue a la obra en la simulación.** La escrituración (entrada de la
+  subrogación, ~72% del precio) estaba fijada como offset constante desde el inicio de ventas, mientras
+  la construcción flotaba con el ritmo → al acelerar ventas los costos se adelantaban pero el ingreso
+  grande no → resultado invertido (vender más rápido *bajaba* la TIR). Ahora, al variar el ritmo, la
+  escrituración mantiene fija la brecha *equilibrio→escrituración* (entregas tras construir) →
+  **vender más rápido sube la TIR** (correcto). Solo afecta al Monte Carlo; el modelo base no cambia.
+- **Override de fiducia ignorado en el Monte Carlo.** Para proyectos con TIR auditada de fiducia (cifra
+  fija), la simulación usa la **TIR del modelo** (que sí responde a las variables); la cifra de decisión
+  auditada no se toca. Aviso visible en la UI.
+- `charts.montecarlo_hist` generalizado (TIR y VPN; eje/umbral/leyenda parametrizables).
+### Verificación
+- Base sin shocks reconcilia **exacto** (Dominica TIR 0.5655, VPN 14.618.571). Dirección correcta:
+  ventas +30% → TIR 0.736; −30% → TIR 0.411. n=300 en ~1.7s. AppTest sección Monte Carlo: 0 excepciones.
+
 ## [2.35.0] — 2026-06-09
 ### Seguridad (UX quick win 1/7 — blindaje del candado)
 - **El gate nunca abre en modo editor sin clave.** Antes, sin `CLAVE_EQUIPO` ni SSO, caía en silencio a
