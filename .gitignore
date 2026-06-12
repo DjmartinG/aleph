@@ -14,6 +14,8 @@ venv/
 proyectos_privados/
 *_REAL_privado.json
 *_privado.json
+# Snapshots dorados de proyectos REALES (cifras auditadas) — solo locales; los ilustrativos sí se commitean
+tests/golden/*_REAL_snapshot.json
 
 # Artefactos de empaquetado / herramientas
 *.egg-info/
