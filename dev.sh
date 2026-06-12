@@ -14,6 +14,9 @@ if ! "$PY" -c 'import sys; assert sys.version_info[:2] >= (3, 12)' 2>/dev/null; 
   PY="/c/Users/Usuario/AppData/Local/Programs/Python/Python312/python.exe"
 fi
 
+# El motor vive en ./engine como paquete; la app lo importa. Asegúralo instalado (editable).
+"$PY" -c "import aleph_engine" 2>/dev/null || { echo "==> instalando el motor aleph_engine…"; "$PY" -m pip install -e ./engine; }
+
 echo "==> Streamlit en http://localhost:8501  (Ctrl+C para parar)"
 cd app_streamlit
 exec "$PY" -m streamlit run app.py --server.port=8501

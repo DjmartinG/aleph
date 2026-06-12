@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests del menú adaptativo al estado del ciclo de vida (Paso 1c-1). Verifica que Seguimiento
 aparezca SOLO en construcción/entregado y Administración solo para quien puede ingresar."""
-from cg_engine import config as cfg
+from aleph_engine import config as cfg
 from ui import nav
 
 

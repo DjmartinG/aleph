@@ -12,10 +12,10 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.io as pio
 from streamlit_option_menu import option_menu
-from cg_engine import calcular, __version__ as ENGINE_V
-from cg_engine import evm as _evm   # Valor Ganado (EVM)
-from cg_engine import schema as _schema   # validación del contrato de datos en el borde (antes de guardar)
-from cg_engine import config as _cfg   # estados del ciclo de vida (UI adaptativa al estado)
+from aleph_engine import calcular, __version__ as ENGINE_V
+from aleph_engine import evm as _evm   # Valor Ganado (EVM)
+from aleph_engine import schema as _schema   # validación del contrato de datos en el borde (antes de guardar)
+from aleph_engine import config as _cfg   # estados del ciclo de vida (UI adaptativa al estado)
 import charts as _charts   # gráficos financieros pro (marca CG)
 import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
 from ui.format import fmt_cop, fmt_mm, fmt_pct   # formato único (fuente única de presentación)
@@ -1077,7 +1077,7 @@ if seccion=="Flujo de caja":
 
 # ============ COSTO DE CAPITAL (WACC) ============
 if seccion=="Costo de capital":
-    from cg_engine import modelo as _modelo
+    from aleph_engine import modelo as _modelo
     st.markdown("### 📐 Costo de Capital (WACC)")
     st.caption("Rentabilidad mínima exigida al proyecto. Build-up CAPM de mercado emergente "
                "(metodología Damodaran / CESLA): beta del sector comparable EE.UU. → desapalancar con "
@@ -1293,7 +1293,7 @@ if seccion=="Cronograma":
 
 # ============ MONTE CARLO (función; usada en la pestaña "Riesgo y sensibilidad") ============
 def _sec_monte_carlo():
-    from cg_engine import modelo as _modelo
+    from aleph_engine import modelo as _modelo
     st.markdown("#### 🎲 Simulación Monte Carlo — riesgo de la TIR y el VPN")
     st.caption("En vez de un solo número, simulamos miles de escenarios variando al azar **precio de venta**, "
                "**costo directo** y **ritmo de ventas (unidades/mes)**. La salida es la **TIR** y el **VPN del "
@@ -1387,7 +1387,7 @@ def _sec_monte_carlo():
 
 # ============ RIESGO Y SENSIBILIDAD (Escenarios · Sensibilidad 2D · Tornado · Monte Carlo) ============
 if seccion=="Riesgo y sensibilidad":
-    from cg_engine import modelo as _modelo
+    from aleph_engine import modelo as _modelo
     _rt=st.tabs(["📊 Escenarios","🗺️ Sensibilidad 2D","🌪️ Tornado","🎲 Monte Carlo"])
     with _rt[0]:
         esc=R["escenarios"]

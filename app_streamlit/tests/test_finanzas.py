@@ -6,7 +6,7 @@ los métodos coinciden, la TIR hace VPN≈0, y los valores de libro son correcto
 """
 import pytest
 
-from cg_engine import finanzas
+from aleph_engine import finanzas
 
 
 def test_vpn():

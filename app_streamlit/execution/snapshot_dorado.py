@@ -22,7 +22,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]   # app_factibilidad/
 sys.path.insert(0, str(RAIZ))
-from cg_engine import calcular, __version__ as ENGINE_V   # noqa: E402
+from aleph_engine import calcular, __version__ as ENGINE_V   # noqa: E402
 
 GOLDEN = RAIZ / "tests" / "golden"
 PUB = RAIZ / "proyectos"

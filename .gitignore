@@ -13,3 +13,6 @@ build/
 .ruff_cache/
 .pytest_cache/
 *.egg-info/
+# Archivos intermedios (regenerables) — nunca se commitean (ver metodología en CLAUDE.md)
+.tmp/
+.tmp*

@@ -7,8 +7,13 @@
 #   - Cada deploy usa un tag ÚNICO → App Service SIEMPRE baja la imagen nueva. Esto ESQUIVA el gotcha
 #     conocido: con ":latest", App Service cachea el digest viejo y `restart` no re-baja la imagen.
 #
-# Flujo: gate de working-tree limpia → az acr build (en la nube, sin Docker local) → container set al
-#        tag exacto → restart → verificación de salud + recordatorio de versión en el pie.
+# PROMPT 3 · bloque 2: la imagen ahora BUNDLEA el motor `aleph_engine` (engine/) + la app
+# (app_streamlit/). Por eso el contexto de build es la RAÍZ del monorepo y el Dockerfile es
+# `Dockerfile.streamlit`.
+#
+# Flujo: gate de working-tree limpia → az acr build (en la nube, sin Docker local) → captura de la
+#        imagen ACTUAL (para rollback) → container set al tag exacto → restart → health check
+#        (rollback automático sugerido si falla).
 #
 # Recursos Azure (de los aprendizajes 2026-06-11/12). Cámbialos aquí si migran:
 RG="Cg-factibilidad"
@@ -18,7 +23,8 @@ ACR_LOGIN="cgfactibilidadacr.azurecr.io"         # login server completo (para e
 IMAGE="cgapp"
 ACR_URL="https://cgfactibilidadacr.azurecr.io"
 URL="https://cg-factibilidad-app.azurewebsites.net"
-CONTEXT="app_streamlit"          # el Dockerfile vive aquí (monorepo ALEPH)
+DOCKERFILE="Dockerfile.streamlit"                # en la raíz; bundlea engine/ + app_streamlit/
+CONTEXT="."                                      # contexto = raíz del monorepo
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -36,7 +42,7 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 TAG="$(git rev-parse --short=12 HEAD)"
-VER="$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$CONTEXT/cg_engine/__init__.py" | head -1)"
+VER="$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' engine/aleph_engine/__init__.py | head -1)"
 IMG="$ACR_LOGIN/$IMAGE:$TAG"
 
 echo "==> Proyecto:  $APP"
@@ -45,8 +51,12 @@ echo "==> Imagen:    $IMG     (versión app: v$VER)"
 echo ""
 
 # --- 1) Build en ACR (en la nube; no requiere Docker local) ---
-echo "==> [1/4] Construyendo imagen en ACR…"
-az acr build --registry "$ACR" --image "$IMAGE:$TAG" "$CONTEXT"
+echo "==> [1/4] Construyendo imagen en ACR (contexto = raíz, $DOCKERFILE)…"
+az acr build --registry "$ACR" --image "$IMAGE:$TAG" --file "$DOCKERFILE" "$CONTEXT"
+
+# --- Captura la imagen ACTUAL del App Service (destino de rollback si el deploy nuevo falla) ---
+PREV_IMG="$(az webapp config container show --resource-group "$RG" --name "$APP" \
+  --query "[?name=='DOCKER_CUSTOM_IMAGE_NAME'].value | [0]" -o tsv 2>/dev/null || true)"
 
 # --- 2) Apuntar App Service al tag EXACTO (no :latest) ---
 echo "==> [2/4] Apuntando App Service a $IMG…"
@@ -62,7 +72,7 @@ az webapp restart --resource-group "$RG" --name "$APP"
 # --- 4) Verificación ---
 echo "==> [4/4] Esperando a que responda (health)…"
 ok=0
-for _ in $(seq 1 30); do
+for _ in $(seq 1 36); do
   if curl -fsS "$URL/_stcore/health" >/dev/null 2>&1; then ok=1; break; fi
   sleep 5
 done
@@ -70,9 +80,17 @@ done
 echo ""
 if [ "$ok" -eq 1 ]; then
   echo "✅ Desplegado. La app responde."
+  echo "   URL:     $URL"
+  echo "   Imagen:  $IMG"
+  echo "   Esperado en el pie:  «Aplicativo v$VER»  ← confírmalo en el navegador."
 else
-  echo "⚠️  La app aún no responde al health check tras ~150s. Puede tardar en arrancar; revisa el portal."
+  echo "⚠️  La app NO respondió al health check tras ~180s. Puede tardar más en arrancar (revisa el"
+  echo "    portal / logs), o la imagen nueva está mal."
+  if [ -n "${PREV_IMG:-}" ] && [ "$PREV_IMG" != "$ACR_LOGIN/$IMAGE:$TAG" ]; then
+    echo ""
+    echo "    ROLLBACK a la imagen anterior ($PREV_IMG):"
+    echo "      az webapp config container set -g $RG -n $APP \\"
+    echo "        --container-image-name \"$PREV_IMG\" --container-registry-url $ACR_URL"
+    echo "      az webapp restart -g $RG -n $APP"
+  fi
 fi
-echo "   URL:     $URL"
-echo "   Imagen:  $IMG"
-echo "   Esperado en el pie:  «Aplicativo v$VER»  ← confírmalo en el navegador."

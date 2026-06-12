@@ -1,0 +1,28 @@
+# Contexto de build = RAÍZ del monorepo. No copiar basura ni secretos a la imagen del contenedor.
+.git
+.gitignore
+.github
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.venv
+**/venv
+**/antenv
+**/*.egg-info
+**/.ruff_cache
+**/.pytest_cache
+
+# Secretos y datos REALES confidenciales — NUNCA dentro de la imagen (los secretos van como app settings)
+**/.streamlit/secrets.toml
+**/proyectos_privados
+**/*_REAL*.json
+
+# No se necesitan en la imagen
+**/tests
+web
+node_modules
+api
+**/*.md
+**/*.zip
+**/*.tmp
+**/.tmp*

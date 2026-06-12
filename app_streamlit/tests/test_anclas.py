@@ -21,7 +21,7 @@ import copy
 
 import pytest
 
-from cg_engine import calcular
+from aleph_engine import calcular
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _MONEY = {"util_oper", "ventas", "ap_vpn_proyecto", "ap_credito_max"}

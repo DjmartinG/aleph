@@ -10,7 +10,7 @@ Función pura (sin Streamlit) → testeable. `app.py` la usa para armar el menú
 """
 from __future__ import annotations
 
-from cg_engine import config as _cfg
+from aleph_engine import config as _cfg
 
 # Secciones por área (etiqueta, icono bootstrap). Estáticas; el estado decide cuáles se muestran.
 SECCIONES_TABLERO = [("Inicio", "house-door"), ("Pipeline / Embudo", "funnel"), ("Resumen ejecutivo", "speedometer2"),

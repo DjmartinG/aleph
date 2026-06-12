@@ -14,6 +14,9 @@ if (-not $ok) { $Py = "C:\Users\Usuario\AppData\Local\Programs\Python\Python312\
 # Asegura pytest (no está en requirements.txt).
 & $Py -c "import pytest" 2>$null
 if ($LASTEXITCODE -ne 0) { Write-Host "==> instalando pytest…"; & $Py -m pip install -q pytest }
+# El motor (aleph_engine) debe estar instalado: la app y el harness del engine lo importan.
+& $Py -c "import aleph_engine" 2>$null
+if ($LASTEXITCODE -ne 0) { Write-Host "==> instalando el motor aleph_engine…"; & $Py -m pip install -e ./engine }
 
 $fail = 0
 

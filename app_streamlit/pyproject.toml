@@ -1,33 +1,11 @@
-# Configuración del proyecto.
-# Fase 1: el motor (cg_engine) es ahora un PAQUETE instalable — una futura integración
-# ERP/CRM puede reutilizarlo como dependencia (pip install) sin copiar lógica financiera.
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "cg-factibilidad"
-dynamic = ["version"]                       # la versión sale de cg_engine.__version__ (fuente única)
-description = "Evaluación financiera de proyectos inmobiliarios — CG Constructora"
-requires-python = ">=3.12"
-dependencies = [
-    "python-dateutil>=2.8",   # cg_engine/portafolio.py (relativedelta)
-    "scipy>=1.13",            # cg_engine: TIR/optimización (con fallback si falta)
-    "pydantic>=2",            # cg_engine/schema.py (validación del contrato de datos)
-]
-
-# Solo se empaqueta el MOTOR. La UI (app.py, charts.py, storage.py…) es la aplicación,
-# no la librería: no entra en el paquete distribuible.
-[tool.setuptools]
-packages = ["cg_engine"]
-
-[tool.setuptools.dynamic]
-version = { attr = "cg_engine.__version__" }   # fuente única de versión
+# app_streamlit es la APLICACIÓN (capa de presentación), no un paquete distribuible.
+# El motor financiero vive como paquete aparte en `../engine` (aleph_engine) y se instala
+# (`pip install -e ../engine`); la app lo consume vía import. Aquí solo queda la config de
+# pruebas y lint. (PROMPT 3 · bloque 2: se retiró el empaquetado de cg_engine, ya eliminado.)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]            # importa cg_engine y app.py desde la raíz del repo
+pythonpath = ["."]            # importa app.py / ui / charts desde la raíz de app_streamlit
 addopts = "-q"
 
 [tool.ruff]
@@ -35,5 +13,5 @@ target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
-# Fase 0/1: solo reglas de CORRECTITUD (errores reales), no estilo. Se endurece más adelante.
+# Solo reglas de CORRECTITUD (errores reales), no estilo (igual que el engine y el CI).
 select = ["E9", "F63", "F7", "F82"]

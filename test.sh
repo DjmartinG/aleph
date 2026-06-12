@@ -18,6 +18,8 @@ fi
 
 # Asegura las herramientas de prueba (no están en requirements.txt; el CI las instala aparte).
 "$PY" -c "import pytest" 2>/dev/null || { echo "==> instalando pytest…"; "$PY" -m pip install -q pytest; }
+# El motor (aleph_engine) debe estar instalado: la app y el harness del engine lo importan.
+"$PY" -c "import aleph_engine" 2>/dev/null || { echo "==> instalando el motor aleph_engine…"; "$PY" -m pip install -e ./engine; }
 
 fail=0
 

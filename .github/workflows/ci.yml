@@ -1,9 +1,10 @@
 name: CI
 
-# Red de seguridad de la reestructuración (Fase 0). Corre en cada push/PR a main:
-# lint de correctitud -> compilación (atrapa SyntaxError) -> tests (anclas + humo de UI).
-# Los tests de anclas AUDITADAS se saltan en CI (los JSON reales son confidenciales/gitignored);
-# corren los de REGRESIÓN (proyectos ilustrativos del repo) y el humo de la UI.
+# Red de seguridad del monorepo ALEPH. Corre en cada push/PR a main:
+#   instalar motor (aleph_engine) -> lint de correctitud -> compilación -> tests del motor
+#   (incl. harness dorado) -> tests de la app (regresión de cifras + humo de UI).
+# Los tests de anclas AUDITADAS usan JSON reales (confidenciales/gitignored): en CI solo corren los
+# de REGRESIÓN (proyectos ilustrativos) y, del harness dorado, los 3 snapshots ilustrativos.
 
 on:
   push:
@@ -14,9 +15,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app_streamlit   # monorepo ALEPH: la app Streamlit vive aquí
     steps:
       - uses: actions/checkout@v4
 
@@ -29,14 +27,23 @@ jobs:
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r app_streamlit/requirements.txt
+          pip install -e ./engine          # aleph_engine (el motor) como paquete instalado
           pip install pytest ruff
 
       - name: Lint (ruff — solo errores de correctitud)
-        run: ruff check .
+        run: |
+          ruff check engine
+          ruff check app_streamlit
 
       - name: Compilar (atrapa errores de sintaxis antes de desplegar)
-        run: python -m compileall -q app.py charts.py storage.py navarra_data.py cg_engine ui
+        working-directory: app_streamlit
+        run: python -m compileall -q app.py charts.py storage.py navarra_data.py ui
 
-      - name: Tests (regresión de cifras + humo de UI)
+      - name: Tests del motor (aleph_engine — incl. harness dorado)
+        working-directory: engine
+        run: pytest
+
+      - name: Tests de la app (regresión de cifras + humo de UI)
+        working-directory: app_streamlit
         run: pytest

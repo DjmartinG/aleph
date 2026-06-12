@@ -11,7 +11,7 @@ import os
 import pytest
 from pydantic import ValidationError
 
-from cg_engine import schema, config
+from aleph_engine import schema, config
 
 # Base mínima válida para construir casos de prueba del contrato.
 _BASE = {

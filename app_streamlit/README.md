@@ -31,4 +31,4 @@ Modelación FAST/SMART (separación inputs/cálculo/salida, trazabilidad), versi
 semántico + CHANGELOG, docs-as-code. Enfoque híbrido (ver directiva).
 
 ## Versión
-Fuente única en `cg_engine/__version__` (la leen `pyproject.toml` y el pie de la app). Historial en `CHANGELOG.md`.
+Fuente única en `aleph_engine.__version__` (el motor, en `../engine`; la lee el pie de la app). Historial en `CHANGELOG.md`.

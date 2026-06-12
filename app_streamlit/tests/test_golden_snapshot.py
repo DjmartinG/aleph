@@ -16,7 +16,7 @@ import os
 
 import pytest
 
-from cg_engine import calcular
+from aleph_engine import calcular
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SNAPS = sorted(glob.glob(os.path.join(RAIZ, "tests", "golden", "*_snapshot.json")))
