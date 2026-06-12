@@ -125,6 +125,24 @@ def metric(clave: str) -> Metric:
     return REGISTRO[clave]
 
 
+def flujo_decision(R: dict) -> dict:
+    """KPIs de decisión del proyecto: parten del `flujo` (vista simple) pero, si el waterfall
+    apalancado corrió, **sus cifras mandan** (crédito/VPN/intereses/TIR equity/ref). Es una SELECCIÓN
+    de fuente (no un cálculo nuevo). Regla extraída de app.py para no duplicarla en la UI."""
+    fl = dict(R.get("flujo") or {})
+    ap = R.get("apalancamiento") or {}
+    if ap:
+        fl.update({
+            "credito_max": ap.get("credito_max", fl.get("credito_max")),
+            "vpn_proyecto": ap.get("vpn_proyecto", fl.get("vpn_proyecto")),
+            "intereses_total": ap.get("intereses_total", fl.get("intereses_total")),
+            "tir_equity": ap.get("tir_equity"),
+            "tir_apalancada_ref": ap.get("tir_apalancada_ref", fl.get("tir_apalancada_ref")),
+            "credito_prom": ap.get("credito_prom"),
+        })
+    return fl
+
+
 def valor(R: dict, clave: str):
     """Busca el valor YA CALCULADO de un indicador en el resultado de `calcular()`. NO calcula nada.
     Devuelve None si la sección o la clave no están (p.ej. proyecto sin apalancamiento)."""

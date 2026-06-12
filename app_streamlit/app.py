@@ -17,6 +17,7 @@ from aleph_engine import evm as _evm   # Valor Ganado (EVM)
 from aleph_engine import schema as _schema   # validación del contrato de datos en el borde (antes de guardar)
 from aleph_engine import config as _cfg   # estados del ciclo de vida (UI adaptativa al estado)
 from aleph_engine import portfolio as _portfolio   # agregaciones de portafolio (consolidado/burbujas/pipeline)
+from aleph_engine import metrics as _metrics   # indicadores con etiqueta de base + regla de KPIs de decisión
 import charts as _charts   # gráficos financieros pro (marca CG)
 import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
 from ui.format import fmt_cop, fmt_mm, fmt_pct   # formato único (fuente única de presentación)
@@ -404,13 +405,8 @@ with st.sidebar:
 R = calcular(copy.deepcopy(par)); pg=R["pyg"]; fl=R["flujo"]; meta=R["meta"]
 ap=R.get("apalancamiento") or {}
 # El crédito/VPN/TIR de decisión salen del waterfall CALIBRADO (apalancamiento), no del flujo_caja
-# legacy. Si el waterfall corrió, sus cifras mandan en los KPIs.
-if ap:
-    fl={**fl, "credito_max":ap.get("credito_max",fl.get("credito_max")),
-        "vpn_proyecto":ap.get("vpn_proyecto",fl.get("vpn_proyecto")),
-        "intereses_total":ap.get("intereses_total",fl.get("intereses_total")),
-        "tir_equity":ap.get("tir_equity"), "tir_apalancada_ref":ap.get("tir_apalancada_ref",fl.get("tir_apalancada_ref")),
-        "credito_prom":ap.get("credito_prom")}
+# legacy. La regla ("si el waterfall corrió, sus cifras mandan") vive en el motor (metrics.flujo_decision).
+fl=_metrics.flujo_decision(R)
 
 # ---------------- encabezado + KPIs ----------------
 CONS=None
@@ -1333,11 +1329,9 @@ if seccion=="Riesgo y sensibilidad":
         st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo. "
                    "Barras = utilidad operativa; etiqueta = utilidad y margen.")
     with _rt[1]:
-        _pe=copy.deepcopy(par)
-        _pe.setdefault("ventas_miles", sum(e.get("ventas_miles",0) for e in _pe.get("etapas",[])))
         pasos=[-0.10,-0.05,0.0,0.05,0.10]
-        # matriz de margen %: filas = variación de costo, columnas = variación de precio
-        mat=[[_modelo._correr(_pe, dp, dc)["margen"]*100 for dp in pasos] for dc in pasos]
+        # matriz de margen %: filas = variación de costo, columnas = variación de precio (lógica en el motor)
+        mat=_modelo.heatmap_sensibilidad(par, pasos)
         st.plotly_chart(_charts.heatmap_sensibilidad([p*100 for p in pasos],[c*100 for c in pasos], mat), width="stretch")
         st.caption("Cada celda = margen operativo resultante al variar precio (eje X) y costo directo "
                    "(eje Y). Verde = sano · blanco = punto de quiebre · rojo = pérdida. La celda central es la base.")

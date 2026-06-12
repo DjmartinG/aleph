@@ -5,6 +5,7 @@ Toma un dict de parámetros de proyecto y devuelve P&G, reparto, distribución d
 flujo de caja, escenarios, sensibilidades e indicadores. Metodología validada contra
 prefactibilidades reales. Enfoque híbrido: TIR apalancada de referencia es un parámetro.
 """
+import copy
 import logging
 import random
 from datetime import datetime
@@ -236,6 +237,15 @@ def _correr(par, d_precio=0.0, d_costo=0.0):
 
 def escenarios(par):
     return {"Base":_correr(par), "Optimista":_correr(par,+0.05,-0.02), "Pesimista":_correr(par,-0.10,+0.05)}
+
+def heatmap_sensibilidad(par, pasos=(-0.10, -0.05, 0.0, 0.05, 0.10)):
+    """Matriz de MARGEN operativo (%) variando precio (columnas) y costo directo (filas).
+    `mat[i][j]` = margen al variar costo en `pasos[i]` y precio en `pasos[j]`. Cada celda corre
+    `_correr`. Extraído de app.py (heatmap 2D de sensibilidad); la celda central es la base."""
+    pe = copy.deepcopy(par)
+    pe.setdefault("ventas_miles", sum(e.get("ventas_miles", 0) for e in pe.get("etapas", [])))
+    pasos = list(pasos)
+    return [[_correr(pe, dp, dc)["margen"] * 100 for dp in pasos] for dc in pasos]
 
 def sensibilidades(par):
     base=pyg(par)["util_oper"]
