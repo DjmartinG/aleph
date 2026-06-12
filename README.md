@@ -17,7 +17,8 @@ Biblioteca de prompts por fase: `directives/prompts_migracion_v3.md`.
 ## Scripts (desde la raíz del monorepo)
 | Quiero… | Linux / Git Bash | Windows / PowerShell |
 |---|---|---|
-| Levantar la app en local (http://localhost:8501) | `./dev.sh` | `.\dev.ps1` |
+| Levantar la app Streamlit en local (http://localhost:8501) | `./dev.sh` | `.\dev.ps1` |
+| Levantar la API en local (http://localhost:8000/docs) | `./dev_api.sh` | `.\dev_api.ps1` |
 | Correr TODAS las pruebas antes de desplegar | `./test.sh` | `.\test.ps1` |
 | Desplegar Streamlit a Azure (tag = SHA del commit) | `./deploy_streamlit.sh` | `.\deploy_streamlit.ps1` |
 

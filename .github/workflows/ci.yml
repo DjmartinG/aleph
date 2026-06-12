@@ -29,12 +29,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r app_streamlit/requirements.txt
           pip install -e ./engine          # aleph_engine (el motor) como paquete instalado
+          pip install fastapi httpx "uvicorn[standard]"   # deps de la API (Fase 4a)
           pip install pytest ruff
 
       - name: Lint (ruff — solo errores de correctitud)
         run: |
           ruff check engine
           ruff check app_streamlit
+          ruff check api
 
       - name: Compilar (atrapa errores de sintaxis antes de desplegar)
         working-directory: app_streamlit
@@ -42,6 +44,10 @@ jobs:
 
       - name: Tests del motor (aleph_engine — incl. harness dorado)
         working-directory: engine
+        run: pytest
+
+      - name: Tests de la API (contrato dorado + fidelidad al motor)
+        working-directory: api
         run: pytest
 
       - name: Tests de la app (regresión de cifras + humo de UI)

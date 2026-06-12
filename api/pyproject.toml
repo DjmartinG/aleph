@@ -1,0 +1,36 @@
+# API de ALEPH: FastAPI sobre `aleph_engine`. NO reimplementa fórmulas — expone el motor y los datos.
+# Estado: PROMPT 4 · Fase 4a (API de LECTURA sobre los datos actuales, sin migración de esquema).
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aleph-api"
+dynamic = ["version"]
+description = "API FastAPI de ALEPH — lectura del motor de factibilidad (CG Constructora)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "aleph-engine",            # el motor (en ../engine; en dev: pip install -e ../engine)
+    # supabase>=2.6 se usa SOLO si hay SUPABASE_URL/KEY (en dev se leen JSON locales).
+]
+
+[tool.setuptools]
+packages = ["aleph_api"]
+
+[tool.setuptools.dynamic]
+version = { attr = "aleph_api.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]

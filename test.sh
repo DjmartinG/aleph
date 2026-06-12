@@ -18,23 +18,29 @@ fi
 
 # Asegura las herramientas de prueba (no están en requirements.txt; el CI las instala aparte).
 "$PY" -c "import pytest" 2>/dev/null || { echo "==> instalando pytest…"; "$PY" -m pip install -q pytest; }
-# El motor (aleph_engine) debe estar instalado: la app y el harness del engine lo importan.
+# El motor (aleph_engine) debe estar instalado: la app, la API y el harness del engine lo importan.
 "$PY" -c "import aleph_engine" 2>/dev/null || { echo "==> instalando el motor aleph_engine…"; "$PY" -m pip install -e ./engine; }
+# Deps de la API (Fase 4a).
+"$PY" -c "import fastapi, httpx" 2>/dev/null || { echo "==> instalando fastapi/httpx (API)…"; "$PY" -m pip install -q fastapi httpx; }
 
 fail=0
 
 echo ""
-echo "================  1/3  engine (aleph_engine)  ================"
+echo "================  1/4  engine (aleph_engine)  ================"
 ( cd engine && "$PY" -m pytest ) || fail=1
 
 echo ""
-echo "================  2/3  app_streamlit  ================"
+echo "================  2/4  api (aleph_api)  ================"
+( cd api && "$PY" -m pytest ) || fail=1
+
+echo ""
+echo "================  3/4  app_streamlit  ================"
 ( cd app_streamlit && "$PY" -m pytest ) || fail=1
 
 echo ""
-echo "================  3/3  ruff (app_streamlit)  ================"
+echo "================  4/4  ruff (engine + api + app)  ================"
 if "$PY" -m ruff --version >/dev/null 2>&1; then
-  ( cd app_streamlit && "$PY" -m ruff check . ) || fail=1
+  ( "$PY" -m ruff check engine api app_streamlit ) || fail=1
 else
   echo "(ruff no instalado — omitido; instala con: $PY -m pip install ruff)"
 fi
