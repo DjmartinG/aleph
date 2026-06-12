@@ -1,39 +1,29 @@
 """`aleph_engine` — motor financiero PURO de ALEPH (fuente única de verdad, capa /engine).
 
-ESTADO: ESQUELETO (PROMPT 2.3). Hoy expone SOLO el contrato de datos del proyecto (modelos
-Pydantic en `models.py`) y la lista válida de estados (`config.py`). La lógica financiera
-(`calcular`, `pyg`, `flujo`, `wacc`, indicadores, EVM, escenarios, Monte Carlo) se EXTRAE TAL CUAL
-desde `app_streamlit/cg_engine` en PROMPT 3 — no se reescribe de memoria.
-
-Cuando se extraiga, el harness dorado (`tests/test_golden_harness.py`) detectará `aleph_engine.calcular`
-automáticamente y empezará a exigir paridad de cifras contra el snapshot (tolerancia 0.1%).
+PROMPT 3 · bloque 1: la lógica se MOVIÓ **tal cual** desde `app_streamlit/cg_engine` (solo imports
+relativos, sin Streamlit/pandas/numpy; deps: scipy con fallback, dateutil, pydantic). El harness
+dorado (`tests/test_golden_harness.py`) ya re-ejecuta `calcular()` sobre la entrada congelada y exige
+paridad de cifras (tol. 0.1%). `app_streamlit` sigue usando su `cg_engine` (INTACTO) hasta el bloque 2,
+que repunta los imports y elimina la copia.
 """
-from . import config
-from .models import (
-    Areas,
-    CostosPct,
-    Cronograma,
-    Etapa,
-    Financiero,
-    Meta,
-    Proyecto,
-    Wacc,
-    parse,
+from .modelo import (
+    calcular,
+    pyg,
+    flujo_caja,
+    escenarios,
+    sensibilidades,
+    montecarlo,
+    montecarlo_tir,
+    calcular_wacc,
+    tir,
+    directos_total,
+    indirectos_total,
+    normalizar_tipologias,
+    gastos_fijos_total,
 )
+from . import curvas
+from . import schema
+from .schema import parse, Proyecto
 
-# FUENTE ÚNICA de versión del paquete. La lee pyproject.toml (dynamic). Paquete nuevo → arranca en 0.x.
-__version__ = "0.1.0"
-
-__all__ = [
-    "config",
-    "Areas",
-    "CostosPct",
-    "Cronograma",
-    "Etapa",
-    "Financiero",
-    "Meta",
-    "Proyecto",
-    "Wacc",
-    "parse",
-    "__version__",
-]
+# Versión HEREDADA del motor extraído (= cg_engine 2.39.0). El dorado compara CIFRAS, no la versión.
+__version__ = "2.39.0"

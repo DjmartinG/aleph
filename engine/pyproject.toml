@@ -1,9 +1,8 @@
 # Paquete `aleph_engine`: el motor financiero PURO de ALEPH (Python, sin Streamlit/FastAPI/Supabase).
 #
-# Estado: ESQUELETO (PROMPT 2.3). Aquí viven hoy SOLO los modelos de datos (contrato Pydantic del
-# proyecto/supuestos) y el harness de tests que lee el snapshot dorado. La lógica financiera
-# (calcular/pyg/flujo/WACC/curva S/indicadores/EVM…) se EXTRAE TAL CUAL desde
-# `app_streamlit/cg_engine` en PROMPT 3 — no se reescribe de memoria.
+# Estado: PROMPT 3 · bloque 1 — la lógica financiera (calcular/pyg/flujo/WACC/curva S/indicadores/EVM)
+# se MOVIÓ tal cual desde `app_streamlit/cg_engine`. El harness dorado (tests/) re-ejecuta el motor y
+# exige paridad de cifras (tol. 0.1%). Próximo bloque: repuntar `app_streamlit` a este paquete.
 #
 # Instalable: una futura integración (API FastAPI, ERP/CRM) lo reutiliza como dependencia
 # (`pip install -e ./engine`) sin copiar lógica.
@@ -18,8 +17,9 @@ dynamic = ["version"]                       # la versión sale de aleph_engine._
 description = "Motor financiero de proyectos inmobiliarios — ALEPH / CG Constructora (núcleo puro)"
 requires-python = ">=3.12"
 dependencies = [
-    "pydantic>=2",            # aleph_engine/models.py (contrato de datos del proyecto)
-    # NOTA: scipy / python-dateutil se agregan en PROMPT 3 al extraer la lógica que los usa.
+    "pydantic>=2",            # aleph_engine/schema.py (contrato de datos del proyecto)
+    "scipy>=1.13",            # aleph_engine/finanzas.py (TIR/optimización; con fallback si falta)
+    "python-dateutil>=2.8",   # aleph_engine/portafolio.py (relativedelta)
 ]
 
 [tool.setuptools]

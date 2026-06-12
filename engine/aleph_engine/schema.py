@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Contrato de datos del proyecto ALEPH (validación en el BORDE con Pydantic v2).
+"""Contrato de datos del proyecto (validación en el BORDE con Pydantic v2).
 
-Declara el "shape" del proyecto (hoy un dict implícito en `app_streamlit`) para poder VALIDARLO al
-entrar (al cargar de Supabase o de un futuro ERP/CRM): `parse(dict)` lanza un error legible si los
-datos no cumplen, ANTES de que lleguen al motor.
+Hoy el "shape" del proyecto es un dict implícito, reconstruido con `.get()` por todo el código:
+un campo mal escrito o de tipo equivocado se silencia con un default y puede corromper una cifra
+auditada sin avisar. Este módulo declara el contrato y permite VALIDARLO al entrar (al cargar de
+Supabase o desde un futuro ERP/CRM): `schema.parse(dict)` lanza un error legible si los datos no
+cumplen, antes de que lleguen al motor.
 
-ORIGEN: portado desde `app_streamlit/cg_engine/schema.py` (mismo contrato), enriquecido con los
-bloques descriptivos `Areas` y `Cronograma` ya presentes en los JSON reales. `aleph_engine` es PURO
-y autónomo: este módulo NO importa de `cg_engine`.
+IMPORTANTE — no transforma los datos: el motor sigue consumiendo el MISMO dict. La validación es
+una compuerta, no una conversión (cero riesgo para las cifras). El cableado en la capa de
+servicios/almacenamiento llega en fases posteriores.
 
-Diseño (igual que el original): `extra="allow"` porque el shape es heterogéneo y evolutivo (Dominica
-no trae tipologías ni fiducia; los reales traen `_nota`, `directos_cap`, etc.). Solo se exige lo
-estructural que el motor necesita sí o sí; el resto es opcional (sus defaults vivirán en config.py al
-extraer la lógica en PROMPT 3). La validación es una COMPUERTA, no una conversión: no transforma datos.
+Diseño: `extra="allow"` porque el shape es heterogéneo y evolutivo (Dominica no trae tipologías ni
+fiducia; los reales traen `_nota`, `directos_cap`, etc.). Solo se exige lo estructural que el motor
+necesita sí o sí; el resto es opcional (sus defaults viven en config.py).
 """
 from __future__ import annotations
 
@@ -44,19 +45,9 @@ class Meta(BaseModel):
         return v
 
 
-class Areas(BaseModel):
-    """Cabida del lote. HOY es DESCRIPTIVA: alimenta KPIs urbanísticos, no el cálculo financiero
-    (ver aprendizaje 2026-06-11). Todo opcional para no rechazar proyectos sin cabida cargada."""
-    model_config = _PERMISIVO
-    m2_vendibles: Optional[float] = None
-    m2_construidos: Optional[float] = None
-    lote_bruta: Optional[float] = None
-    lote_util: Optional[float] = None
-
-
 class Wacc(BaseModel):
-    """Parámetros del build-up CAPM (Damodaran). Opcionales para no rechazar proyectos sin WACC
-    propio; el cálculo del WACC exige los suyos cuando se invoque (lógica en PROMPT 3)."""
+    """Parámetros del build-up CAPM. Opcionales para no rechazar proyectos sin WACC propio;
+    `calcular_wacc` exige los suyos cuando se invoca."""
     model_config = _PERMISIVO
     rf: Optional[float] = None
     rm: Optional[float] = None
@@ -78,7 +69,7 @@ class Financiero(BaseModel):
     model_config = _PERMISIVO
     wacc: Optional[Wacc] = None
     # renta, split_cg, pct_ci, sep_und_miles, tasa_credito_ea, cobertura_cc, tio,
-    # tir_apalancada_ref, credito_cap_miles… → extra (defaults en config al extraer la lógica)
+    # tir_apalancada_ref, credito_cap_miles… → extra (defaults en config.py)
 
 
 class CostosPct(BaseModel):
@@ -89,17 +80,6 @@ class CostosPct(BaseModel):
     honorarios: float
     util_lote: float
     # recon_codensa, hon_construccion, hon_gerencia, hon_ventas → extra (defaults en pyg)
-
-
-class Cronograma(BaseModel):
-    """Curva de obra (PERT/Gauss). Opcional: sus defaults los aporta el motor al calcular."""
-    model_config = _PERMISIVO
-    dur_obra: Optional[int] = None
-    moda_pert: Optional[int] = None
-    curva: Optional[str] = None           # "Gauss" | "PERT"
-    rel_materiales: Optional[float] = None
-    ea_materiales: Optional[float] = None
-    ea_mano_obra: Optional[float] = None
 
 
 class Etapa(BaseModel):
@@ -123,17 +103,15 @@ class Proyecto(BaseModel):
     financiero: Financiero
     lote_bruto_miles: float
     meta: Optional[Meta] = None
-    areas: Optional[Areas] = None
-    cronograma: Optional[Cronograma] = None
     schema_version: int = 1
-    # tipologias, directos_cap, indirectos_cap, gastos_fijos, fiducia, ventas_miles, _nota… → extra
+    # areas, cronograma, tipologias, directos_cap, indirectos_cap, gastos_fijos, fiducia,
+    # ventas_miles, _nota… → extra
 
 
 def parse(d: dict) -> Proyecto:
     """Valida un dict de proyecto contra el contrato. Devuelve el modelo (para inspección);
     lanza `pydantic.ValidationError` (mensaje legible) si los datos no cumplen.
 
-    El motor NO usará el modelo: tras validar, se le pasa el MISMO dict `d` a `calcular(d)` (cuando
-    la lógica se extraiga en PROMPT 3). La validación es una compuerta, no una conversión.
+    El motor NO usa el modelo: tras validar, se le pasa el MISMO dict `d` a `calcular(d)`.
     """
     return Proyecto.model_validate(d)
