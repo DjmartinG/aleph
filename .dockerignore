@@ -21,7 +21,8 @@
 **/tests
 web
 node_modules
-api
+# (api/aleph_api SÍ entra al contexto: lo necesita Dockerfile.api. La cruft de api/ —tests, caches,
+#  README— ya la excluyen los patrones de este archivo; Dockerfile.streamlit no copia api/.)
 **/*.md
 **/*.zip
 **/*.tmp
