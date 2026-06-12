@@ -16,6 +16,7 @@ from aleph_engine import calcular, __version__ as ENGINE_V
 from aleph_engine import evm as _evm   # Valor Ganado (EVM)
 from aleph_engine import schema as _schema   # validación del contrato de datos en el borde (antes de guardar)
 from aleph_engine import config as _cfg   # estados del ciclo de vida (UI adaptativa al estado)
+from aleph_engine import portfolio as _portfolio   # agregaciones de portafolio (consolidado/burbujas/pipeline)
 import charts as _charts   # gráficos financieros pro (marca CG)
 import navarra_data as _nav   # datos operativos del comité (Monitor de Ejecución)
 from ui.format import fmt_cop, fmt_mm, fmt_pct   # formato único (fuente única de presentación)
@@ -181,99 +182,33 @@ if st.session_state.get("_sin_clave"):
                "está deshabilitada por seguridad. Para ingresar datos, define **CLAVE_EQUIPO** y **CLAVE_EDITOR** "
                "en los secretos del despliegue (o activa el acceso de Microsoft).")
 
-def _irr_anual(flujos):
-    """TIR anualizada de un flujo mensual (bisección robusta). None si no hay cambio de signo."""
-    def vpn(r): return sum(f/(1+r)**t for t,f in enumerate(flujos))
-    lo,hi=-0.95,5.0; flo,fhi=vpn(lo),vpn(hi)
-    if flo*fhi>0:                                   # buscar cambio de signo
-        r=lo; prev=flo; found=False
-        while r<hi:
-            r2=r+0.01; cur=vpn(r2)
-            if prev*cur<0: lo,hi,flo=r,r2,prev; found=True; break
-            prev=cur; r=r2
-        if not found: return None
-    for _ in range(200):
-        mid=(lo+hi)/2; fm=vpn(mid)
-        if flo*fm<=0: hi=mid
-        else: lo=mid; flo=fm
-    m=(lo+hi)/2
-    try: return (1+m)**12-1
-    except Exception: return None
+def _items_portafolio(keys):
+    """Carga + calcula cada proyecto del set → lista de (slug, par, R) para las funciones de portafolio
+    del motor. Omite los que fallan al cargar/calcular (igual que antes)."""
+    items=[]
+    for name in keys:
+        try:
+            par=cargar(name); items.append((name, par, calcular(copy.deepcopy(par))))
+        except Exception:
+            continue
+    return items
 
 @st.cache_data(show_spinner=False)
 def consolidado(keys):
-    """Consolidado del portafolio. keys = tuple(listar()) → invalida el caché si cambia el set."""
-    # eje GLOBAL absoluto (epoch ene-2022) para alinear proyectos que arrancan en años distintos
-    EPOCH=2022; N=240; oper=[0.0]*N; equity=[0.0]*N; saldo=[0.0]*N
-    ventas=util=udi=vpn=und=0.0; n=0; filas=[]; tir_num=tir_den=0.0
-    for name in keys:
-        try:
-            par=cargar(name); R=calcular(copy.deepcopy(par))
-        except Exception:
-            continue
-        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]; h=R.get("hitos") or {}   # waterfall calibrado
-        ventas+=pg["ventas"]; util+=pg["util_oper"]; udi+=pg["udi"]
-        if ap.get("vpn_proyecto"): vpn+=ap["vpn_proyecto"]
-        tref=ap.get("tir_apalancada_ref")
-        if tref: tir_num+=pg["ventas"]*tref; tir_den+=pg["ventas"]   # TIR ref ponderada por ventas
-        und+=sum(e.get("und",0) or 0 for e in par.get("etapas",[]))
-        base=min((h[c]["IV"] for c in h), default=None)             # offset al eje global
-        off=((base.year-EPOCH)*12+(base.month-1)) if base else 0
-        o=ap.get("operativo") or []; e=ap.get("flujo_equity") or []; s=ap.get("saldo_credito") or []
-        for m in range(max(len(o),len(e),len(s))):
-            g=off+m
-            if 0<=g<N:
-                if m<len(o): oper[g]+=o[m]
-                if m<len(e): equity[g]+=e[m]
-                if m<len(s): saldo[g]+=s[m]
-        filas.append({"Proyecto":mt.get("nombre",name),"Unidades":sum(x.get("und",0) or 0 for x in par.get("etapas",[])),
-                      "Ventas":fmt_mm(pg["ventas"]),"Utilidad oper.":fmt_mm(pg["util_oper"]),
-                      "Margen":f"{pg['margen_oper']*100:.1f}%","Crédito máx":fmt_mm(ap.get('credito_max',0) or 0)})
-        n+=1
-    return {"n":n,"unidades":int(und),"ventas":ventas,"util_oper":util,"udi":udi,"vpn":vpn,
-            "margen":util/ventas if ventas else 0,
-            "tir_ref":(tir_num/tir_den if tir_den else None),
-            "tir_eq":_irr_anual(equity),
-            "credito_max":max(saldo) if saldo else 0.0,"filas":filas}
+    """Consolidado del portafolio (lógica en aleph_engine.portfolio). keys=tuple(listar()) invalida el caché.
+    Las `filas` vienen en números crudos; la UI las formatea al renderizar la tabla."""
+    return _portfolio.consolidar(_items_portafolio(keys))
 
 @st.cache_data(show_spinner=False)
 def puntos_portafolio(keys):
-    """Puntos del gráfico de burbujas: un dict por proyecto {nombre, tir, margen, ventas, tipo, und}.
-    keys = tuple(listar()) → invalida el caché igual que consolidado()."""
-    pts=[]
-    for name in keys:
-        try:
-            par=cargar(name); R=calcular(copy.deepcopy(par))
-        except Exception:
-            continue
-        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]
-        tir=ap.get("tir_proyecto")
-        if tir is None: tir=ap.get("tir_apalancada_ref")
-        pts.append({"nombre":mt.get("nombre",name),"tir":tir,"margen":pg.get("margen_oper"),
-                    "ventas":pg.get("ventas"),"tipo":mt.get("tipo","No VIS"),
-                    "und":sum(e.get("und",0) or 0 for e in par.get("etapas",[]))})
-    return pts
+    """Puntos del gráfico de burbujas (lógica en aleph_engine.portfolio). keys=tuple(listar()) invalida el caché."""
+    return _portfolio.puntos_burbujas(_items_portafolio(keys))
 
 @st.cache_data(show_spinner="Cargando pipeline…")
 def pipeline_datos(keys):
-    """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline y
-    las tarjetas del Portafolio. {slug, nombre, estado, tir, vpn, ventas, und, ubicacion, tipo}.
-    keys=tuple(listar()) invalida el caché (parámetro sin guion bajo → entra al hash de st.cache_data)."""
-    out=[]
-    for name in keys:
-        try:
-            par=cargar(name); R=calcular(copy.deepcopy(par))
-        except Exception:
-            continue
-        pg=R["pyg"]; ap=R.get("apalancamiento") or {}; mt=R["meta"]; _m=par.get("meta",{}) or {}
-        estado=_m.get("estado") or _cfg.ESTADO_DEFAULT
-        if estado not in _cfg.ESTADOS: estado=_cfg.ESTADO_DEFAULT
-        tir=ap.get("tir_apalancada_ref") or ap.get("tir_proyecto")
-        out.append({"slug":name,"nombre":mt.get("nombre",name),"estado":estado,"tir":tir,
-                    "vpn":ap.get("vpn_proyecto"),"ventas":pg.get("ventas"),
-                    "und":sum(e.get("und",0) or 0 for e in par.get("etapas",[])),
-                    "ubicacion":_m.get("ubicacion",""),"tipo":_m.get("tipo","")})
-    return out
+    """Estado del ciclo de vida + métricas por proyecto (lógica en aleph_engine.portfolio), para el
+    embudo/pipeline y las tarjetas del Portafolio. keys=tuple(listar()) invalida el caché."""
+    return _portfolio.pipeline(_items_portafolio(keys))
 
 def tarjeta_proyecto(d, activo=False):
     """Tarjeta moderna de proyecto (Portafolio): nombre, ubicación, badge de estado sólido y 4 KPIs.
@@ -695,7 +630,10 @@ if seccion=="Proyectos activos":
                     st.write("")
         st.write("")
         st.markdown("##### Resumen financiero del portafolio")
-        filas=list(CONS["filas"]) if CONS else []
+        filas=[{"Proyecto":f["nombre"],"Unidades":f["unidades"],
+                "Ventas":fmt_mm(f["ventas"]),"Utilidad oper.":fmt_mm(f["util_oper"]),
+                "Margen":f"{f['margen']*100:.1f}%","Crédito máx":fmt_mm(f["credito_max"])}
+               for f in (CONS["filas"] if CONS else [])]
         filas.append({"Proyecto":"— TOTAL —","Unidades":CONS["unidades"] if CONS else 0,
                       "Ventas":fmt_mm(CONS["ventas"] if CONS else 0),
                       "Utilidad oper.":fmt_mm(CONS["util_oper"] if CONS else 0),

@@ -67,6 +67,47 @@ def irr_biseccion(flujos):
     return (lo + hi) / 2
 
 
+def irr_anual_biseccion(flujos):
+    """TIR ANUAL desde una serie MENSUAL por BISECCIÓN robusta + escaneo de cambio de signo:
+    `(1 + TIR_mensual)^12 − 1`. None si no encuentra cambio de signo.
+
+    Variante usada por el CONSOLIDADO de portafolio para la TIR equity. Es DISTINTA de `irr_anual`
+    (que usa brentq): se conserva tal cual (extraída de la app) porque produce el valor exacto que ya
+    mostraba el portafolio, y esa cifra no está cubierta por el snapshot dorado (que es por-proyecto)."""
+    def _vpn(r):
+        return sum(f / (1 + r) ** t for t, f in enumerate(flujos))
+    lo, hi = -0.95, 5.0
+    flo, fhi = _vpn(lo), _vpn(hi)
+    if flo * fhi > 0:                                  # buscar un sub-intervalo con cambio de signo
+        r = lo
+        prev = flo
+        found = False
+        while r < hi:
+            r2 = r + 0.01
+            cur = _vpn(r2)
+            if prev * cur < 0:
+                lo, hi, flo = r, r2, prev
+                found = True
+                break
+            prev = cur
+            r = r2
+        if not found:
+            return None
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        fm = _vpn(mid)
+        if flo * fm <= 0:
+            hi = mid
+        else:
+            lo = mid
+            flo = fm
+    m = (lo + hi) / 2
+    try:
+        return (1 + m) ** 12 - 1
+    except Exception:
+        return None
+
+
 def calcular_wacc(p, detalle=False):
     """WACC en COP por el build-up CAPM de mercado emergente (metodología Damodaran/CESLA, auditada CG).
 

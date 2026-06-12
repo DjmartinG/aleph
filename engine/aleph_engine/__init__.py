@@ -23,6 +23,9 @@ from .modelo import (
 )
 from . import curvas
 from . import schema
+from . import portfolio
+from . import metrics
+from . import checks
 from .schema import parse, Proyecto
 
 # Versión HEREDADA del motor extraído (= cg_engine 2.39.0). El dorado compara CIFRAS, no la versión.
