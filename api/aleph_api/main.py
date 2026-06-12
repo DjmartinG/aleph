@@ -14,7 +14,7 @@ from aleph_engine import __version__ as ENGINE_V
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import __version__, auth, build
+from . import __version__, auth, build, repo
 
 log = logging.getLogger("aleph_api")
 
@@ -59,9 +59,27 @@ def version():
     return {"name": "aleph-api", "version": __version__, "engine_version": ENGINE_V}
 
 
+@app.get("/health/data")
+def health_data():
+    """Salud de DATOS (público, sin auth ni cifras sensibles): fuente + nº de proyectos visibles.
+    Permite verificar un deploy (`project_count` > 0) AUNQUE la auth de `/v1` esté cerrada — así no hay
+    que exponer rutas confidenciales para confirmar que la API lee los datos. `data_source=supabase` con
+    `project_count=0` delata una mala config de Supabase (configurada pero la consulta no trae filas)."""
+    return {"data_source": repo.fuente(), "project_count": len(repo.listar())}
+
+
 @v1.get("/portfolio")
 def get_portfolio(estado: str | None = Query(default=None)):
-    payload = build.portafolio(build.items_portafolio())
+    items = build.items_portafolio()
+    # Fail-loud en prod: sin la imagen no hay respaldo local, así que 0 proyectos = la fuente de datos
+    # no respondió. Con ALEPH_DATA_REQUIRED=true devolvemos 503 en vez de un 200 con portafolio vacío.
+    if repo.data_required() and not items:
+        log.error("ALEPH_DATA_REQUIRED=true pero 0 proyectos disponibles (fuente=%s) → 503", repo.fuente())
+        raise HTTPException(
+            status_code=503,
+            detail="Sin proyectos disponibles: la fuente de datos no respondió (revisar SUPABASE_URL/KEY).",
+        )
+    payload = build.portafolio(items)
     if estado:
         payload = {**payload, "items": [d for d in payload["items"] if d.get("estado") == estado]}
     return payload

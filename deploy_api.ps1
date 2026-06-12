@@ -54,13 +54,14 @@ $existe = az webapp show --resource-group $RG --name $APP --query name -o tsv 2>
 if (-not $existe) {
   Write-Host "`n==> El App Service '$APP' NO existe todavía (primer deploy)." -ForegroundColor Yellow
   Write-Host "    La imagen YA quedó construida: $Img"
-  Write-Host "    Provisiona el App Service UNA vez (rellena los secretos) — ver api/DEPLOY.md:`n"
-  Write-Host "    az webapp create -g $RG -p $PLAN -n $APP --deployment-container-image-name $Img"
-  Write-Host "    az webapp config appsettings set -g $RG -n $APP --settings WEBSITES_PORT=8000 ``"
-  Write-Host "      SUPABASE_URL=<tu-url> SUPABASE_KEY=<service_role> ``"
-  Write-Host "      ENTRA_TENANT_ID=<guid-tenant> API_AUDIENCE=<app-id-uri-o-client-id> ALEPH_AUTH_REQUIRED=true"
+  Write-Host "    Provisiona el App Service UNA vez (rellena los secretos) — ver api/DEPLOY.md (Parte B).`n"
+  Write-Host "    Flags VIGENTES (no uses --deployment-container-image-name; está deprecado):"
+  Write-Host "    az webapp create -g $RG -p $PLAN -n $APP --container-image-name $Img ``"
+  Write-Host "      --container-registry-url $ACR_URL --container-registry-user <ACR_USER> --container-registry-password <ACR_PASS>"
+  Write-Host "    az webapp config appsettings set -g $RG -n $APP --settings WEBSITES_PORT=8000 ALEPH_DATA_REQUIRED=true ``"
+  Write-Host "      SUPABASE_URL=<tu-url> SUPABASE_KEY=<service_role>     # (auth Entra: Parte B-2 de DEPLOY.md)"
   Write-Host "    az webapp restart -g $RG -n $APP"
-  Write-Host "`n    Luego vuelve a correr este script para los redeploys (ya solo actualizará la imagen)." -ForegroundColor Yellow
+  Write-Host "`n    Verifica con /health/data (project_count>0), no solo /version. Luego re-corre este script para redeploys." -ForegroundColor Yellow
   exit 0
 }
 
@@ -92,7 +93,16 @@ for ($i = 0; $i -lt 18; $i++) {
 
 Write-Host ""
 if ($ok) {
-  Write-Host "   URL:     $URL/version   y   $URL/docs"
+  # Health de DATOS: /version NO prueba que lea Supabase. Confirmar project_count>0 (la imagen no trae respaldo local).
+  $count = -1
+  try { $count = [int](Invoke-RestMethod -Uri "$URL/health/data" -TimeoutSec 8 -ErrorAction Stop).project_count } catch { }
+  if ($count -ge 1) {
+    Write-Host "OK DATOS.  /health/data => project_count=$count" -ForegroundColor Green
+  } else {
+    Write-Host "AVISO: el contenedor arrancó pero /health/data no reporta proyectos (project_count=$count)." -ForegroundColor Yellow
+    Write-Host "       Revisa SUPABASE_URL/KEY en app settings y los logs (az webapp log tail -g $RG -n $APP)."
+  }
+  Write-Host "   URL:     $URL/version  ·  $URL/health/data  ·  $URL/docs"
   Write-Host "   Imagen:  $Img"
   Write-Host "   Confirma que version=v$Ver."
 } else {

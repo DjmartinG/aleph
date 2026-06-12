@@ -58,34 +58,51 @@ az acr build --registry $ACR --image alephapi:$SHA \
 ACR_USER=$(az acr credential show -n $ACR --query username -o tsv)
 ACR_PASS=$(az acr credential show -n $ACR --query 'passwords[0].value' -o tsv)
 
-# 3) Crear el App Service apuntando a la imagen
+# 3) Crear el App Service apuntando a la imagen (flags VIGENTES, no deprecados — verificado vs docs MS)
 az webapp create -g $RG -p $PLAN -n $APP \
-  --deployment-container-image-name $IMG \
-  --docker-registry-server-user $ACR_USER \
-  --docker-registry-server-password $ACR_PASS
+  --container-image-name $IMG \
+  --container-registry-url https://$ACR_LOGIN \
+  --container-registry-user "$ACR_USER" \
+  --container-registry-password "$ACR_PASS"
 
 # 4) App settings — PRIMER deploy con auth APAGADA (validar lectura primero; se cierra en la Parte B-2).
-#    Solo puerto + datos (Supabase). SUPABASE_KEY = la service_role (la misma del Streamlit).
+#    OJO: la SUPABASE_KEY (service_role) NO se pega con <...> — los símbolos < > los interpreta bash como
+#    redirección y rompen la línea. Se lee OCULTA con `read -s` (no queda en pantalla ni en el historial).
+#    ALEPH_DATA_REQUIRED=true: si la fuente de datos falla, la API responde 503 en vez de 200 con 0 proyectos.
+read -rs -p "Pega la SUPABASE_KEY (service_role) y dale Enter: " SBKEY; echo
 az webapp config appsettings set -g $RG -n $APP --settings \
   WEBSITES_PORT=8000 \
+  ALEPH_DATA_REQUIRED=true \
   SUPABASE_URL=https://jehkdhmngxvuvhxuhlan.supabase.co \
-  SUPABASE_KEY=<service_role_key>
+  SUPABASE_KEY="$SBKEY"
 
-# 5) Reiniciar
+# 5) Reiniciar (las env vars solo entran al proceso en un (re)arranque)
 az webapp restart -g $RG -n $APP
 ```
 
-**Verificar (health check real — `/version` es público):**
+**Verificar — versión + DATOS (ambos endpoints son públicos y NO exponen cifras):**
 
 ```bash
 curl -fsS https://cg-aleph-api.azurewebsites.net/version
 # Esperado: {"name":"aleph-api","version":"0.1.0","engine_version":"2.39.0"}
 
-# Con la auth apagada, /v1 también responde (lee los datos migrados):
-curl -fsS https://cg-aleph-api.azurewebsites.net/v1/portfolio | head -c 400
+# CRÍTICO: /version OK no prueba que la API LEA los datos. Confirma project_count>0:
+curl -fsS https://cg-aleph-api.azurewebsites.net/health/data
+# Esperado: {"data_source":"supabase","project_count":3}
+#   · project_count:0 con data_source:supabase → SUPABASE_KEY mal/ausente o la consulta falla.
+#   · data_source:local                        → las env vars no se aplicaron (faltó reiniciar).
 ```
 
-También abre `https://cg-aleph-api.azurewebsites.net/docs` (OpenAPI interactivo).
+> **Supabase es OBLIGATORIO en prod:** la imagen del API **no incluye JSON de respaldo** (solo copia
+> `engine/` + `api/aleph_api/`), así que la única fuente de datos en el contenedor es Supabase. Por eso se
+> verifica con `/health/data` (project_count>0) y se pone `ALEPH_DATA_REQUIRED=true` (fail-loud).
+>
+> **⚠️ Ventana de exposición (auth apagada):** mientras la auth esté apagada, `/v1/*` (que expone cifras
+> REALES confidenciales de los proyectos) queda **público en internet sin token**. Por eso la verificación
+> usa `/health/data` (no `/v1`) y **debes cerrar la auth pronto** (Parte B-2). No compartas la URL en esa
+> ventana. Si quieres cero exposición, haz la **Parte A** ANTES y arranca ya con la auth cerrada.
+
+`https://cg-aleph-api.azurewebsites.net/docs` muestra el OpenAPI interactivo.
 
 ---
 
@@ -102,8 +119,9 @@ az webapp config appsettings set -g $RG -n $APP --settings \
   ALEPH_CORS_ORIGINS=https://cg-factibilidad-app.azurewebsites.net
 az webapp restart -g $RG -n $APP
 
-# Ahora /version sigue público, pero /v1 sin token => 401; con token Bearer de Entra => 200.
-curl -fsS https://cg-aleph-api.azurewebsites.net/v1/portfolio   # debe dar 401 (sin token)
+# Ahora /v1 sin token => 401; con token Bearer de Entra => 200. /version y /health/data siguen públicos:
+curl -fsS https://cg-aleph-api.azurewebsites.net/v1/portfolio    # debe dar 401 (sin token)
+curl -fsS https://cg-aleph-api.azurewebsites.net/health/data     # sigue confirmando project_count>0
 ```
 
 ---
@@ -119,7 +137,8 @@ az webapp config container set -g $RG -n $APP \
   --container-image-name $ACR_LOGIN/alephapi:$SHA \
   --container-registry-url https://$ACR_LOGIN
 az webapp restart -g $RG -n $APP
-curl -fsS https://cg-aleph-api.azurewebsites.net/version   # confirma engine/version
+curl -fsS https://cg-aleph-api.azurewebsites.net/version      # confirma engine/version
+curl -fsS https://cg-aleph-api.azurewebsites.net/health/data  # confirma que sigue leyendo (project_count>0)
 ```
 
 El tag = SHA único hace que App Service SIEMPRE baje la imagen nueva (esquiva el digest cacheado).

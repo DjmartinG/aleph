@@ -71,3 +71,26 @@ def test_sensitivity_y_run():
 def test_404_proyecto_inexistente():
     assert client.get("/v1/projects/no_existe").status_code == 404
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404
+
+
+def test_health_data():
+    """Salud de datos público (no sensible): fuente + nº de proyectos. Sirve para verificar el deploy."""
+    j = client.get("/health/data").json()
+    assert j["data_source"] in ("supabase", "local")
+    assert j["project_count"] == len(SLUGS)
+
+
+def test_portfolio_fail_loud_503_si_data_required_y_sin_datos(monkeypatch):
+    """En prod la imagen NO trae respaldo local: 0 proyectos = la fuente cayó → 503, no 200 vacío."""
+    monkeypatch.setattr(repo, "listar", lambda: [])
+    monkeypatch.setenv("ALEPH_DATA_REQUIRED", "true")
+    assert client.get("/v1/portfolio").status_code == 503
+
+
+def test_portfolio_sin_data_required_sigue_devolviendo_vacio(monkeypatch):
+    """Sin el flag (dev/CI), 0 proyectos sigue dando 200 con portafolio vacío (comportamiento previo)."""
+    monkeypatch.setattr(repo, "listar", lambda: [])
+    monkeypatch.delenv("ALEPH_DATA_REQUIRED", raising=False)
+    r = client.get("/v1/portfolio")
+    assert r.status_code == 200
+    assert r.json()["consolidado"]["n"] == 0

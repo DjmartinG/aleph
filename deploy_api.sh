@@ -54,15 +54,16 @@ if ! az webapp show --resource-group "$RG" --name "$APP" --query name -o tsv >/d
   echo ""
   echo "==> El App Service '$APP' NO existe todavía (primer deploy)."
   echo "    La imagen YA quedó construida: $IMG"
-  echo "    Provisiona el App Service UNA vez (rellena los secretos) — ver api/DEPLOY.md:"
+  echo "    Provisiona el App Service UNA vez (rellena los secretos) — ver api/DEPLOY.md (Parte B)."
   echo ""
-  echo "    az webapp create -g $RG -p $PLAN -n $APP --deployment-container-image-name $IMG"
-  echo "    az webapp config appsettings set -g $RG -n $APP --settings WEBSITES_PORT=8000 \\"
-  echo "      SUPABASE_URL=<tu-url> SUPABASE_KEY=<service_role> \\"
-  echo "      ENTRA_TENANT_ID=<guid-tenant> API_AUDIENCE=<app-id-uri-o-client-id> ALEPH_AUTH_REQUIRED=true"
+  echo "    Flags VIGENTES (no uses --deployment-container-image-name; está deprecado):"
+  echo "    az webapp create -g $RG -p $PLAN -n $APP --container-image-name $IMG \\"
+  echo "      --container-registry-url $ACR_URL --container-registry-user <ACR_USER> --container-registry-password <ACR_PASS>"
+  echo "    az webapp config appsettings set -g $RG -n $APP --settings WEBSITES_PORT=8000 ALEPH_DATA_REQUIRED=true \\"
+  echo "      SUPABASE_URL=<tu-url> SUPABASE_KEY=<service_role>     # (auth Entra: Parte B-2 de DEPLOY.md)"
   echo "    az webapp restart -g $RG -n $APP"
   echo ""
-  echo "    Luego vuelve a correr este script para los redeploys (ya solo actualizará la imagen)."
+  echo "    Verifica con /health/data (project_count>0), no solo /version. Luego re-corre este script para redeploys."
   exit 0
 fi
 
@@ -94,7 +95,15 @@ done
 
 echo ""
 if [ "$OK" = "1" ]; then
-  echo "   URL:     $URL/version   y   $URL/docs"
+  # Health de DATOS: /version NO prueba que lea Supabase. Confirmar project_count>0 (la imagen no trae respaldo local).
+  COUNT="$(curl -fsS --max-time 8 "$URL/health/data" 2>/dev/null | grep -oE '"project_count":[0-9]+' | grep -oE '[0-9]+' || echo 0)"
+  if [ "${COUNT:-0}" -ge 1 ] 2>/dev/null; then
+    echo "✅ DATOS.  /health/data => project_count=$COUNT"
+  else
+    echo "⚠️  El contenedor arrancó pero /health/data no reporta proyectos (project_count=${COUNT:-?})."
+    echo "    Revisa SUPABASE_URL/KEY en app settings y los logs (az webapp log tail -g $RG -n $APP)."
+  fi
+  echo "   URL:     $URL/version  ·  $URL/health/data  ·  $URL/docs"
   echo "   Imagen:  $IMG"
   echo "   Confirma que version=v$VER."
 else

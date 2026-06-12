@@ -17,7 +17,9 @@ COPY engine/ ./engine/
 RUN pip install ./engine
 
 # 2) Deps de la API: supabase para leer los datos en prod; pyjwt[crypto] valida el JWT de Entra (RS256).
-RUN pip install "fastapi>=0.110" "uvicorn[standard]>=0.29" "pyjwt[crypto]>=2.8" "supabase>=2.6"
+#    Cotas de versión MAYOR (<N): un cambio mayor de supabase-py/pyjwt/fastapi podría romper repo.py/auth.py;
+#    acotar el major mantiene el build reproducible sin fijar parche a parche (lock completo = mejora futura).
+RUN pip install "fastapi>=0.110,<1" "uvicorn[standard]>=0.29,<1" "pyjwt[crypto]>=2.8,<3" "supabase>=2.6,<3"
 
 # 3) El paquete de la API (solo el código; tests/README/pyproject quedan fuera vía .dockerignore).
 COPY api/aleph_api/ ./aleph_api/

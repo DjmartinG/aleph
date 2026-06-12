@@ -98,3 +98,10 @@ def es_real(slug: str) -> bool:
 
 def fuente() -> str:
     return "supabase" if _usa_supabase() else "local"
+
+
+def data_required() -> bool:
+    """True si la API DEBE tener datos (producción): 0 proyectos → la ruta de datos responde 503 en vez
+    de 200-vacío. La imagen del API NO trae JSON de respaldo, así que en prod Supabase es OBLIGATORIO;
+    sin esto, una mala config de Supabase serviría un portafolio vacío en silencio (HTTP 200, n=0)."""
+    return os.environ.get("ALEPH_DATA_REQUIRED", "").strip().lower() in ("1", "true", "yes", "si", "sí")
