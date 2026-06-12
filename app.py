@@ -542,7 +542,7 @@ if seccion=="Inicio":
                   '<li>Todo se digita aquí (sin importar archivos)</li></ul></div>', unsafe_allow_html=True)
     s[2].markdown('<div class="navcard"><h4>3 · Revisa resultados</h4><ul>'
                   '<li>P&G · Flujo · Apalancamiento</li>'
-                  '<li>Cronograma · Escenarios · Sensibilidad</li>'
+                  '<li>Cronograma · Riesgo y sensibilidad</li>'
                   '<li>Exporta el respaldo a Excel/JSON</li></ul></div>', unsafe_allow_html=True)
     st.write("")
     st.markdown("#### Módulos del modelo")
@@ -550,7 +550,7 @@ if seccion=="Inicio":
     mods=[("🏢 Portafolio",["Proyectos activos","Ingreso de datos (admin)"]),
           ("📐 Definición",["Urbanístico (áreas e índices)","Cronograma de hitos","Ingresos (recaudo)"]),
           ("📊 Resultados",["Distribución de costos","P&G (Estado de Resultados)","Reparto CG / socio"]),
-          ("💵 Flujo & Análisis",["Flujo de caja","Apalancamiento (crédito)","Escenarios","Sensibilidad"])]
+          ("💵 Flujo & Análisis",["Flujo de caja","Apalancamiento (crédito)","Riesgo y sensibilidad"])]
     for i,(t,items) in enumerate(mods):
         li="".join(f"<li>{x}</li>" for x in items)
         g[i].markdown(f'<div class="navcard"><h4>{t}</h4><ul>{li}</ul></div>', unsafe_allow_html=True)
@@ -623,7 +623,7 @@ if seccion=="Resumen ejecutivo":
             render_alertas(_nav.NAVARRA_ALERTAS, solo_activas=True, max_items=3)
     st.caption("Semáforo por umbral de industria (inmobiliario CO): TIR 🟢≥30% / 🟡20–30% · margen 🟢≥5% / "
                "🟡3–5% · payback 🟢≤36m. Cifras del waterfall calibrado; donde hay FCL de fiducia, TIR/VPN son "
-               "auditados. Detalle en **Apalancamiento**, **Flujo de caja** y **Monte Carlo**.")
+               "auditados. Detalle en **Apalancamiento**, **Flujo de caja** y **Riesgo y sensibilidad**.")
 
 # ============ PORTAFOLIO (BURBUJAS — mapa de valor) ============
 if seccion=="Portafolio (burbujas)":
@@ -1265,29 +1265,12 @@ if seccion=="Ingresos":
         kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
         st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega).")
 
-# ============ ESCENARIOS ============
-if seccion=="Escenarios":
-    et=st.tabs(["📊 Escenarios","🗺️ Sensibilidad 2D (precio vs costo)"])
-    with et[0]:
-        esc=R["escenarios"]
-        st.plotly_chart(_charts.escenarios_barras(esc), width="stretch")
-        st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo. "
-                   "Barras = utilidad operativa; etiqueta = utilidad y margen.")
-    with et[1]:
-        from cg_engine import modelo as _modelo
-        _pe=copy.deepcopy(par)
-        _pe.setdefault("ventas_miles", sum(e.get("ventas_miles",0) for e in _pe.get("etapas",[])))
-        pasos=[-0.10,-0.05,0.0,0.05,0.10]
-        # matriz de margen %: filas = variación de costo, columnas = variación de precio
-        mat=[[_modelo._correr(_pe, dp, dc)["margen"]*100 for dp in pasos] for dc in pasos]
-        st.plotly_chart(_charts.heatmap_sensibilidad([p*100 for p in pasos],[c*100 for c in pasos], mat), width="stretch")
-        st.caption("Cada celda = margen operativo resultante al variar precio (eje X) y costo directo "
-                   "(eje Y). Verde = sano · blanco = punto de quiebre · rojo = pérdida. La celda central es la base.")
+# ============ (Escenarios, Sensibilidad 2D, Tornado y Monte Carlo viven en "Riesgo y sensibilidad", abajo) ============
 
-# ============ MONTE CARLO (riesgo probabilístico) ============
-if seccion=="Monte Carlo":
+# ============ MONTE CARLO (función; usada en la pestaña "Riesgo y sensibilidad") ============
+def _sec_monte_carlo():
     from cg_engine import modelo as _modelo
-    st.markdown("### 🎲 Simulación Monte Carlo — riesgo de la TIR y el VPN")
+    st.markdown("#### 🎲 Simulación Monte Carlo — riesgo de la TIR y el VPN")
     st.caption("En vez de un solo número, simulamos miles de escenarios variando al azar **precio de venta**, "
                "**costo directo** y **ritmo de ventas (unidades/mes)**. La salida es la **TIR** y el **VPN del "
                "proyecto** — lo que mueve la decisión del comité — con su rango probable y la probabilidad de "
@@ -1378,17 +1361,35 @@ if seccion=="Monte Carlo":
                    "El motor recalcula hitos→recaudo→flujo apalancado en cada escenario; **no** altera el modelo "
                    "guardado ni la cifra auditada.")
 
-# ============ SENSIBILIDAD ============
-if seccion=="Sensibilidad":
-    s=R["sensibilidades"]; base=R["pyg"]["util_oper"]
-    # agrupar +/- por variable para el tornado (delta_pos/delta_neg respecto a la base)
-    filas=[
-        {"variable":"Precio de venta ±10%", "delta_pos":s.get("Precio +10%",0), "delta_neg":s.get("Precio -10%",0)},
-        {"variable":"Costo directo ±10%",   "delta_pos":s.get("Costo directo -10%",0), "delta_neg":s.get("Costo directo +10%",0)},
-    ]
-    st.plotly_chart(_charts.tornado(filas, base, kpi_nombre="utilidad operativa"), width="stretch")
-    st.caption("Tornado: impacto en la utilidad operativa al mover cada variable ±10%. La barra más larga "
-               "= variable más sensible. Verde favorable / rojo desfavorable; la línea vertical es la base.")
+# ============ RIESGO Y SENSIBILIDAD (Escenarios · Sensibilidad 2D · Tornado · Monte Carlo) ============
+if seccion=="Riesgo y sensibilidad":
+    from cg_engine import modelo as _modelo
+    _rt=st.tabs(["📊 Escenarios","🗺️ Sensibilidad 2D","🌪️ Tornado","🎲 Monte Carlo"])
+    with _rt[0]:
+        esc=R["escenarios"]
+        st.plotly_chart(_charts.escenarios_barras(esc), width="stretch")
+        st.caption("Optimista: +5% precio, −2% costo · Pesimista: −10% precio, +5% costo. "
+                   "Barras = utilidad operativa; etiqueta = utilidad y margen.")
+    with _rt[1]:
+        _pe=copy.deepcopy(par)
+        _pe.setdefault("ventas_miles", sum(e.get("ventas_miles",0) for e in _pe.get("etapas",[])))
+        pasos=[-0.10,-0.05,0.0,0.05,0.10]
+        # matriz de margen %: filas = variación de costo, columnas = variación de precio
+        mat=[[_modelo._correr(_pe, dp, dc)["margen"]*100 for dp in pasos] for dc in pasos]
+        st.plotly_chart(_charts.heatmap_sensibilidad([p*100 for p in pasos],[c*100 for c in pasos], mat), width="stretch")
+        st.caption("Cada celda = margen operativo resultante al variar precio (eje X) y costo directo "
+                   "(eje Y). Verde = sano · blanco = punto de quiebre · rojo = pérdida. La celda central es la base.")
+    with _rt[2]:
+        s=R["sensibilidades"]; base=R["pyg"]["util_oper"]
+        filas=[
+            {"variable":"Precio de venta ±10%", "delta_pos":s.get("Precio +10%",0), "delta_neg":s.get("Precio -10%",0)},
+            {"variable":"Costo directo ±10%",   "delta_pos":s.get("Costo directo -10%",0), "delta_neg":s.get("Costo directo +10%",0)},
+        ]
+        st.plotly_chart(_charts.tornado(filas, base, kpi_nombre="utilidad operativa"), width="stretch")
+        st.caption("Tornado: impacto en la utilidad operativa al mover cada variable ±10%. La barra más larga "
+                   "= variable más sensible. Verde favorable / rojo desfavorable; la línea vertical es la base.")
+    with _rt[3]:
+        _sec_monte_carlo()
 
 # ============ MONITOR DE EJECUCIÓN (operativo, por torre) ============
 if seccion=="Monitor de ejecución":

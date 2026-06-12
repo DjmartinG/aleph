@@ -20,8 +20,8 @@ SECCIONES_FACTIBILIDAD = [("Datos del proyecto", "pencil-square"), ("Urbanístic
                           ("Cronograma", "calendar3"), ("Ingresos", "cash-coin"),
                           ("Distribución costos", "bar-chart-line"), ("P&G", "table"), ("Reparto", "pie-chart"),
                           ("Costo de capital", "percent"), ("Flujo de caja", "cash-stack"),
-                          ("Apalancamiento", "bank"), ("Escenarios", "bullseye"),
-                          ("Monte Carlo", "dice-5"), ("Sensibilidad", "sliders")]
+                          ("Apalancamiento", "bank"),
+                          ("Riesgo y sensibilidad", "exclamation-triangle")]
 SECCIONES_SEGUIMIENTO = [("Monitor de ejecución", "clipboard-data"), ("Valor Ganado", "graph-up-arrow")]
 SECCIONES_ADMIN = [("Ingreso de datos", "pencil-square")]
 

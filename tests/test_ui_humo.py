@@ -29,7 +29,7 @@ SECCION_AREA = {
     "Distribución costos": "Factibilidad",  # solo-lectura tras 1b-ii (editores movidos a Ingreso)
     "Costo de capital": "Factibilidad",   # usa calcular_wacc(detalle=True)
     "Apalancamiento": "Factibilidad",
-    "Monte Carlo": "Factibilidad",
+    "Riesgo y sensibilidad": "Factibilidad",   # Escenarios+Sens2D+Tornado+Monte Carlo en tabs (1c-4b)
 }
 
 
