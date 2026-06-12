@@ -1,0 +1,40 @@
+# test.ps1 — corre TODA la red de pruebas del monorepo antes de desplegar (Windows / PowerShell).
+#   Uso:  .\test.ps1          (desde la raíz del monorepo)
+#
+# Equivalente nativo de test.sh. Valida lo mismo que el CI más el harness del engine:
+#   1) engine  2) app_streamlit  3) ruff. El SNAPSHOT DORADO es sagrado: rojo => NO desplegar.
+$ErrorActionPreference = "Continue"
+Set-Location -Path $PSScriptRoot
+
+$Py = if ($env:PYTHON) { $env:PYTHON } else { "python" }
+$ok = $false
+try { & $Py -c "import sys; assert sys.version_info[:2] >= (3, 12)"; $ok = ($LASTEXITCODE -eq 0) } catch { $ok = $false }
+if (-not $ok) { $Py = "C:\Users\Usuario\AppData\Local\Programs\Python\Python312\python.exe" }
+
+# Asegura pytest (no está en requirements.txt).
+& $Py -c "import pytest" 2>$null
+if ($LASTEXITCODE -ne 0) { Write-Host "==> instalando pytest…"; & $Py -m pip install -q pytest }
+
+$fail = 0
+
+Write-Host "`n================  1/3  engine (aleph_engine)  ================" -ForegroundColor Cyan
+Push-Location (Join-Path $PSScriptRoot "engine"); & $Py -m pytest; if ($LASTEXITCODE -ne 0) { $fail = 1 }; Pop-Location
+
+Write-Host "`n================  2/3  app_streamlit  ================" -ForegroundColor Cyan
+Push-Location (Join-Path $PSScriptRoot "app_streamlit"); & $Py -m pytest; if ($LASTEXITCODE -ne 0) { $fail = 1 }; Pop-Location
+
+Write-Host "`n================  3/3  ruff (app_streamlit)  ================" -ForegroundColor Cyan
+& $Py -m ruff --version 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+  Push-Location (Join-Path $PSScriptRoot "app_streamlit"); & $Py -m ruff check .; if ($LASTEXITCODE -ne 0) { $fail = 1 }; Pop-Location
+} else {
+  Write-Host "(ruff no instalado — omitido; instala con: $Py -m pip install ruff)"
+}
+
+Write-Host ""
+if ($fail -eq 0) {
+  Write-Host "OK  TODO VERDE — seguro para desplegar (.\deploy_streamlit.ps1)" -ForegroundColor Green
+} else {
+  Write-Host "FALLOS arriba — NO desplegar hasta arreglarlos." -ForegroundColor Red
+}
+exit $fail

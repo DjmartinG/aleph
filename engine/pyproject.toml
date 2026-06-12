@@ -1,0 +1,42 @@
+# Paquete `aleph_engine`: el motor financiero PURO de ALEPH (Python, sin Streamlit/FastAPI/Supabase).
+#
+# Estado: ESQUELETO (PROMPT 2.3). Aquí viven hoy SOLO los modelos de datos (contrato Pydantic del
+# proyecto/supuestos) y el harness de tests que lee el snapshot dorado. La lógica financiera
+# (calcular/pyg/flujo/WACC/curva S/indicadores/EVM…) se EXTRAE TAL CUAL desde
+# `app_streamlit/cg_engine` en PROMPT 3 — no se reescribe de memoria.
+#
+# Instalable: una futura integración (API FastAPI, ERP/CRM) lo reutiliza como dependencia
+# (`pip install -e ./engine`) sin copiar lógica.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aleph-engine"
+dynamic = ["version"]                       # la versión sale de aleph_engine.__version__ (fuente única)
+description = "Motor financiero de proyectos inmobiliarios — ALEPH / CG Constructora (núcleo puro)"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2",            # aleph_engine/models.py (contrato de datos del proyecto)
+    # NOTA: scipy / python-dateutil se agregan en PROMPT 3 al extraer la lógica que los usa.
+]
+
+[tool.setuptools]
+packages = ["aleph_engine"]
+
+[tool.setuptools.dynamic]
+version = { attr = "aleph_engine.__version__" }   # fuente única de versión del paquete
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]            # importa aleph_engine desde la raíz de /engine sin instalar
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Igual que el motor actual: solo reglas de CORRECTITUD (errores reales), no estilo.
+select = ["E9", "F63", "F7", "F82"]

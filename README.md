@@ -13,6 +13,18 @@ Biblioteca de prompts por fase: `directives/prompts_migracion_v3.md`.
 | `web/` | Next.js + TS + Tailwind + shadcn/ui. UI profesional (solo presenta). |
 | `app_streamlit/` | La app Streamlit **actual**, en producción hasta tener paridad. No se le añade funcionalidad nueva. |
 
+## Scripts (desde la raíz del monorepo)
+| Quiero… | Linux / Git Bash | Windows / PowerShell |
+|---|---|---|
+| Levantar la app en local (http://localhost:8501) | `./dev.sh` | `.\dev.ps1` |
+| Correr TODAS las pruebas antes de desplegar | `./test.sh` | `.\test.ps1` |
+| Desplegar Streamlit a Azure (tag = SHA del commit) | `./deploy_streamlit.sh` | `.\deploy_streamlit.ps1` |
+
+- `test.sh` corre: **engine** (contrato + harness dorado) → **app_streamlit** (regresión de cifras + humo UI) → **ruff**.
+- `deploy_streamlit.sh` exige **working tree limpia** (el tag = SHA debe representar la imagen), construye en
+  ACR, apunta App Service al tag exacto (no `:latest` → fuerza el pull), reinicia y verifica salud. Confirma
+  la versión en el pie: «Aplicativo vX.Y.Z». Requiere `az login` previo.
+
 ## Reglas de oro
 - **Snapshot dorado sagrado** (`app_streamlit/tests/golden/`): la migración NO mueve cifras (tolerancia 0.1%).
 - **Deploy por SHA** del commit, nunca `:latest`.

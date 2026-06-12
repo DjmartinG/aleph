@@ -1,0 +1,6 @@
+# Los scripts de shell DEBEN tener saltos de línea LF, o se rompen en Linux/CI/Git Bash
+# ("bad interpreter: /usr/bin/env bash^M"). Esto lo garantiza sin importar core.autocrlf de cada PC.
+*.sh    text eol=lf
+
+# Los .ps1 corren en Windows (PowerShell); CRLF es lo convencional allí.
+*.ps1   text eol=crlf
