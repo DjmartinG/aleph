@@ -3,4 +3,4 @@ from .modelo import calcular, pyg, flujo_caja, escenarios, sensibilidades, monte
 from . import curvas
 
 # FUENTE ÚNICA de versión del proyecto. La leen pyproject.toml (dynamic) y el pie de la app.
-__version__ = "2.38.0"
+__version__ = "2.39.0"
