@@ -495,7 +495,7 @@ if seccion == "Proyectos activos":
     kpi(k[4],"VPN @WACC (suma)", fmt_mm(CONS["vpn"]), "preliminar", AMBER)
     kpi(k[5],"Crédito máx (pico)", fmt_mm(CONS["credito_max"]), "preliminar", AMBER)
     st.write("")
-elif seccion not in ("Inicio","Cockpit","Portafolio (burbujas)"):
+elif seccion not in ("Inicio","Resumen ejecutivo","Pipeline / Embudo","Portafolio (burbujas)"):
     hc1,hc2 = st.columns([1,9])
     if LOGO.exists(): hc1.image(str(LOGO), width=78)
     hc2.markdown("<h1>Factibilidad de Proyectos</h1>", unsafe_allow_html=True)
@@ -588,10 +588,10 @@ if seccion=="Pipeline / Embudo":
                    "candidatos (pre-factibilidad) a proyectos entregados.")
 
 # ============ COCKPIT EJECUTIVO (resumen 1-vistazo, por proyecto) ============
-if seccion=="Cockpit":
+if seccion=="Resumen ejecutivo":
     hc1,hc2 = st.columns([1,9])
     if LOGO.exists(): hc1.image(str(LOGO), width=78)
-    hc2.markdown(f"<h1>Cockpit ejecutivo — {meta.get('nombre','')}</h1>", unsafe_allow_html=True)
+    hc2.markdown(f"<h1>Resumen ejecutivo — {meta.get('nombre','')}</h1>", unsafe_allow_html=True)
     _audit = ap.get("fiducia_real")
     hc2.caption("CG Constructora · resumen de comité, 1 vistazo · "
                 + ("TIR/VPN **auditados** (FCL de fiducia)" if _audit else "cifras preliminares del modelo calibrado"))

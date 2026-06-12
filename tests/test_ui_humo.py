@@ -23,7 +23,7 @@ SECCION_AREA = {
     "Inicio": "Tablero",
     "Pipeline / Embudo": "Tablero",   # embudo por estado del ciclo de vida (1c-2)
     "Proyectos activos": "Tablero",   # filtro por estado + tarjetas modernas (1c-3)
-    "Cockpit": "Tablero",
+    "Resumen ejecutivo": "Tablero",   # ex-Cockpit (renombrado en 1c-4a)
     "P&G": "Factibilidad",
     "Flujo de caja": "Factibilidad",
     "Distribución costos": "Factibilidad",  # solo-lectura tras 1b-ii (editores movidos a Ingreso)

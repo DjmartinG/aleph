@@ -13,12 +13,13 @@ from __future__ import annotations
 from cg_engine import config as _cfg
 
 # Secciones por área (etiqueta, icono bootstrap). Estáticas; el estado decide cuáles se muestran.
-SECCIONES_TABLERO = [("Inicio", "house-door"), ("Pipeline / Embudo", "funnel"), ("Cockpit", "speedometer2"),
+SECCIONES_TABLERO = [("Inicio", "house-door"), ("Pipeline / Embudo", "funnel"), ("Resumen ejecutivo", "speedometer2"),
                      ("Proyectos activos", "buildings"), ("Portafolio (burbujas)", "graph-up")]
+# Orden: la tasa de descuento (WACC) se define ANTES del flujo (se descuenta con ella).
 SECCIONES_FACTIBILIDAD = [("Datos del proyecto", "pencil-square"), ("Urbanístico", "building"),
                           ("Cronograma", "calendar3"), ("Ingresos", "cash-coin"),
                           ("Distribución costos", "bar-chart-line"), ("P&G", "table"), ("Reparto", "pie-chart"),
-                          ("Flujo de caja", "cash-stack"), ("Costo de capital", "percent"),
+                          ("Costo de capital", "percent"), ("Flujo de caja", "cash-stack"),
                           ("Apalancamiento", "bank"), ("Escenarios", "bullseye"),
                           ("Monte Carlo", "dice-5"), ("Sensibilidad", "sliders")]
 SECCIONES_SEGUIMIENTO = [("Monitor de ejecución", "clipboard-data"), ("Valor Ganado", "graph-up-arrow")]
