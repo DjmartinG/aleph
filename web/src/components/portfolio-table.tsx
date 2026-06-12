@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { ProjectItem } from "@/lib/api";
-import { fmtCop, fmtInt, fmtPct } from "@/lib/format";
+import { fmtInt, splitCop, splitPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Figure } from "@/components/figure";
 import { PhaseBadge } from "@/components/phase-badge";
 
-/** Tabla densa de proyectos. Cifras a la derecha, tabular-nums; fila navegable. */
+/** Tabla densa de proyectos. Cifras a la derecha (unidad de-enfatizada); fila navegable con acento teal. */
 export function PortfolioTable({ items }: { items: ProjectItem[] }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
+    <div className="overflow-hidden rounded-[var(--radius-data)] border bg-card">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-rule text-xs uppercase tracking-wide text-muted-foreground">
               <Th className="text-left">Proyecto</Th>
               <Th className="text-left">Fase</Th>
               <Th className="text-right">Ventas</Th>
@@ -31,7 +32,10 @@ export function PortfolioTable({ items }: { items: ProjectItem[] }) {
               </tr>
             ) : (
               items.map((p) => (
-                <tr key={p.slug} className="group border-b last:border-0 transition-colors hover:bg-accent/40">
+                <tr
+                  key={p.slug}
+                  className="group relative border-b border-rule last:border-0 transition-colors [transition-timing-function:var(--ease-out)] hover:bg-accent/40 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary before:opacity-0 before:transition-opacity hover:before:opacity-100"
+                >
                   <Td>
                     <Link
                       href={`/proyectos/${p.slug}`}
@@ -48,21 +52,24 @@ export function PortfolioTable({ items }: { items: ProjectItem[] }) {
                   <Td>
                     <PhaseBadge estado={p.estado} />
                   </Td>
-                  <Td className="text-right tabular-nums">{fmtCop(p.ventas)}</Td>
-                  <Td className="text-right tabular-nums text-muted-foreground data-[na=false]:text-foreground" data-na={p.tir == null}>
-                    {fmtPct(p.tir)}
+                  <Td className="text-right">
+                    <Figure parts={splitCop(p.ventas)} />
                   </Td>
-                  <Td
-                    className={cn(
-                      "text-right tabular-nums",
-                      p.vpn != null && p.vpn < 0 ? "text-danger" : "text-foreground",
-                    )}
-                  >
-                    {fmtCop(p.vpn)}
+                  <Td className="text-right">
+                    <Figure
+                      parts={splitPct(p.tir)}
+                      className={p.tir == null ? "text-muted-foreground" : undefined}
+                    />
                   </Td>
-                  <Td className="text-right tabular-nums">{fmtInt(p.und)}</Td>
+                  <Td className="text-right">
+                    <Figure
+                      parts={splitCop(p.vpn)}
+                      className={p.vpn != null && p.vpn < 0 ? "text-danger" : undefined}
+                    />
+                  </Td>
+                  <Td className="num text-right">{fmtInt(p.und)}</Td>
                   <Td className="pl-0 pr-3 text-right">
-                    <ChevronRight className="ml-auto size-4 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
+                    <ChevronRight className="ml-auto size-4 text-muted-foreground/40 transition-all [transition-timing-function:var(--ease-out)] group-hover:translate-x-0.5 group-hover:text-primary" />
                   </Td>
                 </tr>
               ))
@@ -78,10 +85,6 @@ function Th({ children, className }: { children?: React.ReactNode; className?: s
   return <th className={cn("px-4 py-2.5 font-medium", className)}>{children}</th>;
 }
 
-function Td({ children, className, ...rest }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return (
-    <td className={cn("px-4 py-3 align-top", className)} {...rest}>
-      {children}
-    </td>
-  );
+function Td({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return <td className={cn("px-4 py-3 align-top", className)}>{children}</td>;
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, GitBranch, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AlephMark } from "@/components/aleph-mark";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; soon?: boolean };
 type NavGroup = { group: string; items: NavItem[] };
@@ -23,8 +24,10 @@ export function Sidebar() {
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
       <div className="flex h-14 items-center gap-2.5 border-b px-5">
-        <span className="size-2.5 rounded-full bg-primary" aria-hidden />
-        <span className="font-semibold tracking-tight text-foreground">ALEPH</span>
+        <AlephMark />
+        <span className="text-sm font-semibold uppercase tracking-[0.22em] text-foreground">
+          ALEPH
+        </span>
       </div>
 
       <nav className="flex-1 space-y-6 px-3 py-5">
@@ -37,11 +40,9 @@ export function Sidebar() {
               {g.items.map((it) => {
                 const active = pathname === it.href;
                 const Icon = it.icon;
-                const content = (
+                const inner = (
                   <>
-                    <Icon
-                      className={cn("size-4", active ? "text-primary" : "text-muted-foreground")}
-                    />
+                    <Icon className={cn("size-4", active ? "text-primary" : "text-muted-foreground")} />
                     <span className="flex-1">{it.label}</span>
                     {it.soon ? (
                       <span className="rounded bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
@@ -54,7 +55,7 @@ export function Sidebar() {
                   return (
                     <li key={it.href}>
                       <span className="flex cursor-default items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground/70">
-                        {content}
+                        {inner}
                       </span>
                     </li>
                   );
@@ -65,13 +66,13 @@ export function Sidebar() {
                       href={it.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors",
+                        "relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors [transition-timing-function:var(--ease-out)] active:scale-[0.985]",
                         active
-                          ? "bg-accent text-accent-foreground"
+                          ? "bg-accent text-accent-foreground before:absolute before:inset-y-1.5 before:-left-3 before:w-0.5 before:rounded-r-full before:bg-primary"
                           : "text-sidebar-foreground hover:bg-accent/60 hover:text-accent-foreground",
                       )}
                     >
-                      {content}
+                      {inner}
                     </Link>
                   </li>
                 );
@@ -81,9 +82,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t px-5 py-3 text-xs text-muted-foreground">
-        CG Constructora S.A.S.
-      </div>
+      <div className="border-t px-5 py-3 text-xs text-muted-foreground">CG Constructora S.A.S.</div>
     </aside>
   );
 }

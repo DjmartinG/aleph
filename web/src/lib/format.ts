@@ -37,3 +37,16 @@ export function fmtInt(x: number | null | undefined): string {
   if (x === null || x === undefined || !isFinite(x)) return "—";
   return Math.round(x).toLocaleString("es-CO");
 }
+
+/** Igual que fmtCop pero separa [magnitud, unidad] para de-enfatizar el sufijo en la UI. */
+export function splitCop(x: number | null | undefined): [string, string] {
+  if (!x) return ["$0", ""];
+  if (Math.abs(x) >= 1_000_000) return [`$${enDot(x / 1_000_000, 1)}`, "mil M"];
+  return [`$${enDot(x / 1000, 0)}`, "M"];
+}
+
+/** Igual que fmtPct pero separa [magnitud, "%"]. n/d → ["n/d", ""]. */
+export function splitPct(x: number | null | undefined, dec = 2): [string, string] {
+  if (x === null || x === undefined || !isFinite(x)) return ["n/d", ""];
+  return [(x * 100).toFixed(dec), "%"];
+}

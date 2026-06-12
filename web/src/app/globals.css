@@ -11,6 +11,7 @@
 
 :root {
   --radius: 0.625rem;
+  --radius-data: 3px; /* superficies de DATOS casi-rectas; pill solo para estado */
 
   --background: oklch(0.985 0.003 200);
   --foreground: oklch(0.22 0.012 220);
@@ -21,7 +22,7 @@
   --popover-foreground: oklch(0.22 0.012 220);
 
   /* Segunda capa neutra: sidebar/paneles un punto más fríos que el contenido. */
-  --sidebar: oklch(0.972 0.005 205);
+  --sidebar: oklch(0.968 0.006 208);
   --sidebar-foreground: oklch(0.30 0.012 220);
 
   --primary: oklch(0.44 0.072 186); /* teal CG #0E5E59 */
@@ -37,8 +38,10 @@
   --destructive: oklch(0.58 0.19 27);
   --destructive-foreground: oklch(0.99 0.005 196);
 
-  --border: oklch(0.91 0.005 205);
-  --input: oklch(0.91 0.005 205);
+  /* Borde de MARCO (frío, casi neutro) vs RULE interno (tintado al teal). */
+  --border: oklch(0.905 0.006 205);
+  --input: oklch(0.905 0.006 205);
+  --rule: oklch(0.90 0.013 188);
   --ring: oklch(0.44 0.072 186);
 
   /* Semánticos de estado (NO decorativos). */
@@ -46,6 +49,12 @@
   --warning: oklch(0.66 0.135 68); /* ámbar CG */
   --danger: oklch(0.58 0.19 27);
   --cg-amber: oklch(0.66 0.135 68);
+
+  /* Elevación tintada al teal (nunca negra ni shadow-md). */
+  --shadow-card: 0 1px 2px -1px oklch(0.45 0.03 200 / 0.10), 0 6px 22px -12px oklch(0.45 0.045 192 / 0.16);
+
+  /* Easing con punch (ease-out-quint). */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dark {
@@ -57,7 +66,7 @@
   --popover: oklch(0.225 0.014 220);
   --popover-foreground: oklch(0.95 0.005 200);
 
-  --sidebar: oklch(0.165 0.013 224);
+  --sidebar: oklch(0.155 0.014 226);
   --sidebar-foreground: oklch(0.80 0.01 200);
 
   --primary: oklch(0.74 0.11 182); /* teal más brillante para fondo oscuro */
@@ -73,14 +82,17 @@
   --destructive: oklch(0.62 0.18 27);
   --destructive-foreground: oklch(0.96 0.005 196);
 
-  --border: oklch(0.30 0.012 220);
-  --input: oklch(0.30 0.012 220);
+  --border: oklch(0.295 0.012 222);
+  --input: oklch(0.295 0.012 222);
+  --rule: oklch(0.32 0.018 194);
   --ring: oklch(0.74 0.11 182);
 
   --success: oklch(0.68 0.13 155);
   --warning: oklch(0.76 0.135 75);
   --danger: oklch(0.66 0.17 27);
   --cg-amber: oklch(0.76 0.135 75);
+
+  --shadow-card: 0 1px 2px -1px oklch(0 0 0 / 0.5), inset 0 1px 0 oklch(1 0 0 / 0.04);
 }
 
 @theme inline {
@@ -104,6 +116,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-rule: var(--rule);
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
@@ -116,6 +129,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  --ease-out-quint: var(--ease-out);
 }
 
 @layer base {
@@ -126,12 +141,35 @@
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
-    /* Densidad financiera: todos los números alineados (constitución). */
+    /* Inter afinada: alternates cv05/ss01 + cifras tabulares. */
+    font-feature-settings: "cv05" 1, "ss01" 1;
     font-variant-numeric: tabular-nums;
   }
-  /* Foco visible y consistente (accesibilidad AA). */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Cifras: tracking negativo para que se vean "puestas", no por defecto. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .num-display {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.022em;
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
   }
 }

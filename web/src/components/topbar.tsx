@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AlephMark } from "@/components/aleph-mark";
 
 function crumbs(pathname: string): string[] {
   if (!pathname || pathname === "/") return ["Portafolio"];
@@ -19,8 +20,8 @@ export function Topbar() {
     <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/75 px-4 backdrop-blur sm:px-6">
       {/* Wordmark compacto en móvil (sidebar oculto). */}
       <div className="flex items-center gap-2 md:hidden">
-        <span className="size-2.5 rounded-full bg-primary" aria-hidden />
-        <span className="font-semibold tracking-tight">ALEPH</span>
+        <AlephMark />
+        <span className="text-sm font-semibold uppercase tracking-[0.2em]">ALEPH</span>
       </div>
 
       <nav aria-label="Ruta" className="hidden items-center gap-1.5 text-sm md:flex">

@@ -1,18 +1,22 @@
 import { cn } from "@/lib/utils";
+import { Figure } from "@/components/figure";
 
 export type StatState = "neutral" | "positive" | "negative";
 
 export interface StatItem {
   label: string;
-  value: string;
+  /** [magnitud, unidad] — p. ej. ["$229.7", "mil M"] o ["37.60", "%"]. */
+  parts: [string, string];
   /** Etiqueta de base (constitución: ninguna cifra sin etiqueta de base). */
   base?: string;
   sub?: string;
   state?: StatState;
+  /** Métrica-héroe: cifra mayor, acento teal, ocupa 2 columnas en xl. */
+  emphasis?: boolean;
 }
 
 /** Métrica atómica: valor + etiqueta de base + sub + estado. */
-export function Stat({ label, value, base, sub, state = "neutral" }: StatItem) {
+export function Stat({ label, parts, base, sub, state = "neutral", emphasis = false }: StatItem) {
   const color =
     state === "positive"
       ? "text-success"
@@ -24,27 +28,36 @@ export function Stat({ label, value, base, sub, state = "neutral" }: StatItem) {
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </div>
-      <div className={cn("mt-1.5 text-xl font-semibold tabular-nums", color)}>{value}</div>
-      {base ? (
-        <div className="mt-1 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground/70">
-          {base}
-        </div>
-      ) : null}
-      {sub ? <div className="mt-0.5 text-xs tabular-nums text-muted-foreground">{sub}</div> : null}
+      <Figure
+        parts={parts}
+        display={emphasis}
+        className={cn("mt-1.5 block font-semibold", emphasis ? "text-[1.9rem] leading-none" : "text-lg", color)}
+      />
+      {base ? <div className="mt-1.5 text-[0.72rem] text-muted-foreground/80">{base}</div> : null}
+      {sub ? <div className="num mt-0.5 text-xs text-muted-foreground">{sub}</div> : null}
     </div>
   );
 }
 
 /**
- * Panel de métricas: UN panel dividido por separadores de 1px (no un grid de tarjetas idénticas).
- * Técnica: contenedor con `bg-border` + `gap-px`, celdas `bg-card` → hairlines limpias.
+ * Panel de métricas: UN panel dividido por reglas de 1px tintadas al teal (no un grid de tarjetas
+ * idénticas). La métrica-héroe lleva acento teal (barra izquierda + piso tenue) y ocupa 2 col en xl.
  */
 export function StatPanel({ items }: { items: StatItem[] }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-border">
+    <div className="shadow-card overflow-hidden rounded-[var(--radius-data)] border bg-rule">
       <div className="grid grid-cols-2 gap-px sm:grid-cols-3 xl:grid-cols-6">
         {items.map((s) => (
-          <div key={s.label} className="bg-card p-4">
+          <div
+            key={s.label}
+            className={cn(
+              "relative bg-card p-4",
+              s.emphasis && "bg-primary/[0.045] pl-5 xl:col-span-2",
+            )}
+          >
+            {s.emphasis ? (
+              <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-primary" aria-hidden />
+            ) : null}
             <Stat {...s} />
           </div>
         ))}
