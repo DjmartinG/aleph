@@ -52,7 +52,7 @@ export function StatPanel({ items }: { items: StatItem[] }) {
             key={s.label}
             className={cn(
               "relative bg-card p-4",
-              s.emphasis && "bg-primary/[0.045] pl-5 xl:col-span-2",
+              s.emphasis && "bg-primary/[0.045] pl-5",
             )}
           >
             {s.emphasis ? (

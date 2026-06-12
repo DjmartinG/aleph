@@ -53,6 +53,7 @@ function Dashboard({ data }: { data: Portfolio }) {
     },
     { label: "TIR apal. ref.", parts: splitPct(c.tir_ref), base: "Ponderada por ventas" },
     { label: "Crédito máx", parts: splitCop(c.credito_max), base: "Pico consolidado" },
+    { label: "Unidades", parts: [fmtInt(c.unidades), ""], base: `${fmtInt(c.n)} proyectos` },
   ];
 
   return (
