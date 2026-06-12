@@ -1,34 +1,15 @@
+# Monorepo ALEPH — nivel raíz. El .gitignore de la app vive en app_streamlit/.gitignore.
 __pycache__/
 *.pyc
 .venv/
 venv/
+node_modules/
+.next/
+dist/
+build/
 .env
 .env.local
-*.xlsx
-*.xlsm
-~$*
 .DS_Store
-.streamlit/secrets.toml
-
-# Datos REALES confidenciales — nunca al repo público
-proyectos_privados/
-*_REAL_privado.json
-*_privado.json
-# Snapshots dorados de proyectos REALES (cifras auditadas) — solo locales; los ilustrativos sí se commitean
-tests/golden/*_REAL_snapshot.json
-
-# Artefactos de empaquetado / herramientas
-*.egg-info/
-build/
-dist/
 .ruff_cache/
 .pytest_cache/
-
-# Archivos scratch / temporales (pruebas, auditorías, agentes)
-*.tmp
-.tmp*
-.audit*
-_audit*
-nav_audit.txt
-nav_resultado.txt
-suma_cap.txt
+*.egg-info/
