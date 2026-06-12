@@ -7,7 +7,8 @@ Modelos Pydantic. Tests obligatorios para toda función financiera (incluido el 
 > La lógica financiera se trajo **tal cual** desde `app_streamlit/cg_engine` (solo imports relativos; deps:
 > scipy con fallback, dateutil, pydantic). Módulos: `config`, `errors`, `schema`, `finanzas`, `curvas`,
 > `flujo`, `portafolio`, `ingresos`, `modelo` (orquestador `calcular`), `apalancamiento` (waterfall fiducia,
-> cifras doradas) y `evm`. Versión **heredada 2.39.0**.
+> cifras doradas) y `evm`. Versión **heredada 2.39.0**. Además: `metrics.py` (diccionario único de
+> indicadores con **etiqueta de base**) y `checks.py` (checks de cuadre) — registro/reconciliación, sin cálculos nuevos.
 >
 > Tests (`tests/`, leen los snapshots desde `app_streamlit/tests/golden/`, fuente única):
 > - `test_golden_harness.py` — re-ejecuta `aleph_engine.calcular()` y exige paridad de cifras (tol. 0.1%). **VERDE.**
