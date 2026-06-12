@@ -12,6 +12,7 @@ Biblioteca de prompts por fase: `directives/prompts_migracion_v3.md`.
 | `api/` | FastAPI sobre el motor + Supabase. Contrato OpenAPI versionado. |
 | `web/` | Next.js + TS + Tailwind + shadcn/ui. UI profesional (solo presenta). |
 | `app_streamlit/` | La app Streamlit **actual**, en producción hasta tener paridad. No se le añade funcionalidad nueva. |
+| `docs/` | Decisiones de arquitectura (ADRs). Empieza en [docs/README.md](docs/README.md). |
 
 ## Scripts (desde la raíz del monorepo)
 | Quiero… | Linux / Git Bash | Windows / PowerShell |
