@@ -24,6 +24,8 @@ SECCION_AREA = {
     "Pipeline / Embudo": "Tablero",   # embudo por estado del ciclo de vida (1c-2)
     "Proyectos activos": "Tablero",   # filtro por estado + tarjetas modernas (1c-3)
     "Resumen ejecutivo": "Tablero",   # ex-Cockpit (renombrado en 1c-4a)
+    "Datos del proyecto": "Factibilidad",   # consulta: resumen + Urbanístico absorbido (1c-4c)
+    "Cronograma": "Factibilidad",   # Cronograma + Ingresos en tabs (1c-4c)
     "P&G": "Factibilidad",
     "Flujo de caja": "Factibilidad",
     "Distribución costos": "Factibilidad",  # solo-lectura tras 1b-ii (editores movidos a Ingreso)

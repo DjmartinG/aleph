@@ -16,9 +16,10 @@ from cg_engine import config as _cfg
 SECCIONES_TABLERO = [("Inicio", "house-door"), ("Pipeline / Embudo", "funnel"), ("Resumen ejecutivo", "speedometer2"),
                      ("Proyectos activos", "buildings"), ("Portafolio (burbujas)", "graph-up")]
 # Orden: la tasa de descuento (WACC) se define ANTES del flujo (se descuenta con ella).
-SECCIONES_FACTIBILIDAD = [("Datos del proyecto", "pencil-square"), ("Urbanístico", "building"),
-                          ("Cronograma", "calendar3"), ("Ingresos", "cash-coin"),
-                          ("Distribución costos", "bar-chart-line"), ("P&G", "table"), ("Reparto", "pie-chart"),
+# Urbanístico vive en "Datos del proyecto"; Ingresos en "Cronograma"; Reparto al final de "P&G".
+SECCIONES_FACTIBILIDAD = [("Datos del proyecto", "pencil-square"),
+                          ("Cronograma", "calendar3"),
+                          ("Distribución costos", "bar-chart-line"), ("P&G", "table"),
                           ("Costo de capital", "percent"), ("Flujo de caja", "cash-stack"),
                           ("Apalancamiento", "bank"),
                           ("Riesgo y sensibilidad", "exclamation-triangle")]

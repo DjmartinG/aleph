@@ -708,13 +708,30 @@ if seccion=="Proyectos activos":
                    "TIR mostrada es la **referencia del modelo aprobado**. *Dominica y Torres aún greenfield-2026.* "
                    + ("Datos reales (privados)." if _proys and es_real(_proys[0]) else "Cifras ilustrativas."))
 
-# ============ DATOS DEL PROYECTO ============
+# ============ URBANÍSTICO (función; se muestra dentro de "Datos del proyecto") ============
+def _sec_urbanistico():
+    u=R["urbanistico"]
+    df=pd.DataFrame([
+        ("Área lote bruta (m²)",u["lote_bruta"]),("Área lote útil (m²)",u["lote_util"]),
+        ("Ratio bruta/útil",u["ratio_bruta_util"]),("Área construida (m²)",u["area_construida"]),
+        ("Área vendible (m²)",u["area_vendible"]),("Índice de construcción",u["indice_construccion"]),
+        ("Aprovechamiento",u["aprovechamiento"]),("Densidad (und/ha)",u["densidad_und_ha"]),
+        ("Precio venta /m² (COP)",u["precio_m2_vend"]),("Costo directo /m² const (COP)",u["costo_dir_m2_const"]),
+    ],columns=["Indicador","Valor"])
+    st.dataframe(df.style.format({"Valor":"{:,.2f}"}, na_rep="—"), width="stretch", hide_index=True)
+
+# ============ DATOS DEL PROYECTO (consulta: resumen + urbanístico; la edición vive en Ingreso) ============
 if seccion=="Datos del proyecto":
-    # La EDICIÓN se trasladó a ADMINISTRACIÓN → Ingreso de datos (admin-only). Aquí queda la CONSULTA.
     st.markdown("### 📝 Datos del proyecto")
     st.info("🔒 **Solo lectura.** El ingreso de datos se hace en **Administración → Ingreso de datos** "
-            "(reservado a los administradores). El resto del tablero está disponible para consulta.")
-    st.caption("Resultados, flujo, apalancamiento y cronograma se calculan automáticamente desde esos datos.")
+            "(reservado a los administradores).")
+    _c=st.columns(4)
+    _c[0].metric("Tipo", meta.get("tipo") or "—")
+    _c[1].metric("Unidades", f"{meta.get('unidades') or 0:,}".replace(",", "."))
+    _c[2].metric("Etapas", len(par.get("etapas",[])))
+    _c[3].metric("Costo del lote", fmt_mm(par.get("lote_bruto_miles",0)))
+    st.markdown("#### Urbanístico — áreas e índices")
+    _sec_urbanistico()
 elif seccion=="Ingreso de datos" and not PUEDE_INGRESAR:
     st.markdown("### 🗂️ Ingreso de datos")
     st.error("🔒 Sección restringida a **administradores** (acceso por login de Microsoft).")
@@ -956,11 +973,10 @@ if seccion=="P&G":
                    "*FC del Inversionista* de **Flujo de caja**. La **renta** ya está descontada en la **UDI**. "
                    "Otros impuestos operativos (**predial, ICA**) se cargan como capítulos del **indirecto** "
                    "(Distribución costos).")
-
-# ============ REPARTO ============
-if seccion=="Reparto":
-    fig=go.Figure(data=[go.Pie(labels=["CG","Socio"],values=[pg["cg"],pg["socio"]],hole=.55,marker_colors=[TEAL,AMBER])])
-    fig.update_layout(title="Distribución de resultados",height=380); st.plotly_chart(fig, width="stretch")
+    st.markdown("##### Reparto del resultado — CG / socio")
+    _figrep=go.Figure(data=[go.Pie(labels=["CG","Socio"],values=[pg["cg"],pg["socio"]],hole=.55,marker_colors=[TEAL,AMBER])])
+    _figrep.update_layout(title="Distribución de resultados",height=360); st.plotly_chart(_figrep, width="stretch")
+    st.caption("Reparto de la utilidad operativa entre CG y el socio, según el split configurado.")
 
 # ============ DISTRIBUCIÓN COSTOS ============
 if seccion=="Distribución costos":
@@ -1187,8 +1203,8 @@ if seccion=="Valor Ganado":
         st.caption("PV (teal) = costo directo planeado acumulado · EV (verde) = avance real valorado al "
                    "presupuesto · AC (rojo) = costo realmente gastado · EAC (ámbar) = proyección del costo final.")
 
-# ============ CRONOGRAMA ============
-if seccion=="Cronograma":
+# ============ CRONOGRAMA (función; se muestra junto con Ingresos en tabs, abajo) ============
+def _sec_cronograma():
     h=R.get("hitos",{})
     if not h:
         st.info("Completa los datos de etapas (en 🗂️ Ingreso de datos) para ver el cronograma.")
@@ -1250,8 +1266,8 @@ if seccion=="Cronograma":
             kpi(cc[2],"Meses con entregas", str((en[-1]-en[0]+1) if en else 0))
             st.caption("Barras = unidades vendidas por mes y etapa · línea roja = entregas/mes · punteada = acumulado vendido (curva de absorción).")
 
-# ============ INGRESOS ============
-if seccion=="Ingresos":
+# ============ INGRESOS / RECAUDO (función; se muestra como tab dentro de Cronograma) ============
+def _sec_ingresos():
     rc=R.get("recaudo",{})
     if not rc or not rc.get("total"):
         st.info("Completa los datos de etapas para ver el recaudo de ingresos.")
@@ -1264,6 +1280,14 @@ if seccion=="Ingresos":
         kpi(cc[0],"Separación",fmt_mm(sum(sepr))); kpi(cc[1],"Cuota inicial",fmt_mm(sum(cir)))
         kpi(cc[2],"Subrogación",fmt_mm(sum(subr))); kpi(cc[3],"Recaudo total",fmt_mm(sum(tot)))
         st.caption("Separación diferida + cuota inicial (venta → escrituración) + subrogación (a la entrega).")
+
+# ============ CRONOGRAMA + INGRESOS (recaudo) — en tabs ============
+if seccion=="Cronograma":
+    _ct=st.tabs(["📅 Cronograma","💰 Ingresos (recaudo)"])
+    with _ct[0]:
+        _sec_cronograma()
+    with _ct[1]:
+        _sec_ingresos()
 
 # ============ (Escenarios, Sensibilidad 2D, Tornado y Monte Carlo viven en "Riesgo y sensibilidad", abajo) ============
 
@@ -1493,17 +1517,7 @@ if seccion=="Monitor de ejecución":
                         f'<div style="font-size:10px;color:#9CA3AF;margin-top:3px;">{", ".join(a["meses"])} · {a["impacto"]}</div></div>',
                         unsafe_allow_html=True)
 
-# ============ URBANÍSTICO ============
-if seccion=="Urbanístico":
-    u=R["urbanistico"]
-    df=pd.DataFrame([
-        ("Área lote bruta (m²)",u["lote_bruta"]),("Área lote útil (m²)",u["lote_util"]),
-        ("Ratio bruta/útil",u["ratio_bruta_util"]),("Área construida (m²)",u["area_construida"]),
-        ("Área vendible (m²)",u["area_vendible"]),("Índice de construcción",u["indice_construccion"]),
-        ("Aprovechamiento",u["aprovechamiento"]),("Densidad (und/ha)",u["densidad_und_ha"]),
-        ("Precio venta /m² (COP)",u["precio_m2_vend"]),("Costo directo /m² const (COP)",u["costo_dir_m2_const"]),
-    ],columns=["Indicador","Valor"])
-    st.dataframe(df.style.format({"Valor":"{:,.2f}"}, na_rep="—"), width="stretch", hide_index=True)
+# ============ (Urbanístico vive dentro de "Datos del proyecto", como vista de consulta) ============
 
 # ---------------- acciones (solo dentro de un proyecto, no en Inicio) ----------------
 if seccion != "Inicio":
