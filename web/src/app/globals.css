@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* Dark mode por clase .dark (lo controlará un toggle; ambos modos desde el día uno). */
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   Design tokens ALEPH · CG Constructora
+   Base zinc/slate · acento teal CG #0E5E59 · ámbar CG secundario ·
+   semánticos verde/ámbar/rojo SOLO para estados. Tipografía Inter, tabular-nums.
+   ============================================================================ */
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #ffffff;
+  --foreground: #09090b;            /* zinc-950 */
+
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+
+  --primary: #0e5e59;               /* teal CG */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f4f4f5;             /* zinc-100 */
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;      /* zinc-500 */
+  --accent: #f1f5f9;                /* slate-100 */
+  --accent-foreground: #0f172a;
+
+  --destructive: #dc2626;           /* red-600 */
+  --destructive-foreground: #fafafa;
+
+  --border: #e4e4e7;                /* zinc-200 */
+  --input: #e4e4e7;
+  --ring: #0e5e59;
+
+  /* Semánticos de estado (NO decorativos) */
+  --success: #16a34a;               /* green-600  */
+  --warning: #d97706;               /* amber-600 (ámbar CG secundario) */
+  --danger: #dc2626;                /* red-600    */
+  --cg-amber: #d97706;
+}
+
+.dark {
+  --background: #09090b;            /* zinc-950 */
+  --foreground: #fafafa;
+
+  --card: #18181b;                  /* zinc-900 */
+  --card-foreground: #fafafa;
+  --popover: #18181b;
+  --popover-foreground: #fafafa;
+
+  --primary: #2dd4bf;               /* teal-400, pop sobre fondo oscuro */
+  --primary-foreground: #04201e;
+
+  --secondary: #27272a;             /* zinc-800 */
+  --secondary-foreground: #fafafa;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;      /* zinc-400 */
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+
+  --destructive: #ef4444;           /* red-500 */
+  --destructive-foreground: #fafafa;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #2dd4bf;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --cg-amber: #f59e0b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-cg-amber: var(--cg-amber);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    /* Densidad financiera: todos los números alineados (constitución). */
+    font-variant-numeric: tabular-nums;
+  }
+}
