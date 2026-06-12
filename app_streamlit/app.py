@@ -1388,8 +1388,9 @@ if seccion=="Monitor de ejecución":
             PR=_nav.NAVARRA_PRESUPUESTO_T1; parts=PR["partidas"]
             bac=sum(p["base"] for p in parts); ac=sum(p["ejecutado"] for p in parts)
             eac=sum(p["proy_act"] for p in parts); aseg=sum(p["asegurado"] for p in parts)
-            real_av,_=_nav.avance_ultimo(); ev=real_av/100.0*bac      # valor ganado = %avance × BAC
-            cpi=(ev/ac) if ac else None; vac=bac-eac
+            real_av,_=_nav.avance_ultimo()
+            # Fórmula EVM en el motor (evm.indices). EAC bottom-up por partida (Σ proyectado); no hay cifra nueva.
+            _ix=_evm.indices(bac, ac, avance=real_av/100.0, EAC=eac); ev=_ix["EV"]; cpi=_ix["CPI"]; vac=_ix["VAC"]
             st.caption(f"Control de presupuesto Torre 1 · corte {PR['fecha_corte']} · valores en **millones COP**.")
             e=st.columns(5)
             kpi(e[0],"Presupuesto base (BAC)", f"${bac:,.0f} M".replace(",", "."), "planeado", MUTED)

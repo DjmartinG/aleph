@@ -33,6 +33,31 @@ def _curva_planeada(distribucion):
     return esc, acum
 
 
+def indices(BAC, AC, EV=None, avance=None, PV=None, EAC=None):
+    """FÓRMULA EVM compartida: a partir de los agregados ya medidos (BAC, AC, y EV o % avance),
+    deriva los índices y proyecciones. La usan TANTO el EVM del modelo (`calcular_evm`) COMO el control
+    de presupuesto real por partidas de la app — para no duplicar la fórmula.
+
+      - EV  = `avance` × BAC si no se pasa EV explícito.
+      - CPI = EV/AC · SPI = EV/PV (None si falta el denominador).
+      - EAC: si se PASA (proyección bottom-up por partida) se respeta; si no, EAC = BAC/CPI (índice).
+      - CV = EV−AC · SV = EV−PV · ETC = EAC−AC · VAC = BAC−EAC.
+    """
+    if EV is None:
+        EV = (avance or 0.0) * BAC
+    cpi = (EV / AC) if AC else None
+    spi = (EV / PV) if PV else None
+    cv = EV - AC
+    sv = (EV - PV) if PV is not None else None
+    if EAC is None:
+        EAC = (BAC / cpi) if cpi else None
+    etc = (EAC - AC) if EAC is not None else None
+    vac = (BAC - EAC) if EAC is not None else None
+    return {"BAC": BAC, "EV": EV, "AC": AC, "PV": PV,
+            "CPI": cpi, "SPI": spi, "CV": cv, "SV": sv,
+            "EAC": EAC, "ETC": etc, "VAC": vac}
+
+
 def calcular_evm(par, R, hoy=None):
     """Calcula EVM del proyecto. `par` = dict del proyecto; `R` = salida de modelo.calcular(par).
     Devuelve None si no hay datos de avance real ingresados (no se puede computar EV/AC).
@@ -91,14 +116,10 @@ def calcular_evm(par, R, hoy=None):
     else:
         pv = avance_global * BAC                         # sin calendario: PV≈avance esperado
 
-    # ---- índices y proyecciones ----
-    cpi = (ev / ac) if ac else None
-    spi = (ev / pv) if pv else None
-    cv = ev - ac
-    sv = ev - pv
-    eac = (BAC / cpi) if cpi else None                   # costo final estimado al ritmo actual
-    etc = (eac - ac) if eac is not None else None
-    vac = (BAC - eac) if eac is not None else None
+    # ---- índices y proyecciones (fórmula compartida; EAC por índice = BAC/CPI) ----
+    _idx = indices(BAC, ac, EV=ev, PV=pv)
+    cpi, spi, cv, sv = _idx["CPI"], _idx["SPI"], _idx["CV"], _idx["SV"]
+    eac, etc, vac = _idx["EAC"], _idx["ETC"], _idx["VAC"]
 
     return {
         "BAC": BAC, "PV": pv, "EV": ev, "AC": ac,
