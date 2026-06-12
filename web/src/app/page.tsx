@@ -1,65 +1,122 @@
-import Image from "next/image";
+import { getPortfolio, type Portfolio } from "@/lib/api";
+import { fmtCop, fmtInt, fmtPct } from "@/lib/format";
+import { KpiCard } from "@/components/kpi-card";
+import { PhaseBadge } from "@/components/phase-badge";
+import { PortfolioTable } from "@/components/portfolio-table";
 
-export default function Home() {
+export default async function Page() {
+  let data: Portfolio | null = null;
+  let errMsg: string | null = null;
+  try {
+    data = await getPortfolio();
+  } catch (e) {
+    errMsg = e instanceof Error ? e.message : "Error desconocido";
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex min-h-full flex-col">
+      <Header />
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Portafolio</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Consolidado de proyectos de CG Constructora.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {errMsg ? (
+          <ErrorPanel message={errMsg} />
+        ) : data ? (
+          <Dashboard data={data} />
+        ) : null}
       </main>
+      <Footer />
+    </div>
+  );
+}
+
+function Dashboard({ data }: { data: Portfolio }) {
+  const c = data.consolidado;
+  return (
+    <div className="space-y-8">
+      {/* KPIs consolidados */}
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <KpiCard label="Proyectos" value={fmtInt(c.n)} sub={`${fmtInt(c.unidades)} unidades`} />
+        <KpiCard label="Ventas" value={fmtCop(c.ventas)} base="Consolidado" />
+        <KpiCard
+          label="Utilidad operativa"
+          value={fmtCop(c.util_oper)}
+          base="Consolidado"
+          sub={`Margen ${fmtPct(c.margen)}`}
+        />
+        <KpiCard
+          label="VPN @TIO"
+          value={fmtCop(c.vpn)}
+          base="Suma proyectos"
+          state={c.vpn < 0 ? "negative" : c.vpn > 0 ? "positive" : "neutral"}
+        />
+        <KpiCard label="TIR apal. ref." value={fmtPct(c.tir_ref)} base="Ponderada por ventas" />
+        <KpiCard label="Crédito máx" value={fmtCop(c.credito_max)} base="Pico consolidado" />
+      </section>
+
+      {/* Embudo por fase */}
+      <section>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Embudo por fase</h2>
+        <div className="flex flex-wrap gap-2">
+          {data.embudo.map((f) => (
+            <div
+              key={f.estado}
+              className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2"
+            >
+              <PhaseBadge estado={f.estado} label={f.label} />
+              <span className="text-sm font-semibold tabular-nums">{fmtInt(f.count)}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Tabla de proyectos */}
+      <section>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">Proyectos</h2>
+        <PortfolioTable items={data.items} />
+      </section>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+      <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <span className="size-2.5 rounded-full bg-primary" aria-hidden />
+        <span className="font-semibold tracking-tight">ALEPH</span>
+        <span className="text-sm text-muted-foreground">· CG Constructora</span>
+        <span className="ml-auto text-sm text-muted-foreground">Portafolio</span>
+      </div>
+    </header>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 text-xs text-muted-foreground sm:px-6 lg:px-8">
+        ALEPH · plataforma de evaluación financiera — datos del motor <code>aleph_engine</code>.
+      </div>
+    </footer>
+  );
+}
+
+function ErrorPanel({ message }: { message: string }) {
+  return (
+    <div className="rounded-xl border border-danger/30 bg-danger/5 p-6">
+      <h2 className="font-semibold text-danger">No se pudo cargar el portafolio</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+      <p className="mt-3 text-sm text-muted-foreground">
+        ¿Está corriendo el API en local? Levántalo con{" "}
+        <code className="rounded bg-muted px-1 py-0.5">./dev_api.ps1</code> (puerto 8000, auth
+        apagada) o define <code className="rounded bg-muted px-1 py-0.5">ALEPH_API_URL</code>.
+      </p>
     </div>
   );
 }
