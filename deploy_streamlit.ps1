@@ -62,23 +62,29 @@ Write-Host "==> [3/4] Reiniciando…" -ForegroundColor Cyan
 az webapp restart --resource-group $RG --name $APP
 
 # --- 4) Verificación ---
-Write-Host "==> [4/4] Esperando a que responda (health)…" -ForegroundColor Cyan
-$ok = $false
-foreach ($i in 1..36) {
-  try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 "$URL/_stcore/health" | Out-Null; $ok = $true; break } catch { Start-Sleep -Seconds 5 }
-}
+# OJO: la app corre detrás de Easy Auth (login de Microsoft) -> un health check ANONIMO devuelve la
+# pagina de login (200/302) AUNQUE el contenedor este roto = falso positivo. Verificamos por el ESTADO
+# del App Service + confirmacion visual en el navegador (donde si tienes sesion).
+Write-Host "==> [4/4] Esperando arranque del contenedor (~40s)…" -ForegroundColor Cyan
+Start-Sleep -Seconds 40
+$Estado = az webapp show --resource-group $RG --name $APP --query state -o tsv 2>$null
 
 Write-Host ""
-if ($ok) {
-  Write-Host "OK Desplegado. La app responde." -ForegroundColor Green
-  Write-Host "   URL:     $URL"
-  Write-Host "   Imagen:  $Img"
-  Write-Host "   Esperado en el pie:  «Aplicativo v$Ver»  <- confírmalo en el navegador."
+Write-Host "OK Deploy enviado.  App Service: $Estado" -ForegroundColor Green
+Write-Host "   URL:     $URL"
+Write-Host "   Imagen:  $Img"
+Write-Host ""
+Write-Host "   VERIFICA TU (no se puede automatizar tras Easy Auth):" -ForegroundColor Yellow
+Write-Host "     1) Abre $URL con tu cuenta CG."
+Write-Host "     2) Confirma el pie:  «Aplicativo v$Ver»."
+Write-Host "     3) Revisa el tablero de Navarra: cifras identicas a antes (TIR proyecto 37.60%, etc.)."
+Write-Host ""
+Write-Host "   Si la app NO carga / queda en error -> ROLLBACK a la imagen anterior:"
+if ($PrevImg -and $PrevImg -ne "$ACR_LOGIN/$IMAGE`:$Tag") {
+  Write-Host "     az webapp config container set -g $RG -n $APP --container-image-name `"$PrevImg`" --container-registry-url $ACR_URL"
 } else {
-  Write-Host "La app NO respondió al health check tras ~180s. Puede tardar más, o la imagen está mal." -ForegroundColor Yellow
-  if ($PrevImg -and $PrevImg -ne "$ACR_LOGIN/$IMAGE`:$Tag") {
-    Write-Host "`n   ROLLBACK a la imagen anterior ($PrevImg):"
-    Write-Host "     az webapp config container set -g $RG -n $APP --container-image-name `"$PrevImg`" --container-registry-url $ACR_URL"
-    Write-Host "     az webapp restart -g $RG -n $APP"
-  }
+  Write-Host "     (imagen previa no detectada; mira el portal -> Deployment Center para el tag anterior)"
 }
+Write-Host "     az webapp restart -g $RG -n $APP"
+Write-Host ""
+Write-Host "   Arranque lento o con error? Mira los logs:  az webapp log tail -g $RG -n $APP"

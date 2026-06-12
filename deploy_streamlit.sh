@@ -70,27 +70,29 @@ echo "==> [3/4] Reiniciando…"
 az webapp restart --resource-group "$RG" --name "$APP"
 
 # --- 4) Verificación ---
-echo "==> [4/4] Esperando a que responda (health)…"
-ok=0
-for _ in $(seq 1 36); do
-  if curl -fsS "$URL/_stcore/health" >/dev/null 2>&1; then ok=1; break; fi
-  sleep 5
-done
+# OJO: la app corre detrás de Easy Auth (login de Microsoft) → un health check ANÓNIMO devuelve la
+# página de login (200/302) AUNQUE el contenedor esté roto = falso positivo. Por eso verificamos por
+# el ESTADO del App Service + confirmación visual en el navegador (donde sí tienes sesión).
+echo "==> [4/4] Esperando arranque del contenedor (~40s)…"
+sleep 40
+ESTADO="$(az webapp show --resource-group "$RG" --name "$APP" --query state -o tsv 2>/dev/null || echo '?')"
 
 echo ""
-if [ "$ok" -eq 1 ]; then
-  echo "✅ Desplegado. La app responde."
-  echo "   URL:     $URL"
-  echo "   Imagen:  $IMG"
-  echo "   Esperado en el pie:  «Aplicativo v$VER»  ← confírmalo en el navegador."
+echo "✅ Deploy enviado.  App Service: $ESTADO"
+echo "   URL:     $URL"
+echo "   Imagen:  $IMG"
+echo ""
+echo "   VERIFICA TÚ (no se puede automatizar tras Easy Auth):"
+echo "     1) Abre $URL con tu cuenta CG."
+echo "     2) Confirma el pie:  «Aplicativo v$VER»."
+echo "     3) Revisa el tablero de Navarra: cifras idénticas a antes (TIR proyecto 37.60%, etc.)."
+echo ""
+echo "   Si la app NO carga / queda en error → ROLLBACK a la imagen anterior:"
+if [ -n "${PREV_IMG:-}" ] && [ "$PREV_IMG" != "$ACR_LOGIN/$IMAGE:$TAG" ]; then
+  echo "     az webapp config container set -g $RG -n $APP --container-image-name \"$PREV_IMG\" --container-registry-url $ACR_URL"
 else
-  echo "⚠️  La app NO respondió al health check tras ~180s. Puede tardar más en arrancar (revisa el"
-  echo "    portal / logs), o la imagen nueva está mal."
-  if [ -n "${PREV_IMG:-}" ] && [ "$PREV_IMG" != "$ACR_LOGIN/$IMAGE:$TAG" ]; then
-    echo ""
-    echo "    ROLLBACK a la imagen anterior ($PREV_IMG):"
-    echo "      az webapp config container set -g $RG -n $APP \\"
-    echo "        --container-image-name \"$PREV_IMG\" --container-registry-url $ACR_URL"
-    echo "      az webapp restart -g $RG -n $APP"
-  fi
+  echo "     (imagen previa no detectada; míra el portal → Deployment Center para el tag anterior)"
 fi
+echo "     az webapp restart -g $RG -n $APP"
+echo ""
+echo "   ¿Arranque lento o con error? Mira los logs:  az webapp log tail -g $RG -n $APP"
