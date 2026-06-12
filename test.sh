@@ -20,8 +20,8 @@ fi
 "$PY" -c "import pytest" 2>/dev/null || { echo "==> instalando pytest…"; "$PY" -m pip install -q pytest; }
 # El motor (aleph_engine) debe estar instalado: la app, la API y el harness del engine lo importan.
 "$PY" -c "import aleph_engine" 2>/dev/null || { echo "==> instalando el motor aleph_engine…"; "$PY" -m pip install -e ./engine; }
-# Deps de la API (Fase 4a).
-"$PY" -c "import fastapi, httpx" 2>/dev/null || { echo "==> instalando fastapi/httpx (API)…"; "$PY" -m pip install -q fastapi httpx; }
+# Deps de la API (Fase 4a + auth 4c).
+"$PY" -c "import fastapi, httpx, jwt, cryptography" 2>/dev/null || { echo "==> instalando deps de la API…"; "$PY" -m pip install -q fastapi httpx "pyjwt[crypto]"; }
 
 fail=0
 

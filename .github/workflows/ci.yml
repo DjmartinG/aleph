@@ -29,7 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r app_streamlit/requirements.txt
           pip install -e ./engine          # aleph_engine (el motor) como paquete instalado
-          pip install fastapi httpx "uvicorn[standard]"   # deps de la API (Fase 4a)
+          pip install fastapi httpx "uvicorn[standard]" "pyjwt[crypto]"   # deps de la API (4a + auth 4c)
           pip install pytest ruff
 
       - name: Lint (ruff — solo errores de correctitud)

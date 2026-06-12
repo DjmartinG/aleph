@@ -13,6 +13,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
+    "pyjwt[crypto]>=2.8",      # validación de JWT de Entra ID (auth.py); cryptography para RS256
     "aleph-engine",            # el motor (en ../engine; en dev: pip install -e ../engine)
     # supabase>=2.6 se usa SOLO si hay SUPABASE_URL/KEY (en dev se leen JSON locales).
 ]

@@ -4,9 +4,24 @@ Envuelve `aleph_engine` y expone el motor por HTTP. NO reimplementa fórmulas �
 corre `calcular()` y estructura la respuesta (indicadores **con etiqueta de base**, P&G, flujo, crédito,
 checks de cuadre, sensibilidad).
 
-> **Estado: PROMPT 4 · Fase 4a — API de LECTURA sobre los datos actuales.** Versión 0.1.0.
-> Sin migración de esquema, sin auth todavía, sin tocar el Streamlit. Contrato en
-> `../directives/plan_migracion.md` §5.
+> **Estado: PROMPT 4 · Fase 4a (lectura) + 4c (auth Entra ID).** Versión 0.1.0.
+> Sin migración de esquema, sin tocar el Streamlit. Contrato en `../directives/plan_migracion.md` §5.
+
+## Auth (Entra ID) — `auth.py`
+Valida el **JWT de Entra ID** del header `Authorization: Bearer` (firma RS256 vía JWKS del tenant,
+`aud`, `iss`, `exp`), con **PyJWT**. Es **config-driven**: se activa SOLO si están estas variables de
+entorno (si no, la API queda abierta — útil en dev/CI):
+
+| Variable | Qué es |
+|---|---|
+| `ENTRA_TENANT_ID` | GUID del tenant de Entra (el mismo del App Service actual). |
+| `API_AUDIENCE` | audiencia que debe traer el token = App ID URI o client-id del **registro de app de la API**. |
+| `ALEPH_ADMINS` | (opcional) correos admin separados por coma (rol admin si no viene en los claims). |
+| `ALEPH_CORS_ORIGINS` | (opcional) orígenes permitidos del `/web` (coma-separados); por defecto `*`. |
+
+**Lo que Martin configura en Entra (para 4d):** registrar una **app para la API** (exponer un scope /
+App ID URI → ese es `API_AUDIENCE`); la app del `/web` pide un token para ese scope; poner las variables
+de arriba como *Application settings* del App Service `cg-aleph-api`. `/version` queda público (health).
 
 ## Endpoints (v1)
 | Método | Ruta | Qué devuelve |

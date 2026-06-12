@@ -1,16 +1,22 @@
 # -*- coding: utf-8 -*-
-"""App FastAPI de ALEPH (Fase 4a — lectura). Expone el motor `aleph_engine` por HTTP.
+"""App FastAPI de ALEPH (Fase 4a lectura + 4c auth). Expone el motor `aleph_engine` por HTTP.
 
-Contrato §5 de `directives/plan_migracion.md`. Auth (Entra ID) y migración de datos llegan en fases
-posteriores; por ahora es solo lectura sobre los datos actuales, sin tocar Supabase ni el Streamlit.
+Contrato §5 de `directives/plan_migracion.md`. La auth (Entra ID) se activa por configuración
+(`auth.py`): sin `ENTRA_TENANT_ID`/`API_AUDIENCE` la API queda abierta (dev/CI). La migración de
+datos a `projects`/`scenarios` llega en 4b.
 """
 from __future__ import annotations
 
+import logging
+import os
+
 from aleph_engine import __version__ as ENGINE_V
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import __version__, build
+from . import __version__, auth, build
+
+log = logging.getLogger("aleph_api")
 
 app = FastAPI(
     title="ALEPH API",
@@ -18,10 +24,21 @@ app = FastAPI(
     description="API de lectura del motor de factibilidad de CG Constructora (sobre aleph_engine).",
 )
 
-# CORS abierto en Fase 4a (sin auth todavía). Se restringe al añadir Entra ID (Fase 4c).
+# CORS: orígenes desde ALEPH_CORS_ORIGINS (coma-separados) o "*" si no se configura (dev).
+_origins = [o.strip() for o in os.environ.get("ALEPH_CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware, allow_origins=_origins, allow_methods=["*"], allow_headers=["*"],
 )
+
+# Aviso de arranque: que no pase desapercibido un despliegue con la auth apagada.
+if not auth.auth_enabled():
+    if auth.auth_required():
+        log.error("ALEPH_AUTH_REQUIRED=true pero la auth NO está configurada: las rutas /v1 devolverán 503.")
+    else:
+        log.warning("AUTH DESHABILITADA (sin ENTRA_TENANT_ID/API_AUDIENCE): API abierta — solo para dev/CI.")
+
+# Router v1: TODO requiere usuario autenticado (no-op si la auth está deshabilitada en dev/CI).
+v1 = APIRouter(prefix="/v1", dependencies=[Depends(auth.current_user)])
 
 
 def _slug_de_escenario(scenario_id: str) -> str:
@@ -38,46 +55,49 @@ def _par_o_404(slug: str):
 
 @app.get("/version")
 def version():
+    """Salud + versión (público, sin auth — sirve de health check). No expone el estado de la auth."""
     return {"name": "aleph-api", "version": __version__, "engine_version": ENGINE_V}
 
 
-@app.get("/v1/portfolio")
+@v1.get("/portfolio")
 def get_portfolio(estado: str | None = Query(default=None)):
-    items = build.items_portafolio()
-    payload = build.portafolio(items)
+    payload = build.portafolio(build.items_portafolio())
     if estado:
         payload = {**payload, "items": [d for d in payload["items"] if d.get("estado") == estado]}
     return payload
 
 
-@app.get("/v1/projects/{slug}")
+@v1.get("/projects/{slug}")
 def get_project(slug: str):
     par, R = _par_o_404(slug)
     return build.project(slug, par, R)
 
 
-@app.get("/v1/projects/{slug}/scenarios")
+@v1.get("/projects/{slug}/scenarios")
 def get_scenarios(slug: str):
-    _par_o_404(slug)                       # 404 si no existe
+    _par_o_404(slug)
     return build.scenarios_list(slug)
 
 
-@app.get("/v1/scenarios/{scenario_id}/results")
+@v1.get("/scenarios/{scenario_id}/results")
 def get_results(scenario_id: str):
     slug = _slug_de_escenario(scenario_id)
     par, R = _par_o_404(slug)
     return build.results(slug, par, R)
 
 
-@app.get("/v1/scenarios/{scenario_id}/sensitivity")
+@v1.get("/scenarios/{scenario_id}/sensitivity")
 def get_sensitivity(scenario_id: str):
     slug = _slug_de_escenario(scenario_id)
     par, _R = _par_o_404(slug)
     return build.sensitivity(slug, par)
 
 
-@app.post("/v1/scenarios/{scenario_id}/run")
+@v1.post("/scenarios/{scenario_id}/run")
 def post_run(scenario_id: str, req: dict | None = None):
     slug = _slug_de_escenario(scenario_id)
     par, _R = _par_o_404(slug)
     return build.run(par, req or {})
+
+
+app.include_router(v1)

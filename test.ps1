@@ -17,9 +17,9 @@ if ($LASTEXITCODE -ne 0) { Write-Host "==> instalando pytest…"; & $Py -m pip i
 # El motor (aleph_engine) debe estar instalado: la app, la API y el harness del engine lo importan.
 & $Py -c "import aleph_engine" 2>$null
 if ($LASTEXITCODE -ne 0) { Write-Host "==> instalando el motor aleph_engine…"; & $Py -m pip install -e ./engine }
-# Deps de la API (Fase 4a).
-& $Py -c "import fastapi, httpx" 2>$null
-if ($LASTEXITCODE -ne 0) { Write-Host "==> instalando fastapi/httpx (API)…"; & $Py -m pip install -q fastapi httpx }
+# Deps de la API (Fase 4a + auth 4c).
+& $Py -c "import fastapi, httpx, jwt, cryptography" 2>$null
+if ($LASTEXITCODE -ne 0) { Write-Host "==> instalando deps de la API…"; & $Py -m pip install -q fastapi httpx "pyjwt[crypto]" }
 
 $fail = 0
 

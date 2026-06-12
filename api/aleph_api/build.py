@@ -7,9 +7,13 @@ NO calcula fórmulas: arma las respuestas desde `aleph_engine` (`calcular`, `met
 """
 from __future__ import annotations
 
+import logging
+
 from aleph_engine import calcular, checks, config, metrics, modelo, portfolio
 
 from . import repo
+
+_log = logging.getLogger("aleph_api.build")
 
 
 def _estado(par: dict) -> str:
@@ -147,6 +151,7 @@ def items_portafolio():
         try:
             par = repo.cargar(slug)
             out.append((slug, par, calcular(par)))
-        except Exception:
+        except Exception as e:
+            _log.warning("Proyecto '%s' omitido del portafolio (%s)", slug, e.__class__.__name__)
             continue
     return out
