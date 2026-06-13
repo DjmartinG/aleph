@@ -14,7 +14,7 @@ const NAV: NavGroup[] = [
     group: "Portafolio",
     items: [
       { href: "/", label: "Tablero", icon: LayoutDashboard },
-      { href: "/pipeline", label: "Pipeline", icon: GitBranch, soon: true },
+      { href: "/pipeline", label: "Pipeline", icon: GitBranch },
     ],
   },
 ];
