@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getProject, getResults } from "@/lib/api";
+import { getProject, getResults, getSensitivity } from "@/lib/api";
 import { fmtInt } from "@/lib/format";
 import { PhaseBadge } from "@/components/phase-badge";
 import { FichaTabs } from "@/components/views/ficha-tabs";
 
 export default async function ProyectoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [project, results] = await Promise.all([getProject(slug), getResults(slug)]);
+  const [project, results, sensitivity] = await Promise.all([
+    getProject(slug),
+    getResults(slug),
+    getSensitivity(slug),
+  ]);
   if (!project || !results) notFound();
 
   const { meta, estado, es_real } = project;
@@ -44,7 +48,7 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
         ) : null}
       </header>
 
-      <FichaTabs project={project} results={results} />
+      <FichaTabs project={project} results={results} sensitivity={sensitivity} />
     </div>
   );
 }

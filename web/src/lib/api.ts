@@ -185,3 +185,32 @@ export async function getResults(slug: string): Promise<Results | null> {
   if (!res.ok) throw new Error(`API ${res.status} en results de ${slug}`);
   return res.json() as Promise<Results>;
 }
+
+// ---------- Sensibilidad (escenarios + tornado + heatmap) ----------
+
+export interface EscenarioVals {
+  ventas: number;
+  util_oper: number;
+  margen: number;
+}
+
+export interface Sensitivity {
+  scenario_id: string;
+  project_id: string;
+  /** { Base | Optimista | Pesimista } → métricas. */
+  escenarios: Record<string, EscenarioVals>;
+  /** { "Precio -10%": Δutil, "Precio +10%": Δutil, ... } impacto sobre la utilidad. */
+  tornado: Record<string, number>;
+  matriz_2d: { pasos_precio: number[]; pasos_costo: number[]; margen_pct: number[][] };
+}
+
+/** GET /v1/scenarios/{slug}:base/sensitivity. null si no existe (404). */
+export async function getSensitivity(slug: string): Promise<Sensitivity | null> {
+  const res = await fetch(
+    `${API_BASE}/v1/scenarios/${encodeURIComponent(slug)}:base/sensitivity`,
+    { cache: "no-store" },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API ${res.status} en sensitivity de ${slug}`);
+  return res.json() as Promise<Sensitivity>;
+}

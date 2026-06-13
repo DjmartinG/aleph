@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ProjectDetail, Results } from "@/lib/api";
+import type { ProjectDetail, Results, Sensitivity } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { FichaResumen } from "@/components/views/ficha-resumen";
 import { FlujoView } from "@/components/views/ficha-flujo";
+import { SensibilidadView } from "@/components/views/ficha-sensibilidad";
 
 type Tab = "resumen" | "flujo" | "sensibilidad";
 
@@ -14,7 +15,15 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "sensibilidad", label: "Sensibilidad" },
 ];
 
-export function FichaTabs({ project, results }: { project: ProjectDetail; results: Results }) {
+export function FichaTabs({
+  project,
+  results,
+  sensitivity,
+}: {
+  project: ProjectDetail;
+  results: Results;
+  sensitivity: Sensitivity | null;
+}) {
   const [tab, setTab] = useState<Tab>("resumen");
 
   return (
@@ -46,9 +55,13 @@ export function FichaTabs({ project, results }: { project: ProjectDetail; result
       {tab === "resumen" ? <FichaResumen project={project} results={results} /> : null}
       {tab === "flujo" ? <FlujoView flujo={results.flujo.apalancado} /> : null}
       {tab === "sensibilidad" ? (
-        <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-          Escenarios, tornado y Monte Carlo — próximamente.
-        </div>
+        sensitivity ? (
+          <SensibilidadView sensitivity={sensitivity} />
+        ) : (
+          <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+            Sensibilidad no disponible.
+          </div>
+        )
       ) : null}
     </div>
   );
