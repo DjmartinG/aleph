@@ -87,6 +87,24 @@ def test_schedule_fiel_al_motor():
     assert sum(sc["recaudo"]["total"]) > 0
 
 
+@pytest.mark.skipif(NAV not in SLUGS, reason="Navarra no disponible")
+def test_wacc_fiel_al_motor():
+    """El build-up CAPM expone lo que el motor calcula; WACC Navarra ~21.54% (cifra dorada)."""
+    w = client.get(f"/v1/scenarios/{NAV}:base/wacc").json()
+    assert w["disponible"] is True
+    # Cifra dorada del build-up (k.beta): WACC Navarra ~21.54%.
+    assert 0.21 <= w["wacc"] <= 0.22
+    # Cadena coherente: reapalancada > desapalancada > 0; Ke COP > Ke USD (riesgo país + inflación).
+    assert w["beta_l"] > w["beta_u"] > 0
+    assert w["ke_cop"] > w["ke_usd"]
+    # Pesos suman 1 y las contribuciones suman el WACC.
+    assert abs(w["we"] + w["wd"] - 1.0) < 1e-9
+    assert abs(w["aporte_equity"] + w["aporte_deuda"] - w["wacc"]) < 1e-9
+    # Fidelidad: el WACC expuesto == el del motor (apalancamiento).
+    R = calcular(repo.cargar(NAV))
+    assert abs(w["wacc"] - R["apalancamiento"]["wacc"]) < 1e-9
+
+
 def test_404_proyecto_inexistente():
     assert client.get("/v1/projects/no_existe").status_code == 404
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404

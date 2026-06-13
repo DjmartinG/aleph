@@ -279,6 +279,39 @@ export async function getSchedule(slug: string): Promise<Schedule | null> {
   return res.json() as Promise<Schedule>;
 }
 
+// ---------- Costo de capital (WACC build-up CAPM) ----------
+
+export interface WaccInputs {
+  rf: number | null; rm: number | null; pm: number | null;
+  kd_us: number | null; de_us: number | null; tax_us: number | null;
+  de_col: number | null; tax_col: number | null;
+  inf_col: number | null; inf_us: number | null;
+}
+
+/** Build-up CAPM completo. Tasas como fracción decimal (0.2154 = 21.54%). */
+export interface Wacc {
+  scenario_id: string;
+  project_id: string;
+  disponible: boolean;
+  wacc?: number;
+  tio?: number | null;
+  beta_us?: number; beta_d?: number; beta_u?: number; beta_l?: number;
+  ke_usd?: number; rp?: number; ke_usd_rp?: number; rplp?: number; ke_cop?: number;
+  kd_cop?: number; kd_despues_imp?: number;
+  we?: number; wd?: number; t_col?: number;
+  /** Contribuciones que suman al WACC: E·Ke y D·Kd·(1−t). */
+  aporte_equity?: number; aporte_deuda?: number;
+  inputs?: WaccInputs;
+}
+
+/** GET /v1/scenarios/{slug}:base/wacc. null si no existe (404). */
+export async function getWacc(slug: string): Promise<Wacc | null> {
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/wacc`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API ${res.status} en wacc de ${slug}`);
+  return res.json() as Promise<Wacc>;
+}
+
 // ---------- Monte Carlo (POST run) ----------
 
 export interface MCStats {

@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getProject, getResults, getSensitivity, getSchedule } from "@/lib/api";
+import { getProject, getResults, getSensitivity, getSchedule, getWacc } from "@/lib/api";
 import { fmtInt } from "@/lib/format";
 import { PhaseBadge } from "@/components/phase-badge";
 import { FichaTabs } from "@/components/views/ficha-tabs";
 
 export default async function ProyectoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [project, results, sensitivity, schedule] = await Promise.all([
+  const [project, results, sensitivity, schedule, wacc] = await Promise.all([
     getProject(slug),
     getResults(slug),
     getSensitivity(slug),
     getSchedule(slug),
+    getWacc(slug),
   ]);
   if (!project || !results) notFound();
 
@@ -49,7 +50,7 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
         ) : null}
       </header>
 
-      <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} />
+      <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} />
     </div>
   );
 }

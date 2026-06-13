@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from aleph_engine import calcular, checks, config, metrics, modelo, portfolio
+from aleph_engine import calcular, checks, config, finanzas, metrics, modelo, portfolio
 
 from . import repo
 
@@ -185,6 +185,46 @@ def schedule(slug: str, par: dict, R: dict) -> dict:
             "acum_ventas": _acum(ventas_g[:fin]), "acum_entregas": _acum(entregas_g[:fin]),
         },
         "recaudo": {"separacion": _r(sep), "cuota_inicial": _r(ci), "subrogacion": _r(sub), "total": _r(tot)},
+    }
+
+
+def wacc(slug: str, par: dict, R: dict) -> dict:
+    """Costo de capital (§5 GET /scenarios/{id}/wacc): build-up CAPM de mercado emergente.
+
+    Expone TODA la cadena que el motor (`finanzas.calcular_wacc(detalle=True)`) ya calcula —
+    beta des/reapalancada → Ke USD → +EMBI → paridad de inflación → Ke COP, Kd y escudo fiscal,
+    WACC = E·Ke + D·Kd·(1−t) — SIN recalcular. Tasas como fracción decimal (0.2154 = 21.54%).
+    `disponible=False` si el proyecto no trae parámetros de WACC (greenfield).
+    """
+    base = {"scenario_id": f"{slug}:base", "project_id": slug}
+    wp = (par.get("financiero") or {}).get("wacc")
+    if not wp:
+        return {**base, "disponible": False}
+
+    d = finanzas.calcular_wacc(wp, detalle=True)
+    ap = R.get("apalancamiento") or {}
+
+    def _pct(k):
+        v = wp.get(k)
+        return v / 100 if v is not None else None
+
+    return {
+        **base, "disponible": True,
+        "wacc": d["wacc"], "tio": ap.get("tio"),
+        "beta_us": wp.get("beta_us"), "beta_d": d["beta_d"], "beta_u": d["beta_u"], "beta_l": d["beta_l"],
+        "ke_usd": d["ke_usd"], "rp": d["rp"], "ke_usd_rp": d["ke_usd_rp"],
+        "rplp": d["rplp"], "ke_cop": d["ke_cop"],
+        "kd_cop": d["kd_cop"], "kd_despues_imp": d["kd_cop"] * (1 - d["t_col"]),
+        "we": d["we"], "wd": d["wd"], "t_col": d["t_col"],
+        # Contribuciones al WACC (suman al WACC): E·Ke_cop y D·Kd·(1−t).
+        "aporte_equity": d["we"] * d["ke_cop"],
+        "aporte_deuda": d["wd"] * d["kd_cop"] * (1 - d["t_col"]),
+        "inputs": {
+            "rf": _pct("rf"), "rm": _pct("rm"), "pm": d["pm"],
+            "kd_us": _pct("kd_us"), "de_us": _pct("de_us"), "tax_us": _pct("tax_us"),
+            "de_col": _pct("de_col"), "tax_col": _pct("tax_col"),
+            "inf_col": _pct("inf_col"), "inf_us": _pct("inf_us"),
+        },
     }
 
 
