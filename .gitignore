@@ -16,3 +16,8 @@ build/
 # Archivos intermedios (regenerables) — nunca se commitean (ver metodología en CLAUDE.md)
 .tmp/
 .tmp*
+*.tmp
+# Basura suelta en la RAÍZ (capturas, logs). Las imágenes de producto viven en web/public/ o
+# app_streamlit/assets/, no en la raíz, así que ignorar PNG/LOG sueltos en raíz es seguro.
+/*.png
+/*.log
