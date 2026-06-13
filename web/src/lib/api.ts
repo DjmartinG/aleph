@@ -75,6 +75,8 @@ export interface ProjectItem {
   tir: number | null;
   vpn: number | null;
   ventas: number | null;
+  /** Margen operativo (fracción). Para el mapa de valor (TIR × margen). */
+  margen: number | null;
   und: number;
   ubicacion: string;
   tipo: string;

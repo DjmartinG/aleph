@@ -31,6 +31,8 @@ def test_portfolio():
     assert len(j["items"]) == len(SLUGS)
     # el embudo cubre los estados del ciclo de vida
     assert {e["estado"] for e in j["embudo"]}
+    # mapa de valor: cada item trae margen (TIR/margen/ventas/tipo ya presentes)
+    assert all({"nombre", "tir", "margen", "ventas", "tipo"} <= it.keys() for it in j["items"])
 
 
 @pytest.mark.skipif(NAV not in SLUGS, reason="Navarra no disponible")

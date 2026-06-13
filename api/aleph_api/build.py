@@ -238,6 +238,12 @@ def portafolio(items) -> dict:
     embudo = [{"estado": e, "label": config.ESTADO_LABEL.get(e, e), "count": cuenta.get(e, 0)}
               for e in config.ESTADOS]
     consolidado = {k: v for k, v in cons.items() if k != "filas"}
+    # Enriquecer cada item con su margen operativo → habilita el mapa de valor (TIR × margen) en la UI.
+    # Se reusa la MISMA TIR de los items (apal. ref. / proyecto), consistente con la tabla y sin el
+    # TIR degenerado -99% de proyectos greenfield (la constitución prohíbe mostrarlo).
+    margen = {s: (R.get("pyg") or {}).get("margen_oper") for s, _p, R in items}
+    for d in pipe:
+        d["margen"] = margen.get(d["slug"])
     return {"consolidado": consolidado, "embudo": embudo, "items": pipe}
 
 

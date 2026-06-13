@@ -3,6 +3,7 @@ import { fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { FunnelBar } from "@/components/funnel-bar";
 import { PortfolioTable } from "@/components/portfolio-table";
+import { ValueMap } from "@/components/charts/value-map";
 import { SectionTitle } from "@/components/section-title";
 
 export default async function Page() {
@@ -64,6 +65,13 @@ function Dashboard({ data }: { data: Portfolio }) {
       <section className="mt-10">
         <SectionTitle>Embudo por fase</SectionTitle>
         <FunnelBar stages={data.embudo} />
+      </section>
+
+      <section className="mt-9">
+        <SectionTitle right="TIR × margen">Mapa de valor</SectionTitle>
+        <div className="rounded-[var(--radius-data)] border bg-card p-4">
+          <ValueMap items={data.items} />
+        </div>
       </section>
 
       <section className="mt-7">
