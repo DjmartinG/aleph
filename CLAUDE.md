@@ -1,6 +1,6 @@
 # Instrucciones para el Agente
 	
-> Este archivo está replicado en CLAUDE.md, AGENTS.md y GEMINI.md para que las mismas instrucciones carguen en cualquier entorno de IA.
+> **CLAUDE.md es la ÚNICA fuente.** `AGENTS.md` y `GEMINI.md` son **copias generadas** (la misma doctrina carga en cualquier entorno de IA). **Edita SOLO `CLAUDE.md`** y corre `sync_docs.ps1` (o `sync_docs.sh`) para regenerar las copias **antes de commitear**. No edites AGENTS.md/GEMINI.md a mano: se sobrescriben.
 
 ---
 
