@@ -106,6 +106,88 @@ def sensitivity(slug: str, par: dict) -> dict:
     }
 
 
+def _iso(d):
+    """Fecha (date) → ISO 'YYYY-MM-DD', o None."""
+    return d.isoformat() if hasattr(d, "isoformat") else None
+
+
+def _mes_offset(d, base) -> int:
+    """Meses entre `base` y `d` (mismo criterio que ingresos.recaudo_portafolio)."""
+    return (d.year - base.year) * 12 + (d.month - base.month)
+
+
+def schedule(slug: str, par: dict, R: dict) -> dict:
+    """Cronograma + absorción + recaudo (§5 GET /scenarios/{id}/schedule).
+
+    Expone TAL CUAL lo que el motor ya calcula: hitos por etapa (IV/PE/FV/IC/FC → Gantt), la curva de
+    absorción de ventas (unidades vendidas/entregadas por mes + acumulado) y el recaudo mensual
+    (separación / cuota inicial / subrogación). No recalcula nada. Las series viven en una línea de
+    tiempo GLOBAL (mes 0 = `base_date` = IV de la etapa raíz) y se recortan a la ventana activa.
+    """
+    hitos = R.get("hitos") or {}
+    recaudo = R.get("recaudo") or {}
+    vacio = {
+        "scenario_id": f"{slug}:base", "project_id": slug, "base_date": None, "horizonte": 0,
+        "unidades_total": 0, "etapas": [],
+        "absorcion": {"ventas": [], "entregas": [], "acum_ventas": [], "acum_entregas": []},
+        "recaudo": {"separacion": [], "cuota_inicial": [], "subrogacion": [], "total": []},
+    }
+    if not hitos:
+        return vacio   # proyecto sin etapas datadas (p.ej. greenfield): la UI muestra "sin cronograma"
+
+    base = min(h["IV"] for h in hitos.values())
+    etapas = []
+    for cod, h in sorted(hitos.items(), key=lambda kv: (kv[1]["IV"], str(kv[0]))):
+        etapas.append({
+            "cod": cod, "nombre": h.get("nombre"), "unidades": h.get("unidades", 0),
+            "iv": _iso(h["IV"]), "pe": _iso(h["PE"]), "fv": _iso(h["FV"]),
+            "ic": _iso(h["IC"]), "fc": _iso(h["FC"]), "dur_obra": h.get("dur_obra"),
+            "iv_mes": _mes_offset(h["IV"], base), "pe_mes": _mes_offset(h["PE"], base),
+            "fv_mes": _mes_offset(h["FV"], base), "ic_mes": _mes_offset(h["IC"], base),
+            "fc_mes": _mes_offset(h["FC"], base),
+        })
+
+    sep = list(recaudo.get("separacion", [])); ci = list(recaudo.get("cuota_inicial", []))
+    sub = list(recaudo.get("subrogacion", [])); tot = list(recaudo.get("total", []))
+    horizonte = len(tot)
+    ventas_g = [0.0] * horizonte; entregas_g = [0.0] * horizonte
+    for _cod, e in (recaudo.get("por_etapa") or {}).items():
+        off = int(e.get("offset", 0))
+        for m, v in enumerate(e.get("ventas", [])):
+            if 0 <= off + m < horizonte:
+                ventas_g[off + m] += v
+        for m, v in enumerate(e.get("entregas", [])):
+            if 0 <= off + m < horizonte:
+                entregas_g[off + m] += v
+
+    activos = [i for i in range(horizonte) if ventas_g[i] or entregas_g[i] or tot[i]]
+    fin = max((max(activos) + 2 if activos else 0),
+              max((et["fc_mes"] for et in etapas), default=0) + 2)
+    fin = min(max(fin, 1), horizonte) if horizonte else 0
+
+    def _acum(s):
+        out, a = [], 0.0
+        for x in s:
+            a += x; out.append(round(a))
+        return out
+
+    def _r(s):
+        return [round(x, 2) for x in s[:fin]]
+
+    return {
+        "scenario_id": f"{slug}:base", "project_id": slug,
+        "base_date": _iso(base), "horizonte": fin,
+        "unidades_total": sum(h.get("unidades", 0) for h in hitos.values()),
+        "etapas": etapas,
+        "absorcion": {
+            "ventas": [round(x) for x in ventas_g[:fin]],
+            "entregas": [round(x) for x in entregas_g[:fin]],
+            "acum_ventas": _acum(ventas_g[:fin]), "acum_entregas": _acum(entregas_g[:fin]),
+        },
+        "recaudo": {"separacion": _r(sep), "cuota_inicial": _r(ci), "subrogacion": _r(sub), "total": _r(tot)},
+    }
+
+
 def portafolio(items) -> dict:
     """Consolidado + embudo + items (§5 GET /portfolio). `items` = [(slug, par, R)]."""
     cons = portfolio.consolidar(items)

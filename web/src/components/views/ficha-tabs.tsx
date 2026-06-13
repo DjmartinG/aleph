@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import type { ProjectDetail, Results, Sensitivity } from "@/lib/api";
+import type { ProjectDetail, Results, Sensitivity, Schedule } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { FichaResumen } from "@/components/views/ficha-resumen";
 import { FlujoView } from "@/components/views/ficha-flujo";
+import { CronogramaView } from "@/components/views/ficha-cronograma";
 import { SensibilidadView } from "@/components/views/ficha-sensibilidad";
 
-type Tab = "resumen" | "flujo" | "sensibilidad";
+type Tab = "resumen" | "flujo" | "cronograma" | "sensibilidad";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "resumen", label: "Resumen" },
   { key: "flujo", label: "Flujo" },
+  { key: "cronograma", label: "Cronograma" },
   { key: "sensibilidad", label: "Sensibilidad" },
 ];
 
@@ -19,10 +21,12 @@ export function FichaTabs({
   project,
   results,
   sensitivity,
+  schedule,
 }: {
   project: ProjectDetail;
   results: Results;
   sensitivity: Sensitivity | null;
+  schedule: Schedule | null;
 }) {
   const [tab, setTab] = useState<Tab>("resumen");
 
@@ -54,6 +58,15 @@ export function FichaTabs({
 
       {tab === "resumen" ? <FichaResumen project={project} results={results} /> : null}
       {tab === "flujo" ? <FlujoView flujo={results.flujo.apalancado} /> : null}
+      {tab === "cronograma" ? (
+        schedule ? (
+          <CronogramaView schedule={schedule} />
+        ) : (
+          <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+            Cronograma no disponible.
+          </div>
+        )
+      ) : null}
       {tab === "sensibilidad" ? (
         sensitivity ? (
           <SensibilidadView sensitivity={sensitivity} slug={project.id} />

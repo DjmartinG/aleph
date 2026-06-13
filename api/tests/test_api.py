@@ -68,6 +68,25 @@ def test_sensitivity_y_run():
     assert r.status_code == 200
 
 
+@pytest.mark.skipif(NAV not in SLUGS, reason="Navarra no disponible")
+def test_schedule_fiel_al_motor():
+    """El cronograma expone EXACTAMENTE los hitos/recaudo del motor; la absorción reconcilia."""
+    sc = client.get(f"/v1/scenarios/{NAV}:base/schedule").json()
+    R = calcular(repo.cargar(NAV))
+    # Una etapa por cada hito del motor; fechas presentes y la etapa raíz arranca en mes 0.
+    assert sc["etapas"] and len(sc["etapas"]) == len(R["hitos"])
+    e0 = sc["etapas"][0]
+    assert all(e0[k] for k in ("iv", "pe", "fv", "ic", "fc"))
+    assert e0["iv_mes"] == 0 and sc["base_date"]
+    # Series alineadas al horizonte recortado.
+    H = sc["horizonte"]
+    assert H > 0 and len(sc["recaudo"]["total"]) == H == len(sc["absorcion"]["ventas"])
+    # La absorción reconcilia: el acumulado de ventas llega a las unidades del proyecto.
+    assert abs(sc["absorcion"]["acum_ventas"][-1] - sc["unidades_total"]) <= 1
+    # Recaudo con caja real (separación + cuota inicial + subrogación).
+    assert sum(sc["recaudo"]["total"]) > 0
+
+
 def test_404_proyecto_inexistente():
     assert client.get("/v1/projects/no_existe").status_code == 404
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404

@@ -111,6 +111,13 @@ def get_sensitivity(scenario_id: str):
     return build.sensitivity(slug, par)
 
 
+@v1.get("/scenarios/{scenario_id}/schedule")
+def get_schedule(scenario_id: str):
+    slug = _slug_de_escenario(scenario_id)
+    par, R = _par_o_404(slug)
+    return build.schedule(slug, par, R)
+
+
 @v1.post("/scenarios/{scenario_id}/run")
 def post_run(scenario_id: str, req: dict | None = None):
     slug = _slug_de_escenario(scenario_id)

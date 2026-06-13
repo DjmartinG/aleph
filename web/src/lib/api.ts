@@ -245,6 +245,40 @@ export async function getSensitivity(slug: string): Promise<Sensitivity | null> 
   return res.json() as Promise<Sensitivity>;
 }
 
+// ---------- Cronograma (hitos + absorción + recaudo) ----------
+
+/** Una etapa con sus hitos (fechas ISO + offset de mes desde base_date para el Gantt). */
+export interface ScheduleEtapa {
+  cod: number | string;
+  nombre: string;
+  unidades: number;
+  iv: string; pe: string; fv: string; ic: string; fc: string;
+  dur_obra: number | null;
+  iv_mes: number; pe_mes: number; fv_mes: number; ic_mes: number; fc_mes: number;
+}
+
+export interface Schedule {
+  scenario_id: string;
+  project_id: string;
+  /** Mes 0 de las series (= IV de la etapa raíz), ISO o null si no hay cronograma. */
+  base_date: string | null;
+  horizonte: number;
+  unidades_total: number;
+  etapas: ScheduleEtapa[];
+  /** Series mensuales globales de unidades. */
+  absorcion: { ventas: number[]; entregas: number[]; acum_ventas: number[]; acum_entregas: number[] };
+  /** Series mensuales de caja (miles COP). */
+  recaudo: { separacion: number[]; cuota_inicial: number[]; subrogacion: number[]; total: number[] };
+}
+
+/** GET /v1/scenarios/{slug}:base/schedule. null si no existe (404). */
+export async function getSchedule(slug: string): Promise<Schedule | null> {
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/schedule`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API ${res.status} en schedule de ${slug}`);
+  return res.json() as Promise<Schedule>;
+}
+
 // ---------- Monte Carlo (POST run) ----------
 
 export interface MCStats {
