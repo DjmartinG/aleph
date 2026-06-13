@@ -14,6 +14,21 @@ Navegador ──login Microsoft──>  /web (Vercel, Next.js)  ──Bearer tok
 > abierto). Definir las variables de Entra en Vercel ENCIENDE el login. No hay
 > cambios de código entre dev y prod, solo variables.
 
+> ✅ **DESPLEGADO EL 2026-06-13.** En producción: `https://aleph-4iiv.vercel.app`.
+
+## Valores reales de CG (ya creados — NO secretos, son IDs públicos)
+
+| Qué | Valor |
+|---|---|
+| Tenant ID (`ENTRA_TENANT_ID`, base del ISSUER) | `5c0ceba8-4397-49c8-a9fb-832860708337` |
+| App registration **del API** `ALEPH API` (`API_AUDIENCE` + base del scope) | `5dccc7aa-8c5b-4a53-a2fe-4826062af4e5` |
+| App registration **del Web** `ALEPH Web` (`AUTH_MICROSOFT_ENTRA_ID_ID`) | `e91870a2-71a0-4a1c-9c7b-9007d6161c4b` |
+| Dominio de producción en Vercel | `aleph-4iiv.vercel.app` |
+
+> El **client secret** del `ALEPH Web` (`AUTH_MICROSOFT_ENTRA_ID_SECRET`) NO se
+> documenta aquí: vive solo en Vercel. Si se pierde, se crea otro en
+> *Certificates & secrets* del `ALEPH Web`.
+
 ---
 
 ## 0) Lo que necesitas a la mano
@@ -193,3 +208,7 @@ despliegues y puedes volver al anterior en segundos.
 | `AADSTS65001` consent required | falta admin consent del permiso al API | **Grant admin consent** (2.5) |
 | Bucle de login / "sesión expiró" repetido | el access token no se acepta en el API | revisa 1.2 + 3.2 (v2 + audiencia) |
 | Login OK pero el dashboard no carga datos | `ALEPH_API_URL` mal, o el API caído | verifica la URL y `GET /version` del API |
+| Vercel: build **falla en ~2 s** (`framework=other`) | Root Directory quedó en `./`, no en `web` | Project → Settings → Build and Deployment → **Root Directory = `web`** (+ Framework = Next.js) → Redeploy |
+| No encuentro `requestedAccessTokenVersion` en el manifiesto | el manifiesto está en formato **AAD Graph** | edita **`accessTokenAcceptedVersion`** (en la raíz) = `2`; pista: si ves `replyUrlsWithType` es AAD Graph |
+| El API no aparece en **"Mis API"** al dar permiso | propagación de Entra (app recién creada) | usa la pestaña **"API usadas en mi organización"** y busca por el **GUID** del API |
+| No encuentro el "Id. de aplicación (cliente)" | abriste la **Aplicación web** (App Service), no el **Registro de aplicaciones** | el client ID vive en **Microsoft Entra ID → Registros de aplicaciones** (mismo nombre, recurso distinto) |
