@@ -1,6 +1,27 @@
-# Los scripts de shell DEBEN tener saltos de línea LF, o se rompen en Linux/CI/Git Bash
-# ("bad interpreter: /usr/bin/env bash^M"). Esto lo garantiza sin importar core.autocrlf de cada PC.
+# Normalización de fin de línea. Todo el TEXTO se almacena y se revisa con LF (consistente en
+# Windows/Linux/CI), evitando diffs fantasma por CRLF. Excepción: scripts de Windows en CRLF.
+
+* text=auto eol=lf
+
+# Scripts de shell: LF obligatorio (un CRLF rompe el shebang en Linux/CI/Git Bash: "bad interpreter ^M").
 *.sh    text eol=lf
 
-# Los .ps1 corren en Windows (PowerShell); CRLF es lo convencional allí.
+# Scripts de Windows: CRLF es lo convencional (PowerShell / cmd).
 *.ps1   text eol=crlf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binarios: git NO debe aplicarles conversión de fin de línea.
+*.png   binary
+*.ico   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.woff  binary
+*.woff2 binary
+*.xlsx  binary
+*.xlsm  binary
+*.xls   binary
+*.zip   binary
+*.pdf   binary
