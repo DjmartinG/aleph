@@ -112,6 +112,50 @@ def test_404_proyecto_inexistente():
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404
 
 
+class _FakeQuery:
+    """Encadena select/eq/in_/order/limit como el cliente de supabase, ignorando filtros."""
+    def __init__(self, data):
+        self._data = data
+
+    def select(self, *a, **k):
+        return self
+
+    eq = in_ = order = limit = select
+
+    def execute(self):
+        import types as _t
+        return _t.SimpleNamespace(data=self._data)
+
+
+class _FakeSB:
+    def __init__(self, tablas):
+        self._t = tablas
+
+    def table(self, nombre):
+        return _FakeQuery(self._t.get(nombre, []))
+
+
+def test_fase1_cut_over_lectura_a_scenarios(monkeypatch):
+    """Fase 1: con Supabase, cargar() lee el snapshot del escenario (modelo objetivo); la palanca
+    ALEPH_READ_SCENARIOS=false revierte a `proyectos.data` (espejo de respaldo)."""
+    snap = {"meta": {"nombre": "X"}, "etapas": [{"und": 1}]}
+    monkeypatch.setattr(repo, "_usa_supabase", lambda: True)
+
+    # cut-over ON (default): lee de projects→scenarios.snapshot
+    monkeypatch.delenv("ALEPH_READ_SCENARIOS", raising=False)
+    monkeypatch.setattr(repo, "_cliente", lambda: _FakeSB(
+        {"projects": [{"id": "p1", "slug": "x", "es_real": True}],
+         "scenarios": [{"snapshot": snap, "status": "approved", "version": 1}]}))
+    assert repo.cargar("x") == snap          # snapshot del escenario
+    assert repo.es_real("x") is True         # projects.es_real
+    assert repo.listar() == ["x"]            # projects.slug
+
+    # palanca de rollback: lee de `proyectos.data`
+    monkeypatch.setenv("ALEPH_READ_SCENARIOS", "false")
+    monkeypatch.setattr(repo, "_cliente", lambda: _FakeSB({"proyectos": [{"data": {"viejo": True}}]}))
+    assert repo.cargar("x") == {"viejo": True}
+
+
 def test_health_data():
     """Salud de datos público (no sensible): fuente + nº de proyectos. Sirve para verificar el deploy."""
     j = client.get("/health/data").json()

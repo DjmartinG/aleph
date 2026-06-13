@@ -46,13 +46,44 @@ def _cliente():
     return create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
 
+# ---------- Fase 1: cut-over de lectura al modelo objetivo (projects/scenarios) ----------
+# El ETL (db/etl_import_v1.py) pobló `scenarios` con el snapshot = el `par` COMPLETO bit a bit, así que
+# leer de ahí devuelve EXACTAMENTE el mismo dato que `proyectos.data` (el dorado sigue verde por
+# construcción). `proyectos` queda como ESPEJO de respaldo. Palanca de rollback: ALEPH_READ_SCENARIOS=false
+# vuelve a leer de `proyectos.data` sin redeploy de código.
+
+def _read_scenarios() -> bool:
+    return os.environ.get("ALEPH_READ_SCENARIOS", "true").strip().lower() not in ("0", "false", "no")
+
+
+def _snapshot_de_scenario(sb, slug: str) -> dict | None:
+    """`par` desde el modelo objetivo: project(slug) → escenario BASELINE (o el `approved` de mayor
+    versión) → snapshot. None si el proyecto/escenario no existe en el modelo nuevo (→ respaldo)."""
+    proj = sb.table("projects").select("id").eq("slug", slug).limit(1).execute().data
+    if not proj:
+        return None
+    rows = (sb.table("scenarios").select("snapshot,status,version")
+            .eq("project_id", proj[0]["id"]).in_("status", ["baseline", "approved"])
+            .order("version", desc=True).execute().data) or []
+    if not rows:
+        return None
+    elegido = next((r for r in rows if r["status"] == "baseline"), rows[0])  # baseline manda
+    return elegido["snapshot"]
+
+
 # ---------- API pública (espejo de storage.py) ----------
 
 def listar() -> list[str]:
     """Slugs de los proyectos disponibles, ordenados."""
     if _usa_supabase():
+        sb = _cliente()
         try:
-            r = _cliente().table("proyectos").select("slug").execute()
+            if _read_scenarios():
+                r = sb.table("projects").select("slug").execute()
+                slugs = sorted(row["slug"] for row in (r.data or []))
+                if slugs:
+                    return slugs                              # modelo objetivo
+            r = sb.table("proyectos").select("slug").execute()  # respaldo (espejo)
             return sorted(row["slug"] for row in (r.data or []))
         except Exception as e:
             log.warning("Supabase no respondió (%s); usando respaldo local", e.__class__.__name__)
@@ -69,8 +100,13 @@ def listar() -> list[str]:
 def cargar(slug: str) -> dict | None:
     """Devuelve el `par` (dict) del proyecto, o None si no existe."""
     if _usa_supabase():
+        sb = _cliente()
         try:
-            r = _cliente().table("proyectos").select("data").eq("slug", slug).limit(1).execute()
+            if _read_scenarios():
+                snap = _snapshot_de_scenario(sb, slug)
+                if snap is not None:
+                    return snap                              # modelo objetivo (baseline/approved)
+            r = sb.table("proyectos").select("data").eq("slug", slug).limit(1).execute()  # respaldo
             if r.data:
                 return r.data[0]["data"]
         except Exception as e:
@@ -86,8 +122,13 @@ def cargar(slug: str) -> dict | None:
 def es_real(slug: str) -> bool:
     """True si el proyecto tiene datos REALES (confidenciales) en vez de ilustrativos."""
     if _usa_supabase():
+        sb = _cliente()
         try:
-            r = _cliente().table("proyectos").select("es_real").eq("slug", slug).limit(1).execute()
+            if _read_scenarios():
+                r = sb.table("projects").select("es_real").eq("slug", slug).limit(1).execute()
+                if r.data:
+                    return bool(r.data[0].get("es_real"))
+            r = sb.table("proyectos").select("es_real").eq("slug", slug).limit(1).execute()  # respaldo
             if r.data:
                 return bool(r.data[0].get("es_real"))
         except Exception as e:
