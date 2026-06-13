@@ -32,7 +32,12 @@ export function FlujoView({ flujo }: { flujo: FlujoApalancado }) {
     }
     let minV = Infinity;
     let minM = -1;
-    for (const p of out) if (p.acum < minV) ((minV = p.acum), (minM = p.m));
+    for (const p of out) {
+      if (p.acum < minV) {
+        minV = p.acum;
+        minM = p.m;
+      }
+    }
     return {
       data: out,
       maxExposure: minM >= 0 && minV < 0 ? { m: minM, value: minV } : null,
