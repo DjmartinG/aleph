@@ -138,12 +138,32 @@ export interface Check {
   detalle?: string;
 }
 
+/** Series mensuales del flujo apalancado (180 meses). */
+export interface FlujoApalancado {
+  operativo: number[];
+  acumulado: number[];
+  saldo_credito: number[];
+  flujo_equity: number[];
+  ingresos: number[];
+  costos: number[];
+  credito_max: number;
+  max_necesidad_caja: number;
+  aportes_total: number;
+  payback_mes: number | null;
+}
+
+export interface Flujo {
+  apalancado: FlujoApalancado;
+  simple: Record<string, unknown>;
+}
+
 export interface Results {
   scenario_id: string;
   project_id: string;
   base_label: string;
   indicadores: Indicadores;
   pyg: Pyg;
+  flujo: Flujo;
   checks: Check[];
 }
 
