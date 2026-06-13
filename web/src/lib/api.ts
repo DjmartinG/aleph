@@ -118,6 +118,20 @@ export interface KpisCabecera {
   vpn_proyecto: number | null;
 }
 
+/** Ficha técnica / urbanística (áreas, índices, $/m²). Calculada por el motor. */
+export interface Urbanistico {
+  lote_bruta: number | null;
+  lote_util: number | null;
+  ratio_bruta_util: number | null;
+  area_construida: number | null;
+  area_vendible: number | null;
+  indice_construccion: number | null;
+  aprovechamiento: number | null;
+  densidad_und_ha: number | null;
+  precio_m2_vend: number | null;
+  costo_dir_m2_const: number | null;
+}
+
 export interface ProjectDetail {
   id: string;
   es_real: boolean;
@@ -125,6 +139,7 @@ export interface ProjectDetail {
   meta: Meta;
   estado: string;
   estado_label: string;
+  urbanistico?: Urbanistico | null;
   kpis_cabecera: KpisCabecera;
 }
 

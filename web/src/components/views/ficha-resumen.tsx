@@ -1,4 +1,4 @@
-import type { ProjectDetail, Pyg, Results } from "@/lib/api";
+import type { ProjectDetail, Pyg, Results, Urbanistico } from "@/lib/api";
 import { fmtCop, fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { Figure } from "@/components/figure";
@@ -14,7 +14,6 @@ function splitLabel(s: string): [string, string] {
 export function FichaResumen({ project, results }: { project: ProjectDetail; results: Results }) {
   const ind = results.indicadores;
   const pyg = results.pyg;
-  void project;
   const [tpL, tpB] = splitLabel(ind.tir_proyecto_label);
   const [tsL, tsB] = splitLabel(ind.tir_socio_label);
 
@@ -62,6 +61,64 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
         <SectionTitle>Estado de resultados (P&amp;G)</SectionTitle>
         <Ledger pyg={pyg} margen={ind.margen_oper} />
       </section>
+
+      {project.urbanistico ? (
+        <section className="mt-9">
+          <SectionTitle right="áreas e índices">Ficha técnica</SectionTitle>
+          <FichaTecnica u={project.urbanistico} />
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+/** Precio/costo por m² (valor en COP) → "$X.XM" (millones COP por m²). */
+function fmtPorM2(v: number | null): string {
+  if (v === null || v === undefined || !isFinite(v)) return "—";
+  return `$${(v / 1_000_000).toFixed(2)}M`;
+}
+
+function num2(v: number | null): string {
+  return v === null || v === undefined || !isFinite(v) ? "—" : v.toFixed(2);
+}
+
+function FichaTecnica({ u }: { u: Urbanistico }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      <TechBlock title="Áreas">
+        <TechRow label="Lote bruto" value={u.lote_bruta != null ? `${fmtInt(u.lote_bruta)} m²` : "—"} />
+        <TechRow label="Lote útil" value={u.lote_util != null ? `${fmtInt(u.lote_util)} m²` : "—"} />
+        <TechRow label="Área construida" value={u.area_construida != null ? `${fmtInt(u.area_construida)} m²` : "—"} />
+        <TechRow label="Área vendible" value={u.area_vendible != null ? `${fmtInt(u.area_vendible)} m²` : "—"} />
+      </TechBlock>
+      <TechBlock title="Índices">
+        <TechRow label="Ratio bruta / útil" value={num2(u.ratio_bruta_util)} />
+        <TechRow label="Índice de construcción" value={num2(u.indice_construccion)} />
+        <TechRow label="Aprovechamiento" value={fmtPct(u.aprovechamiento)} />
+        <TechRow label="Densidad" value={u.densidad_und_ha != null ? `${fmtInt(u.densidad_und_ha)} und/ha` : "—"} />
+      </TechBlock>
+      <TechBlock title="Por m²">
+        <TechRow label="Precio de venta / m²" value={fmtPorM2(u.precio_m2_vend)} />
+        <TechRow label="Costo directo / m²" value={fmtPorM2(u.costo_dir_m2_const)} />
+      </TechBlock>
+    </div>
+  );
+}
+
+function TechBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-[var(--radius-data)] border bg-card p-4">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
+      <dl className="divide-y divide-[var(--rule)]">{children}</dl>
+    </div>
+  );
+}
+
+function TechRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="num text-sm tabular-nums text-foreground/90">{value}</dd>
     </div>
   );
 }
