@@ -161,6 +161,8 @@ def test_health_data():
     j = client.get("/health/data").json()
     assert j["data_source"] in ("supabase", "local")
     assert j["project_count"] == len(SLUGS)
+    # diagnóstico de Fase 1: de dónde lee el API (local en tests; scenarios/proyectos en prod).
+    assert j["read_model"] in ("scenarios", "proyectos", "local")
 
 
 def test_portfolio_fail_loud_503_si_data_required_y_sin_datos(monkeypatch):

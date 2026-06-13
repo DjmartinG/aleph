@@ -141,6 +141,20 @@ def fuente() -> str:
     return "supabase" if _usa_supabase() else "local"
 
 
+def read_model() -> str:
+    """De dónde lee el API el `par`: 'scenarios' (modelo objetivo, Fase 1), 'proyectos' (espejo de
+    respaldo) o 'local' (JSON). Diagnóstico para verificar el cut-over en prod SIN exponer cifras."""
+    if not _usa_supabase():
+        return "local"
+    if not _read_scenarios():
+        return "proyectos"
+    try:
+        r = _cliente().table("projects").select("slug").limit(1).execute()
+        return "scenarios" if r.data else "proyectos"
+    except Exception:
+        return "proyectos"
+
+
 def data_required() -> bool:
     """True si la API DEBE tener datos (producción): 0 proyectos → la ruta de datos responde 503 en vez
     de 200-vacío. La imagen del API NO trae JSON de respaldo, así que en prod Supabase es OBLIGATORIO;

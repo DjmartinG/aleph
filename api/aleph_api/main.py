@@ -65,7 +65,8 @@ def health_data():
     Permite verificar un deploy (`project_count` > 0) AUNQUE la auth de `/v1` esté cerrada — así no hay
     que exponer rutas confidenciales para confirmar que la API lee los datos. `data_source=supabase` con
     `project_count=0` delata una mala config de Supabase (configurada pero la consulta no trae filas)."""
-    return {"data_source": repo.fuente(), "project_count": len(repo.listar())}
+    return {"data_source": repo.fuente(), "project_count": len(repo.listar()),
+            "read_model": repo.read_model()}
 
 
 @v1.get("/portfolio")
