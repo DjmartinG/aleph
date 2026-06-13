@@ -56,7 +56,7 @@ export function FichaTabs({
       {tab === "flujo" ? <FlujoView flujo={results.flujo.apalancado} /> : null}
       {tab === "sensibilidad" ? (
         sensitivity ? (
-          <SensibilidadView sensitivity={sensitivity} />
+          <SensibilidadView sensitivity={sensitivity} slug={project.id} />
         ) : (
           <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
             Sensibilidad no disponible.

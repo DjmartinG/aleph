@@ -214,3 +214,49 @@ export async function getSensitivity(slug: string): Promise<Sensitivity | null> 
   if (!res.ok) throw new Error(`API ${res.status} en sensitivity de ${slug}`);
   return res.json() as Promise<Sensitivity>;
 }
+
+// ---------- Monte Carlo (POST run) ----------
+
+export interface MCStats {
+  p10: number;
+  p50: number;
+  p90: number;
+  media: number;
+  std: number;
+  n: number;
+}
+
+export interface MonteCarloResult {
+  tir_proyecto: number[];
+  tir_equity: number[];
+  vpn_proyecto: number[];
+  stats_tir: MCStats;
+  stats_equity: MCStats;
+  stats_vpn: MCStats;
+  hurdle: number;
+  prob_tir_hurdle: number;
+  prob_vpn_pos: number;
+  n: number;
+  n_validas: number;
+}
+
+export interface MonteCarloParams {
+  tipo?: "tir" | "margen";
+  n?: number;
+  seed?: number;
+  rango_precio?: [number, number];
+  rango_costo?: [number, number];
+  rango_ventas?: [number, number];
+}
+
+/** POST /v1/scenarios/{slug}:base/run — Monte Carlo (único cálculo intensivo). */
+export async function postRun(slug: string, params: MonteCarloParams): Promise<MonteCarloResult> {
+  const res = await fetch(`${API_BASE}/v1/scenarios/${encodeURIComponent(slug)}:base/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`API ${res.status} al correr Monte Carlo de ${slug}`);
+  return res.json() as Promise<MonteCarloResult>;
+}
