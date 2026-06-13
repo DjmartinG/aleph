@@ -13,8 +13,9 @@ import os
 from aleph_engine import __version__ as ENGINE_V
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-from . import __version__, auth, build, repo
+from . import __version__, auth, build, repo, write
 
 log = logging.getLogger("aleph_api")
 
@@ -131,6 +132,56 @@ def post_run(scenario_id: str, req: dict | None = None):
     slug = _slug_de_escenario(scenario_id)
     par, _R = _par_o_404(slug)
     return build.run(par, req or {})
+
+
+# ---------- Escritura (Fase 2): crear/editar borradores → aprobar → baseline ----------
+# TODO write exige rol admin (`require_admin`); gerencia es solo-lectura. El `par` se valida con el
+# contrato del motor (write._validar) antes de persistir. NO toca el motor (cifras intactas).
+
+class ProjectCreate(BaseModel):
+    par: dict
+    slug: str | None = None
+    nombre: str | None = None
+    es_real: bool = False
+
+
+class ScenarioWrite(BaseModel):
+    par: dict
+
+
+def _actor(user: auth.Principal) -> str | None:
+    return user.email or user.oid
+
+
+@v1.post("/projects")
+def post_project(body: ProjectCreate, user: auth.Principal = Depends(auth.require_admin)):
+    """Crea un proyecto NUEVO + su escenario v1 en borrador (admin)."""
+    return write.crear_proyecto(body.par, slug=body.slug, nombre=body.nombre,
+                                es_real=body.es_real, actor=_actor(user))
+
+
+@v1.post("/projects/{project_id}/scenarios")
+def post_scenario(project_id: str, body: ScenarioWrite, user: auth.Principal = Depends(auth.require_admin)):
+    """Crea un escenario borrador NUEVO (siguiente versión) sobre un proyecto (admin)."""
+    return write.nuevo_draft(project_id, body.par, actor=_actor(user))
+
+
+@v1.put("/scenarios/{scenario_id}")
+def put_scenario(scenario_id: str, body: ScenarioWrite, user: auth.Principal = Depends(auth.require_admin)):
+    """Reemplaza el snapshot de un borrador (solo si status=draft; approved/baseline → 409) (admin)."""
+    return write.editar_draft(scenario_id, body.par, actor=_actor(user))
+
+
+@v1.post("/scenarios/{scenario_id}/approve")
+def post_approve(scenario_id: str, user: auth.Principal = Depends(auth.require_admin)):
+    """Aprueba un borrador: valida → recalcula con el motor → congela snapshot + cache + audita (admin)."""
+    return write.aprobar(scenario_id, actor=_actor(user))
+
+
+@v1.post("/scenarios/{scenario_id}/baseline")
+def post_baseline(scenario_id: str, user: auth.Principal = Depends(auth.require_admin)):
+    """Fija un escenario aprobado como baseline (la versión oficial; uno por proyecto) (admin)."""
+    return write.fijar_baseline(scenario_id, actor=_actor(user))
 
 
 app.include_router(v1)

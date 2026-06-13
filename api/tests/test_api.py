@@ -5,11 +5,12 @@ La API NO debe alterar las cifras del motor: expone exactamente lo que `aleph_en
 produce. El test de contrato dorado (datos REALES de Navarra, solo en local) clava TIR proyecto ~37.60%.
 """
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from aleph_engine import calcular
 
-from aleph_api import repo
+from aleph_api import repo, write
 from aleph_api.main import app
 
 client = TestClient(app)
@@ -112,27 +113,51 @@ def test_404_proyecto_inexistente():
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404
 
 
-class _FakeQuery:
-    """Encadena select/eq/in_/order/limit como el cliente de supabase, ignorando filtros."""
-    def __init__(self, data):
-        self._data = data
+class _FakeTable:
+    """Encadena select/insert/update/upsert + filtros como el cliente de supabase (ignora filtros).
+    `select` devuelve el store del nombre de tabla; `insert` devuelve la fila con un id; `update`/
+    `upsert` registran la llamada. Los `_calls` permiten asertar auditoría/cache."""
+    def __init__(self, store, name):
+        self._store, self._name, self._op = store, name, None
 
     def select(self, *a, **k):
+        self._op = ("select", None); return self
+
+    def insert(self, payload):
+        self._op = ("insert", payload); return self
+
+    def update(self, payload):
+        self._op = ("update", payload); return self
+
+    def upsert(self, payload, **k):
+        self._op = ("upsert", payload); return self
+
+    def eq(self, *a, **k):
         return self
 
-    eq = in_ = order = limit = select
+    in_ = order = limit = eq
 
     def execute(self):
         import types as _t
-        return _t.SimpleNamespace(data=self._data)
+        op, payload = self._op or ("select", None)
+        if op == "select":
+            return _t.SimpleNamespace(data=self._store.get(self._name, []))
+        self._store.setdefault("_calls", []).append((self._name, op, payload))
+        if op == "insert":
+            rows = payload if isinstance(payload, list) else [payload]
+            return _t.SimpleNamespace(data=[{**r, "id": r.get("id", f"{self._name}-id")} for r in rows])
+        return _t.SimpleNamespace(data=[])
 
 
 class _FakeSB:
-    def __init__(self, tablas):
-        self._t = tablas
+    def __init__(self, tablas=None):
+        self.store = dict(tablas or {})
 
     def table(self, nombre):
-        return _FakeQuery(self._t.get(nombre, []))
+        return _FakeTable(self.store, nombre)
+
+    def calls(self, accion=None):
+        return [c for c in self.store.get("_calls", []) if accion is None or c[1] == accion]
 
 
 def test_fase1_cut_over_lectura_a_scenarios(monkeypatch):
@@ -154,6 +179,66 @@ def test_fase1_cut_over_lectura_a_scenarios(monkeypatch):
     monkeypatch.setenv("ALEPH_READ_SCENARIOS", "false")
     monkeypatch.setattr(repo, "_cliente", lambda: _FakeSB({"proyectos": [{"data": {"viejo": True}}]}))
     assert repo.cargar("x") == {"viejo": True}
+
+
+def _par_min() -> dict:
+    """`par` mínimo que PASA el contrato (schema.parse): etapas≥1, costos_pct, financiero,
+    lote_bruto_miles, meta. Suficiente para crear/editar draft (no se recalcula)."""
+    return {
+        "meta": {"nombre": "Prueba", "estado": "prefactibilidad"},
+        "etapas": [{"cod": 1, "und": 10, "vmes": 5, "frec": 1, "pe_pct": 0.6, "fecha_inicio": "2026-01-01"}],
+        "costos_pct": {"directos": 0.5, "indirectos": 0.1, "honorarios": 0.05, "util_lote": 0.1},
+        "financiero": {},
+        "lote_bruto_miles": 1000.0,
+    }
+
+
+def _fake_write(monkeypatch, tablas):
+    fake = _FakeSB(tablas)
+    monkeypatch.setattr(repo, "_usa_supabase", lambda: True)
+    monkeypatch.setattr(repo, "_cliente", lambda: fake)
+    return fake
+
+
+def test_write_crear_proyecto_draft_y_audita(monkeypatch):
+    fake = _fake_write(monkeypatch, {"projects": [], "companies": [{"id": "c1"}]})
+    out = write.crear_proyecto(_par_min(), slug="prueba", nombre="Prueba", es_real=False, actor="me@cg.com")
+    assert out["status"] == "draft" and out["version"] == 1 and out["slug"] == "prueba"
+    assert any(c[0] == "scenarios" and c[1] == "insert" for c in fake.calls())
+    assert any(c[0] == "audit_log" and c[1] == "insert" for c in fake.calls())
+
+
+def test_write_crear_slug_duplicado_409(monkeypatch):
+    _fake_write(monkeypatch, {"projects": [{"id": "p1"}], "companies": [{"id": "c1"}]})
+    with pytest.raises(HTTPException) as ei:
+        write.crear_proyecto(_par_min(), slug="prueba", nombre="X", es_real=False, actor="me")
+    assert ei.value.status_code == 409
+
+
+def test_write_par_invalido_422(monkeypatch):
+    _fake_write(monkeypatch, {"projects": [], "companies": [{"id": "c1"}]})
+    with pytest.raises(HTTPException) as ei:  # sin etapas/costos_pct/financiero/lote → contrato falla
+        write.crear_proyecto({"meta": {"nombre": "X"}}, slug="x", nombre="X", es_real=False, actor="me")
+    assert ei.value.status_code == 422
+
+
+def test_write_editar_solo_draft_409(monkeypatch):
+    _fake_write(monkeypatch, {"scenarios": [
+        {"id": "s1", "project_id": "p1", "version": 1, "status": "approved", "snapshot": {}}]})
+    with pytest.raises(HTTPException) as ei:
+        write.editar_draft("s1", _par_min(), actor="me")
+    assert ei.value.status_code == 409   # un approved es inmutable
+
+
+@pytest.mark.skipif(not SLUGS, reason="sin proyectos para un par real")
+def test_write_aprobar_recalcula_cache_y_audita(monkeypatch):
+    par = repo.cargar(SLUGS[0])           # par REAL (local) → el motor calcula sin problema
+    fake = _fake_write(monkeypatch, {"scenarios": [
+        {"id": "s1", "project_id": "p1", "version": 1, "status": "draft", "snapshot": par}]})
+    out = write.aprobar("s1", actor="me")
+    assert out["status"] == "approved" and "tir_proyecto" in out and "checks_ok" in out
+    assert any(c[0] == "results_cache" for c in fake.calls())     # guardó el cache
+    assert any(c[0] == "audit_log" and c[1] == "insert" for c in fake.calls())
 
 
 def test_health_data():
