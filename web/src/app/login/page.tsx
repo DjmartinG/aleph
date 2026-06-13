@@ -12,24 +12,36 @@ export default function LoginPage() {
         <AlephMark />
         <span className="text-base font-semibold uppercase tracking-[0.22em]">ALEPH</span>
       </div>
-      <p className="max-w-xs text-sm text-muted-foreground">
-        Plataforma de evaluación financiera · CG Constructora. Inicia sesión con tu cuenta
-        corporativa de Microsoft.
-      </p>
-      <Suspense fallback={<Hint />}>
-        <SignInTrigger />
+      <Suspense fallback={<SignInPanel expired={false} />}>
+        <LoginInner />
       </Suspense>
     </div>
   );
 }
 
-function SignInTrigger() {
-  const callbackUrl = useSearchParams().get("callbackUrl") || "/";
-  useEffect(() => {
-    void signIn("microsoft-entra-id", { callbackUrl });
-  }, [callbackUrl]);
+function LoginInner() {
+  const params = useSearchParams();
   return (
-    <div className="flex flex-col items-center gap-3">
+    <SignInPanel
+      expired={params.get("reason") === "expired"}
+      callbackUrl={params.get("callbackUrl") || "/"}
+    />
+  );
+}
+
+function SignInPanel({ expired, callbackUrl = "/" }: { expired: boolean; callbackUrl?: string }) {
+  useEffect(() => {
+    // Login normal: auto-redirige a Microsoft. Sesión expirada: deja que el usuario decida (evita bucles).
+    if (!expired) void signIn("microsoft-entra-id", { callbackUrl });
+  }, [expired, callbackUrl]);
+
+  return (
+    <div className="flex max-w-xs flex-col items-center gap-4">
+      <p className="text-sm text-muted-foreground">
+        {expired
+          ? "Tu sesión expiró. Vuelve a iniciar sesión para continuar."
+          : "Plataforma de evaluación financiera · CG Constructora. Inicia sesión con tu cuenta corporativa de Microsoft."}
+      </p>
       <button
         type="button"
         onClick={() => void signIn("microsoft-entra-id", { callbackUrl })}
@@ -37,11 +49,7 @@ function SignInTrigger() {
       >
         Entrar con Microsoft
       </button>
-      <Hint />
+      {!expired && <p className="text-xs text-muted-foreground">Redirigiendo a Microsoft…</p>}
     </div>
   );
-}
-
-function Hint() {
-  return <p className="text-xs text-muted-foreground">Redirigiendo a Microsoft…</p>;
 }

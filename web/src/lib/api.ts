@@ -2,11 +2,47 @@
  * Cliente tipado del API de ALEPH (`aleph_api`, FastAPI). Solo LECTURA.
  * Contrato §5. La API NO recalcula nada en el cliente: el motor produce las cifras, aquí se consumen.
  *
+ * SERVER-ONLY: importa `auth()`/`redirect` (next/headers). Las páginas (Server Components) y el
+ * Server Action de Monte Carlo lo usan; los client components solo importan los TIPOS (`import type`).
+ *
  * Base URL: env `ALEPH_API_URL` (dev: http://localhost:8000 con la auth apagada).
- * En prod el `/v1` exige token Bearer de Entra — se cableará con NextAuth (fase posterior).
+ * Auth (config-driven, espeja al API): con `AUTH_MICROSOFT_ENTRA_ID_ID` cada `/v1/*` lleva el
+ * access_token de Entra como `Authorization: Bearer`; sin esa env (dev local) no se adjunta nada.
  */
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+
 export const API_BASE = process.env.ALEPH_API_URL ?? "http://localhost:8000";
+
+/** Auth encendida sólo si Entra está configurado (mismo gate que el proxy y el provider). */
+const AUTH_ON = !!process.env.AUTH_MICROSOFT_ENTRA_ID_ID;
+
+/** Adjunta el access_token de Entra (de la sesión NextAuth) si la auth está encendida. */
+async function authHeaders(): Promise<Record<string, string>> {
+  if (!AUTH_ON) return {};
+  const session = await auth();
+  const token = session?.apiToken;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/**
+ * `fetch` contra el API con el Bearer adjunto y manejo central de 401/403.
+ * En prod (auth on), un 401/403 = token expirado/invalidado → redirige a `/login?reason=expired`
+ * (pantalla clara "sesión expirada, vuelve a entrar"). En dev (auth off) lanza un Error normal.
+ */
+async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = {
+    ...(init.headers as Record<string, string> | undefined),
+    ...(await authHeaders()),
+  };
+  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...init, headers });
+  if (res.status === 401 || res.status === 403) {
+    if (AUTH_ON) redirect("/login?reason=expired");
+    throw new Error(`API respondió ${res.status} (no autorizado) en ${path}`);
+  }
+  return res;
+}
 
 /** Estados del ciclo de vida (deben coincidir con `aleph_engine.config.ESTADOS`). */
 export type Estado = "prefactibilidad" | "aprobado" | "construccion" | "entregado";
@@ -52,7 +88,7 @@ export interface Portfolio {
 
 /** GET /v1/portfolio. Sin caché (dato dinámico). Lanza Error con el status si la API falla. */
 export async function getPortfolio(): Promise<Portfolio> {
-  const res = await fetch(`${API_BASE}/v1/portfolio`, { cache: "no-store" });
+  const res = await apiFetch(`/v1/portfolio`);
   if (!res.ok) {
     throw new Error(`API respondió ${res.status} al pedir /v1/portfolio`);
   }
@@ -169,7 +205,7 @@ export interface Results {
 
 /** GET /v1/projects/{slug}. null si no existe (404). */
 export async function getProject(slug: string): Promise<ProjectDetail | null> {
-  const res = await fetch(`${API_BASE}/v1/projects/${encodeURIComponent(slug)}`, { cache: "no-store" });
+  const res = await apiFetch(`/v1/projects/${encodeURIComponent(slug)}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status} en /v1/projects/${slug}`);
   return res.json() as Promise<ProjectDetail>;
@@ -177,10 +213,7 @@ export async function getProject(slug: string): Promise<ProjectDetail | null> {
 
 /** GET /v1/scenarios/{slug}:base/results. null si no existe (404). */
 export async function getResults(slug: string): Promise<Results | null> {
-  const res = await fetch(
-    `${API_BASE}/v1/scenarios/${encodeURIComponent(slug)}:base/results`,
-    { cache: "no-store" },
-  );
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/results`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status} en results de ${slug}`);
   return res.json() as Promise<Results>;
@@ -206,10 +239,7 @@ export interface Sensitivity {
 
 /** GET /v1/scenarios/{slug}:base/sensitivity. null si no existe (404). */
 export async function getSensitivity(slug: string): Promise<Sensitivity | null> {
-  const res = await fetch(
-    `${API_BASE}/v1/scenarios/${encodeURIComponent(slug)}:base/sensitivity`,
-    { cache: "no-store" },
-  );
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/sensitivity`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${res.status} en sensitivity de ${slug}`);
   return res.json() as Promise<Sensitivity>;
@@ -251,11 +281,10 @@ export interface MonteCarloParams {
 
 /** POST /v1/scenarios/{slug}:base/run — Monte Carlo (único cálculo intensivo). */
 export async function postRun(slug: string, params: MonteCarloParams): Promise<MonteCarloResult> {
-  const res = await fetch(`${API_BASE}/v1/scenarios/${encodeURIComponent(slug)}:base/run`, {
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
-    cache: "no-store",
   });
   if (!res.ok) throw new Error(`API ${res.status} al correr Monte Carlo de ${slug}`);
   return res.json() as Promise<MonteCarloResult>;
