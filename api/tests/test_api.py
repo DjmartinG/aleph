@@ -230,6 +230,23 @@ def test_write_editar_solo_draft_409(monkeypatch):
     assert ei.value.status_code == 409   # un approved es inmutable
 
 
+def test_write_editar_draft_ok(monkeypatch):
+    fake = _fake_write(monkeypatch, {"scenarios": [
+        {"id": "s1", "project_id": "p1", "version": 1, "status": "draft", "snapshot": {}}]})
+    out = write.editar_draft("s1", _par_min(), actor="me")        # sin If-Match → no chequea concurrencia
+    assert out["status"] == "draft" and out["version"] == 1
+    assert any(c[0] == "audit_log" for c in fake.calls())
+
+
+def test_write_editar_if_match_conflicto_409(monkeypatch):
+    # Fase 3: con If-Match y la fila cambió (el fake update no afecta filas) → conflicto.
+    _fake_write(monkeypatch, {"scenarios": [
+        {"id": "s1", "project_id": "p1", "version": 1, "status": "draft", "snapshot": {}}]})
+    with pytest.raises(HTTPException) as ei:
+        write.editar_draft("s1", _par_min(), actor="me", if_match="2026-01-01T00:00:00Z")
+    assert ei.value.status_code == 409
+
+
 @pytest.mark.skipif(not SLUGS, reason="sin proyectos para un par real")
 def test_write_aprobar_recalcula_cache_y_audita(monkeypatch):
     par = repo.cargar(SLUGS[0])           # par REAL (local) → el motor calcula sin problema

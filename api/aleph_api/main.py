@@ -11,7 +11,7 @@ import logging
 import os
 
 from aleph_engine import __version__ as ENGINE_V
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -167,9 +167,15 @@ def post_scenario(project_id: str, body: ScenarioWrite, user: auth.Principal = D
 
 
 @v1.put("/scenarios/{scenario_id}")
-def put_scenario(scenario_id: str, body: ScenarioWrite, user: auth.Principal = Depends(auth.require_admin)):
-    """Reemplaza el snapshot de un borrador (solo si status=draft; approved/baseline → 409) (admin)."""
-    return write.editar_draft(scenario_id, body.par, actor=_actor(user))
+def put_scenario(
+    scenario_id: str,
+    body: ScenarioWrite,
+    user: auth.Principal = Depends(auth.require_admin),
+    if_match: str | None = Header(default=None, alias="If-Match"),
+):
+    """Reemplaza el snapshot de un borrador (solo si status=draft; approved/baseline → 409). Admin.
+    Concurrencia optimista: enviar `If-Match: <updated_at>` → 409 si otro usuario editó entremedio."""
+    return write.editar_draft(scenario_id, body.par, actor=_actor(user), if_match=if_match)
 
 
 @v1.post("/scenarios/{scenario_id}/approve")

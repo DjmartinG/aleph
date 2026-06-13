@@ -129,15 +129,26 @@ def nuevo_draft(project_id: str, par: dict, *, actor: str | None) -> dict:
     return {"scenario_id": sc["id"], "version": nv, "status": "draft"}
 
 
-def editar_draft(scenario_id: str, par: dict, *, actor: str | None) -> dict:
-    """Reemplaza el snapshot de un escenario SOLO si está en `draft` (approved/baseline → 409)."""
+def editar_draft(scenario_id: str, par: dict, *, actor: str | None, if_match: str | None = None) -> dict:
+    """Reemplaza el snapshot de un escenario SOLO si está en `draft` (approved/baseline → 409).
+
+    Concurrencia OPTIMISTA (Fase 3): si se pasa `if_match` (el `updated_at` que el cliente leyó), el
+    UPDATE solo aplica si la fila NO cambió desde entonces; si cambió (otro usuario editó) no afecta
+    filas → 409. La inmutabilidad del snapshot fuera de draft la garantiza además el trigger (0002)."""
     _validar(par)
     sb = _sb()
     sc = _scenario(sb, scenario_id)
     if sc["status"] != "draft":
         raise HTTPException(status_code=409,
                             detail=f"Solo se edita un borrador; este está '{sc['status']}' (inmutable)")
-    sb.table("scenarios").update({"snapshot": _con_schema(par)}).eq("id", scenario_id).eq("status", "draft").execute()
+    q = (sb.table("scenarios").update({"snapshot": _con_schema(par)})
+         .eq("id", scenario_id).eq("status", "draft"))
+    if if_match is not None:
+        q = q.eq("updated_at", if_match)                  # compare-and-swap por ETag
+    res = q.execute()
+    if if_match is not None and not (res.data or []):
+        raise HTTPException(status_code=409,
+                            detail="El borrador cambió desde que lo abriste (otro usuario lo editó); recarga e intenta de nuevo")
     _audit(sb, "scenario", scenario_id, "edit", actor)
     return {"scenario_id": scenario_id, "version": sc["version"], "status": "draft"}
 
