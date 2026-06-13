@@ -58,3 +58,110 @@ export async function getPortfolio(): Promise<Portfolio> {
   }
   return res.json() as Promise<Portfolio>;
 }
+
+// ---------- Ficha de proyecto + resultados ----------
+
+export interface Meta {
+  nombre: string;
+  ubicacion?: string;
+  zona?: string;
+  tipo?: string;
+  unidades?: number;
+  moneda?: string;
+  estado?: string;
+  propietario?: string;
+}
+
+export interface KpisCabecera {
+  ventas: number;
+  util_oper: number;
+  udi: number;
+  margen_oper: number;
+  tir_proyecto: number | null;
+  tir_socio: number | null;
+  vpn_proyecto: number | null;
+}
+
+export interface ProjectDetail {
+  id: string;
+  es_real: boolean;
+  fuente: string;
+  meta: Meta;
+  estado: string;
+  estado_label: string;
+  kpis_cabecera: KpisCabecera;
+}
+
+export interface Indicadores {
+  base_label: string;
+  fiducia_real: boolean;
+  tir_proyecto: number | null;
+  tir_proyecto_label: string;
+  tir_socio: number | null;
+  tir_socio_label: string;
+  tir_apalancada_ref: number | null;
+  vpn_proyecto: number | null;
+  vpn_label: string;
+  wacc: number | null;
+  tio: number | null;
+  payback_mes: number | null;
+  credito_max: number | null;
+  credito_prom: number | null;
+  intereses_total: number | null;
+  max_necesidad_caja: number | null;
+  valor_financiable: number | null;
+  margen_oper: number | null;
+}
+
+export interface Pyg {
+  ventas: number;
+  recon_codensa: number;
+  total_ingresos: number;
+  directos: number;
+  indirectos: number;
+  honorarios: number;
+  gastos_fijos: number;
+  indirectos_otros: number;
+  costo_lote: number;
+  util_oper: number;
+  margen_oper: number;
+  udi: number;
+  cg: number;
+  socio: number;
+  resultados: number;
+}
+
+export interface Check {
+  clave: string;
+  nombre: string;
+  ok: boolean;
+  detalle?: string;
+}
+
+export interface Results {
+  scenario_id: string;
+  project_id: string;
+  base_label: string;
+  indicadores: Indicadores;
+  pyg: Pyg;
+  checks: Check[];
+}
+
+/** GET /v1/projects/{slug}. null si no existe (404). */
+export async function getProject(slug: string): Promise<ProjectDetail | null> {
+  const res = await fetch(`${API_BASE}/v1/projects/${encodeURIComponent(slug)}`, { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API ${res.status} en /v1/projects/${slug}`);
+  return res.json() as Promise<ProjectDetail>;
+}
+
+/** GET /v1/scenarios/{slug}:base/results. null si no existe (404). */
+export async function getResults(slug: string): Promise<Results | null> {
+  const res = await fetch(
+    `${API_BASE}/v1/scenarios/${encodeURIComponent(slug)}:base/results`,
+    { cache: "no-store" },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API ${res.status} en results de ${slug}`);
+  return res.json() as Promise<Results>;
+}

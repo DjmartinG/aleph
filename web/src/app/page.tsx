@@ -3,6 +3,7 @@ import { fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { FunnelBar } from "@/components/funnel-bar";
 import { PortfolioTable } from "@/components/portfolio-table";
+import { SectionTitle } from "@/components/section-title";
 
 export default async function Page() {
   let data: Portfolio | null = null;
@@ -72,21 +73,6 @@ function Dashboard({ data }: { data: Portfolio }) {
         </div>
         <PortfolioTable items={data.items} />
       </section>
-    </div>
-  );
-}
-
-function SectionTitle({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={`mb-3 flex items-center gap-2 ${className ?? ""}`}>
-      <span className="h-3.5 w-0.5 rounded-full bg-primary" aria-hidden />
-      <h2 className="text-sm font-medium">{children}</h2>
     </div>
   );
 }
