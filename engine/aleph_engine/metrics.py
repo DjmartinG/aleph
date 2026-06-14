@@ -32,6 +32,9 @@ class Metric:
     unidad: str
     ruta: tuple            # (sección, clave) dentro del dict que devuelve calcular()
     grupo: str             # agrupación para la UI
+    # --- M0 (spec_pyg_dinamico.md): soporte para [VALIDAR] exigible por test (lo usan M1/M2) ---
+    estado_validacion: str = "vigente"   # vigente | por_validar  (p.ej. supuesto fiscal a confirmar)
+    fuente_normativa: str = ""           # norma/fuente del supuesto (ET, decreto, serie Banrep)
 
 
 # Registro único. La clave es estable (la usan UI/API); `ruta` apunta al resultado de calcular().
