@@ -339,3 +339,12 @@ def test_portfolio_sin_data_required_sigue_devolviendo_vacio(monkeypatch):
     r = client.get("/v1/portfolio")
     assert r.status_code == 200
     assert r.json()["consolidado"]["n"] == 0
+
+
+def test_macro_rutas_registradas_y_gate_sin_supabase():
+    # GET /v1/macro existe (no 404) y, sin Supabase en dev, devuelve 503 (la lectura exige tabla).
+    r = client.get("/v1/macro")
+    assert r.status_code in (200, 503)
+    # la ruta está en el OpenAPI
+    paths = client.get("/openapi.json").json()["paths"]
+    assert "/v1/macro" in paths and "/v1/macro/refresh" in paths and "/v1/macro/aprobar" in paths

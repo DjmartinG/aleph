@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from . import __version__, auth, build, repo, write
+from . import __version__, auth, build, macro_store, repo, write
 
 log = logging.getLogger("aleph_api")
 
@@ -211,6 +211,37 @@ def get_project_source(slug: str, user: auth.Principal = Depends(auth.require_ad
 def patch_project(slug: str, body: ProjectPatch, user: auth.Principal = Depends(auth.require_admin)):
     """Marca el proyecto como datos reales / ilustrativos (no toca cifras ni snapshot). Admin."""
     return write.marcar_real(slug, es_real=body.es_real, actor=_actor(user))
+
+
+
+# ---------- Supuestos macro (M6): conectores -> tabla con compuerta de revision ----------
+
+class MacroAprobar(BaseModel):
+    claves: list[str]
+
+
+@v1.get("/macro")
+def get_macro():
+    """Supuestos macro VIGENTES (tasas por banco, EMBI/CRP, TRM/IBR...). Lectura."""
+    return {"vigentes": macro_store.listar_vigentes()}
+
+
+@v1.get("/macro/pendientes")
+def get_macro_pendientes(user: auth.Principal = Depends(auth.require_admin)):
+    """Propuestas pendientes de aprobacion (admin)."""
+    return {"pendientes": macro_store.pendientes()}
+
+
+@v1.post("/macro/refresh")
+def post_macro_refresh(user: auth.Principal = Depends(auth.require_admin)):
+    """Corre los conectores y PROPONE sus valores (no aplica nada; compuerta de revision). Admin."""
+    return macro_store.refrescar()
+
+
+@v1.post("/macro/aprobar")
+def post_macro_aprobar(body: MacroAprobar, user: auth.Principal = Depends(auth.require_admin)):
+    """Aprueba propuestas por clave -> pasan a vigentes (admin)."""
+    return macro_store.aprobar(body.claves)
 
 
 app.include_router(v1)
