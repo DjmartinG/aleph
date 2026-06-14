@@ -2,6 +2,7 @@
 
 import type { Wacc } from "@/lib/api";
 import { fmtPct, splitPct } from "@/lib/format";
+import { SourceNote } from "@/components/source-note";
 import { MiniStat } from "@/components/mini-stat";
 
 function fmtNum(x: number | null | undefined): string {
@@ -83,6 +84,11 @@ export function WaccView({ wacc }: { wacc: Wacc }) {
           </div>
         </section>
       ) : null}
+
+      <SourceNote>
+        Metodología build-up CAPM (Damodaran · mercado emergente): betas del sector, prima de riesgo de
+        mercado (ERP) y riesgo país (CRP) de Damodaran; paridad de inflación CO/US. Recalibrado a jun-2026.
+      </SourceNote>
     </div>
   );
 }
