@@ -8,12 +8,16 @@ import {
   nuevoEscenario,
   postRun,
   postMonteCarloCB,
+  postRecalc,
+  postGoalSeek,
   setProjectReal,
   WriteError,
   type MonteCarloParams,
   type MonteCarloResult,
   type MonteCarloCBParams,
   type MonteCarloCBResult,
+  type Recalc,
+  type GoalSeek,
 } from "@/lib/api";
 
 /**
@@ -34,6 +38,24 @@ export async function runMonteCarloCB(
   params: MonteCarloCBParams,
 ): Promise<MonteCarloCBResult> {
   return postMonteCarloCB(slug, params);
+}
+
+
+/** Server Action (M4b · forward): recalcula indicadores con deltas de precio/costo/ritmo. */
+export async function recalcular(
+  slug: string,
+  deltas: { precio?: number; costo?: number; ritmo?: number },
+): Promise<Recalc> {
+  return postRecalc(slug, deltas);
+}
+
+/** Server Action (M4b · backward / "devolvernos"): qué driver alcanza la meta del objetivo. */
+export async function resolverMeta(
+  slug: string,
+  objetivo: string,
+  meta: number,
+): Promise<GoalSeek> {
+  return postGoalSeek(slug, { objetivo, meta });
 }
 
 // ---------- Escritura (Fase 5): crear + aprobar un proyecto ----------

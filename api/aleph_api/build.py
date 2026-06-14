@@ -327,3 +327,27 @@ def vehiculos(slug: str, par: dict) -> dict:
                        "TIR de comparacion es mensual (la oficial de la fiducia es la auditada anual).",
         **c,
     }
+
+
+def recalc(par: dict, req: dict) -> dict:
+    """Recalculo EN VIVO (M4b · forward): aplica deltas de precio/costo/ritmo y devuelve los indicadores.
+    Reutiliza `modelo.mc_contexto`+`mc_trial` (determinista, rapido). No muta `par`.
+
+    OJO base: como `mc_trial` ignora el override de fiducia (la cifra auditada es fija), las TIR/VPN
+    aqui estan en BASE MENSUAL (direccionales); el `margen` SI es exacto. La cifra oficial es la de la
+    ficha (auditada). Pensado para sliders de sensibilidad, no para reemplazar la TIR oficial.
+    """
+    req = req or {}
+    dp = float(req.get("precio", 0.0))
+    dc = float(req.get("costo", 0.0))
+    dv = float(req.get("ritmo", 0.0))
+    ctx = modelo.mc_contexto(par)
+    base = modelo.mc_trial(ctx, 0.0, 0.0, 0.0)
+    res = modelo.mc_trial(ctx, dp, dc, dv)
+    return {
+        "deltas": {"precio": dp, "costo": dc, "ritmo": dv},
+        "base": base,
+        "resultado": res,
+        "nota": "Simulacion en base mensual: el margen es exacto; TIR/VPN son DIRECCIONALES "
+                "(la oficial es la auditada de la ficha).",
+    }

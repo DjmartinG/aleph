@@ -158,6 +158,14 @@ def post_goal_seek(scenario_id: str, req: dict | None = None):
     return build.goal_seek(par, req or {})
 
 
+@v1.post("/scenarios/{scenario_id}/recalc")
+def post_recalc(scenario_id: str, req: dict | None = None):
+    """Recalculo en vivo (M4b): deltas precio/costo/ritmo -> indicadores (sliders de sensibilidad)."""
+    slug = _slug_de_escenario(scenario_id)
+    par, _R = _par_o_404(slug)
+    return build.recalc(par, req or {})
+
+
 # ---------- Escritura (Fase 2): crear/editar borradores → aprobar → baseline ----------
 # TODO write exige rol admin (`require_admin`); gerencia es solo-lectura. El `par` se valida con el
 # contrato del motor (write._validar) antes de persistir. NO toca el motor (cifras intactas).

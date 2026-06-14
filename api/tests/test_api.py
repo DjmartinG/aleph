@@ -390,3 +390,15 @@ def test_goal_seek_devolvernos():
     assert j["alcanzable"] in (True, False)
     if j["alcanzable"]:
         assert abs(j["valor"] - 0.07) < 1e-2 and "delta" in j
+
+
+@pytest.mark.skipif(NAV not in SLUGS, reason="Navarra no disponible")
+def test_recalc_forward_sliders():
+    """M4b — /recalc aplica deltas de precio/costo/ritmo y devuelve indicadores. +5% precio sube margen."""
+    r = client.post(f"/v1/scenarios/{NAV}:base/recalc", json={"precio": 0.05})
+    assert r.status_code == 200
+    j = r.json()
+    assert j["deltas"] == {"precio": 0.05, "costo": 0.0, "ritmo": 0.0}
+    assert "base" in j and "resultado" in j
+    assert j["resultado"]["margen"] > j["base"]["margen"]          # +precio → +margen (exacto)
+    assert {"tir_proyecto", "tir_equity", "vpn_proyecto", "margen"} <= j["resultado"].keys()

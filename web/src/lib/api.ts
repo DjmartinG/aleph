@@ -605,3 +605,61 @@ export async function getVehiculos(slug: string): Promise<Vehiculos | null> {
   if (!res.ok) throw new Error(`API ${res.status} en vehiculos de ${slug}`);
   return res.json() as Promise<Vehiculos>;
 }
+
+
+// ---------- M4b: recálculo en vivo (forward) + goal-seek (backward) ----------
+
+export interface RecalcInd {
+  tir_proyecto: number;
+  tir_equity: number;
+  vpn_proyecto: number;
+  margen: number;
+  exposicion_maxima: number;
+  breakeven_mes: number;
+}
+
+export interface Recalc {
+  deltas: { precio: number; costo: number; ritmo: number };
+  base: RecalcInd;
+  resultado: RecalcInd;
+  nota: string;
+}
+
+export async function postRecalc(
+  slug: string,
+  deltas: { precio?: number; costo?: number; ritmo?: number },
+): Promise<Recalc> {
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/recalc`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(deltas),
+  });
+  if (!res.ok) throw new Error(`API ${res.status} en recalc de ${slug}`);
+  return res.json() as Promise<Recalc>;
+}
+
+export interface GoalSeekDriver {
+  alcanzable: boolean;
+  objetivo: string;
+  meta: number;
+  driver: string;
+  delta?: number;
+  valor?: number;
+  valor_base?: number;
+}
+
+/** alcanzar(): un resultado por driver (precio/costo/ritmo). */
+export type GoalSeek = Record<string, GoalSeekDriver>;
+
+export async function postGoalSeek(
+  slug: string,
+  params: { objetivo: string; meta: number },
+): Promise<GoalSeek> {
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/goal-seek`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`API ${res.status} en goal-seek de ${slug}`);
+  return res.json() as Promise<GoalSeek>;
+}

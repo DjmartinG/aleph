@@ -9,8 +9,9 @@ import { CronogramaView } from "@/components/views/ficha-cronograma";
 import { WaccView } from "@/components/views/ficha-wacc";
 import { SensibilidadView } from "@/components/views/ficha-sensibilidad";
 import { VehiculosView } from "@/components/views/ficha-vehiculos";
+import { PanelControl } from "@/components/views/panel-control";
 
-type Tab = "resumen" | "flujo" | "cronograma" | "capital" | "sensibilidad" | "vehiculos";
+type Tab = "resumen" | "flujo" | "cronograma" | "capital" | "sensibilidad" | "vehiculos" | "control";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "resumen", label: "Resumen" },
@@ -19,6 +20,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "capital", label: "Costo de capital" },
   { key: "sensibilidad", label: "Sensibilidad" },
   { key: "vehiculos", label: "Vehículos" },
+  { key: "control", label: "Simulador" },
 ];
 
 export function FichaTabs({
@@ -102,6 +104,7 @@ export function FichaTabs({
           </div>
         )
       ) : null}
+      {tab === "control" ? <PanelControl slug={project.id} /> : null}
     </div>
   );
 }
