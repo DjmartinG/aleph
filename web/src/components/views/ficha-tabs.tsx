@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { ProjectDetail, Results, Sensitivity, Schedule, Wacc, Vehiculos } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { FichaResumen } from "@/components/views/ficha-resumen";
@@ -43,25 +43,30 @@ export function FichaTabs({
   return (
     <div>
       <div role="tablist" className="mb-6 flex gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {TABS.map((t) => {
+        {TABS.map((t, i) => {
           const active = tab === t.key;
           return (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "relative -mb-px whitespace-nowrap px-3 py-2 text-sm font-medium transition-[color,transform] [transition-duration:var(--dur-1)] [transition-timing-function:var(--ease-out)] active:scale-[0.97]",
-                active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t.label}
-              {active ? (
-                <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary" aria-hidden />
+            <Fragment key={t.key}>
+              {/* Separador: Resumen es el lienzo; el resto son capas para "profundizar". */}
+              {i === 1 ? (
+                <span aria-hidden className="mx-1 my-2 w-px shrink-0 self-stretch bg-rule" />
               ) : null}
-            </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  "relative -mb-px whitespace-nowrap px-3 py-2 text-sm font-medium transition-[color,transform] [transition-duration:var(--dur-1)] [transition-timing-function:var(--ease-out)] active:scale-[0.97]",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t.label}
+                {active ? (
+                  <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary" aria-hidden />
+                ) : null}
+              </button>
+            </Fragment>
           );
         })}
       </div>
