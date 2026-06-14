@@ -183,7 +183,7 @@ export function MonteCarlo({ slug }: { slug: string }) {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[0.7rem] text-muted-foreground/80">
+              <p className="mt-2 text-[0.7rem] text-muted-foreground">
                 Qué variable explica más la incertidumbre del indicador (correlación de rango al
                 cuadrado, normalizada). Teal = efecto al alza; ámbar = a la baja.
               </p>
@@ -227,7 +227,7 @@ function Stat({
       >
         {value}
       </div>
-      {note ? <div className="text-[0.7rem] text-muted-foreground/80">{note}</div> : null}
+      {note ? <div className="text-[0.7rem] text-muted-foreground">{note}</div> : null}
     </div>
   );
 }

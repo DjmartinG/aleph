@@ -30,7 +30,7 @@ export function WaccView({ wacc }: { wacc: Wacc }) {
             <span className="num text-3xl font-semibold tracking-tight">{waccMag}</span>
             <span className="text-base text-muted-foreground">{waccUnit}</span>
           </div>
-          <div className="text-[0.7rem] text-muted-foreground/80">COP · build-up CAPM</div>
+          <div className="text-[0.7rem] text-muted-foreground">COP · build-up CAPM</div>
         </div>
         <Mini label="Ke (equity)" value={fmtPct(w.ke_cop)} note="recursos propios" />
         <Mini label="Kd (después imp.)" value={fmtPct(w.kd_despues_imp)} note={`escudo fiscal ${fmtPct(w.t_col, 0)}`} />
@@ -125,7 +125,7 @@ function Step({ label, value, op, strong }: { label: string; value: string; op?:
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <dt className={strong ? "text-sm font-medium text-foreground" : "text-sm text-muted-foreground"}>
-        {op ? <span className="mr-1.5 text-xs text-muted-foreground/70">{op}</span> : null}
+        {op ? <span className="mr-1.5 text-xs text-muted-foreground">{op}</span> : null}
         {label}
       </dt>
       <dd className={`num text-sm tabular-nums ${strong ? "font-semibold text-foreground" : "text-foreground/90"}`}>
@@ -140,7 +140,7 @@ function Mini({ label, value, note }: { label: string; value: string; note?: str
     <div>
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="num mt-1 text-xl font-semibold tracking-tight">{value}</div>
-      {note ? <div className="text-[0.7rem] text-muted-foreground/80">{note}</div> : null}
+      {note ? <div className="text-[0.7rem] text-muted-foreground">{note}</div> : null}
     </div>
   );
 }

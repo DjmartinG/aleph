@@ -17,7 +17,7 @@ Registro: **product**. Estrategia de color: **Restrained** (canvas neutro tintad
 - Escala rem FIJA, ratio ~1.2: `text-xs` 0.75 / `sm` 0.875 / `base` 1 / `lg` 1.125 / `xl` 1.25 / `2xl` 1.5.
 - Jerarquía por **escala + peso** (400 cuerpo, 500 labels, 600 títulos/cifras). Contraste sin exagerar.
 - **`font-variant-numeric: tabular-nums` en TODO número.** Cifras alineadas a la derecha.
-- Labels de métrica: `xs`, `uppercase`, `tracking-wide`, `muted`. Etiqueta de base: `[0.7rem]`, muted/70.
+- Labels de métrica: `xs`, `uppercase`, `tracking-wide`, `muted`. Etiqueta de base: `[0.7rem]`, `muted-foreground` pleno (AA: la opacidad /70-/80 fallaba contraste 4.5:1).
 
 ## Layout y superficies
 

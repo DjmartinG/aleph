@@ -36,7 +36,7 @@ export function KpiCard({
         {value}
       </div>
       {base ? (
-        <div className="mt-1 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground/80">
+        <div className="mt-1 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
           {base}
         </div>
       ) : null}

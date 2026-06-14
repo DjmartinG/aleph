@@ -54,7 +54,7 @@ export function Sidebar() {
                 if (it.soon) {
                   return (
                     <li key={it.href}>
-                      <span className="flex cursor-default items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground/70">
+                      <span className="flex cursor-default items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium text-muted-foreground">
                         {inner}
                       </span>
                     </li>

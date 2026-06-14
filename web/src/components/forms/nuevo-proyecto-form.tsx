@@ -548,7 +548,7 @@ function Field({
         {required ? <span className="text-primary">*</span> : null}
       </span>
       {children}
-      {hint ? <span className="mt-0.5 block text-[0.7rem] text-muted-foreground/70">{hint}</span> : null}
+      {hint ? <span className="mt-0.5 block text-[0.7rem] text-muted-foreground">{hint}</span> : null}
     </label>
   );
 }

@@ -24,7 +24,7 @@ export function VehiculosView({ data }: { data: Vehiculos }) {
           <div className="mt-1 num text-3xl font-semibold tracking-tight">
             {fmtPct(of.tir_proyecto_auditada)}
           </div>
-          <div className="text-[0.7rem] text-muted-foreground/80">fiducia · {of.fuente}</div>
+          <div className="text-[0.7rem] text-muted-foreground">fiducia · {of.fuente}</div>
         </div>
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -33,7 +33,7 @@ export function VehiculosView({ data }: { data: Vehiculos }) {
           <div className="mt-1 num text-3xl font-semibold tracking-tight">
             {fmtPct(of.tir_socio_auditada)}
           </div>
-          <div className="text-[0.7rem] text-muted-foreground/80">estructura real (fiducia)</div>
+          <div className="text-[0.7rem] text-muted-foreground">estructura real (fiducia)</div>
         </div>
         <div className="text-sm text-muted-foreground">
           Esta es la cifra de decisión de la estructura actual. La tabla de abajo compara estructuras

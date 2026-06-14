@@ -51,7 +51,7 @@ export function Heatmap2D({
             style={{ gridTemplateColumns: `auto repeat(${pasosPrecio.length}, minmax(3rem, 1fr))` }}
           >
             {/* Encabezado de columnas (precio) */}
-            <div className="flex items-end justify-end pr-2 pb-1 text-[0.65rem] text-muted-foreground/70">
+            <div className="flex items-end justify-end pr-2 pb-1 text-[0.65rem] text-muted-foreground">
               costo&nbsp;\&nbsp;precio
             </div>
             {pasosPrecio.map((p, j) => (

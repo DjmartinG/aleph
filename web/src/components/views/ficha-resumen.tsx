@@ -138,7 +138,7 @@ function Mini({ label, value, note }: { label: string; value: string; note?: str
     <div>
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="num mt-0.5 text-base font-semibold">{value}</div>
-      {note ? <div className="text-[0.7rem] text-muted-foreground/80">{note}</div> : null}
+      {note ? <div className="text-[0.7rem] text-muted-foreground">{note}</div> : null}
     </div>
   );
 }

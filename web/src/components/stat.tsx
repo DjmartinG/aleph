@@ -33,7 +33,7 @@ export function Stat({ label, parts, base, sub, state = "neutral", emphasis = fa
         display={emphasis}
         className={cn("mt-1.5 block font-semibold", emphasis ? "text-[1.9rem] leading-none" : "text-lg", color)}
       />
-      {base ? <div className="mt-1.5 text-[0.72rem] text-muted-foreground/80">{base}</div> : null}
+      {base ? <div className="mt-1.5 text-[0.72rem] text-muted-foreground">{base}</div> : null}
       {sub ? <div className="num mt-0.5 text-xs text-muted-foreground">{sub}</div> : null}
     </div>
   );
