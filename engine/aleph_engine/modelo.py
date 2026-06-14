@@ -133,7 +133,16 @@ def pyg(par):
     # si los gastos fijos exceden el indirecto, el exceso baja la UO (additivo); si no, UO sin cambio
     util_oper  = total_ingresos - costo_lote - directos - indirectos_otros - gastos_fijos - honorarios
     reint_sin_lote = honorarios + util_oper
-    renta = fin.get("renta", config.RENTA) * reint_sin_lote
+    # Renta sobre el reintegro sin lote. VIS/VIP: la UTILIDAD de la primera venta es renta EXENTA
+    # (ET 235-2 num.4) [VALIDAR vigencia Ley 2277/2022]; los honorarios (servicios) siguen GRAVADOS
+    # por defecto. Si el asesor confirma exencion total, fin['vis_exime_honorarios']=True -> renta 0.
+    _tasa_renta = fin.get("renta", config.RENTA)
+    _es_vis = str(par.get("meta", {}).get("tipo", "")).strip().upper() in ("VIS", "VIP")
+    if _es_vis:
+        _base_renta = 0.0 if fin.get("vis_exime_honorarios") else honorarios
+    else:
+        _base_renta = reint_sin_lote
+    renta = _tasa_renta * _base_renta
     udi   = reint_sin_lote - renta
     # reparto CG / socio
     split = fin.get("split_cg", config.SPLIT_CG)
