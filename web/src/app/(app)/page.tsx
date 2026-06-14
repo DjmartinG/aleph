@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { getPortfolio, type Portfolio } from "@/lib/api";
 import { fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
@@ -24,11 +26,19 @@ export default async function Page() {
             Consolidado de proyectos de CG Constructora.
           </p>
         </div>
-        {data ? (
-          <span className="num hidden whitespace-nowrap rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground sm:inline">
-            {fmtInt(data.consolidado.n)} proyectos · {fmtInt(data.consolidado.unidades)} unidades
-          </span>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {data ? (
+            <span className="num hidden whitespace-nowrap rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground sm:inline">
+              {fmtInt(data.consolidado.n)} proyectos · {fmtInt(data.consolidado.unidades)} unidades
+            </span>
+          ) : null}
+          <Link
+            href="/proyectos/nuevo"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-[opacity,transform] [transition-timing-function:var(--ease-out)] hover:opacity-90 active:scale-[0.98]"
+          >
+            <Plus className="size-4" aria-hidden /> Nuevo proyecto
+          </Link>
+        </div>
       </header>
 
       {errMsg ? <ErrorPanel message={errMsg} /> : data ? <Dashboard data={data} /> : null}

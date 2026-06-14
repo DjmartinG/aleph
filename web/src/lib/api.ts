@@ -373,3 +373,103 @@ export async function postRun(slug: string, params: MonteCarloParams): Promise<M
   if (!res.ok) throw new Error(`API ${res.status} al correr Monte Carlo de ${slug}`);
   return res.json() as Promise<MonteCarloResult>;
 }
+
+// ---------- Escritura (Fase 5): crear/aprobar proyectos (SOLO admin) ----------
+// El API es el gate autoritativo: valida el `par` con `schema.parse` (422), exige rol admin (403) y
+// recalcula con el motor al aprobar. Aquí solo adjuntamos el token y traducimos los errores a algo
+// que el formulario pueda mostrar (el `detail` del API), sin redirigir en 403 (ese usuario SÍ está
+// autenticado, solo no es admin → mensaje claro, no bucle de login).
+
+/** Error de escritura con el status HTTP y el mensaje legible del API (su campo `detail`). */
+export class WriteError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "WriteError";
+  }
+}
+
+/** Extrae un mensaje legible del cuerpo de error (string `detail`, o lista de errores Pydantic 422). */
+async function readDetail(res: Response, fallback: string): Promise<string> {
+  try {
+    const j = await res.json();
+    if (j && typeof j.detail === "string") return j.detail;
+    if (j && Array.isArray(j.detail)) {
+      return j.detail
+        .map((e: { loc?: unknown[]; msg?: string }) =>
+          [Array.isArray(e.loc) ? e.loc.slice(1).join(".") : null, e.msg].filter(Boolean).join(": "),
+        )
+        .filter(Boolean)
+        .join(" · ") || fallback;
+    }
+  } catch {
+    /* sin cuerpo JSON */
+  }
+  return fallback;
+}
+
+/**
+ * `fetch` de ESCRITURA. Adjunta el Bearer; 401 → sesión expirada (redirige en prod); 403 → sin rol
+ * admin (WriteError, NO redirige); 4xx/5xx → WriteError con el `detail` del API (422 validación,
+ * 409 conflicto, 503 sin Supabase). Devuelve el JSON parseado en éxito.
+ */
+async function apiWrite(
+  path: string,
+  body: unknown,
+  init: { method?: "POST" | "PUT"; headers?: Record<string, string> } = {},
+): Promise<unknown> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(await authHeaders()),
+    ...init.headers,
+  };
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: init.method ?? "POST",
+    headers,
+    body: JSON.stringify(body ?? {}),
+    cache: "no-store",
+  });
+  if (res.status === 401) {
+    if (AUTH_ON) redirect("/login?reason=expired");
+    throw new WriteError(401, "No autorizado (sesión).");
+  }
+  if (res.status === 403) {
+    throw new WriteError(403, "No tienes permiso: esta acción requiere rol de administrador.");
+  }
+  if (!res.ok) throw new WriteError(res.status, await readDetail(res, `Error ${res.status} del API.`));
+  return res.json();
+}
+
+export interface CreateProjectResult {
+  project_id: string;
+  scenario_id: string;
+  slug: string;
+  version: number;
+  status: string;
+}
+
+export interface ApproveResult {
+  scenario_id: string;
+  status: string;
+  version: number;
+  tir_proyecto: number | null;
+  checks_ok: boolean;
+  checks: { clave: string; nombre: string; ok: boolean }[];
+}
+
+/** POST /v1/projects — crea un proyecto nuevo + su escenario v1 en borrador. Lanza WriteError. */
+export async function createProject(
+  par: Record<string, unknown>,
+  opts?: { slug?: string; nombre?: string; es_real?: boolean },
+): Promise<CreateProjectResult> {
+  return apiWrite(`/v1/projects`, {
+    par,
+    slug: opts?.slug ?? null,
+    nombre: opts?.nombre ?? null,
+    es_real: opts?.es_real ?? false,
+  }) as Promise<CreateProjectResult>;
+}
+
+/** POST /v1/scenarios/{id}/approve — aprueba un borrador (recalcula + congela). Lanza WriteError. */
+export async function approveScenario(scenarioId: string): Promise<ApproveResult> {
+  return apiWrite(`/v1/scenarios/${encodeURIComponent(scenarioId)}/approve`, {}) as Promise<ApproveResult>;
+}
