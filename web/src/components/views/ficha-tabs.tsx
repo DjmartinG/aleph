@@ -53,7 +53,7 @@ export function FichaTabs({
               aria-selected={active}
               onClick={() => setTab(t.key)}
               className={cn(
-                "relative -mb-px whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors [transition-timing-function:var(--ease-out)]",
+                "relative -mb-px whitespace-nowrap px-3 py-2 text-sm font-medium transition-[color,transform] [transition-duration:var(--dur-1)] [transition-timing-function:var(--ease-out)] active:scale-[0.97]",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >

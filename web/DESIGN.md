@@ -39,8 +39,11 @@ Registro: **product**. Estrategia de color: **Restrained** (canvas neutro tintad
 
 ## Motion
 
-- 150-200 ms, ease-out exponencial. Solo comunica estado (hover, focus, selección, carga, reveal).
-- Nada de coreografía al cargar la página ni animar propiedades de layout.
+- Tokens: `--ease-out` (ease-out-quint) + duraciones `--dur-1/2/3` (120/180/280 ms). Salida < entrada; UI < 300 ms.
+- **Solo comunica ESTADO**: hover, foco, selección, presión (`active:scale-[0.97]`), apertura (popovers con `pop-in`, origen en su esquina). Nada de coreografía al cargar.
+- **Las CIFRAS, el P&G y los gráficos NO se animan** (es una herramienta de decisión financiera: nada de números que cuentan hacia arriba ni reveals gimmicky — "si fuera un gráfico de un banco, mejor sin animación").
+- Solo `transform`/`opacity` (GPU). Sin bounce/elastic. `prefers-reduced-motion` ya respetado en base.
+- Nada de animar propiedades de layout (`width/height/top/left`).
 
 ## Accesibilidad
 

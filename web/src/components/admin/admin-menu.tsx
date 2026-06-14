@@ -75,7 +75,7 @@ export function AdminMenu({ slug, nombre, esReal }: { slug: string; nombre: stri
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => (menuOpen ? close() : setMenuOpen(true))}
-        className="inline-flex size-9 items-center justify-center rounded-[var(--radius-data)] border text-muted-foreground transition-colors [transition-timing-function:var(--ease-out)] hover:bg-accent hover:text-foreground"
+        className="inline-flex size-9 items-center justify-center rounded-[var(--radius-data)] border text-muted-foreground transition-[color,background-color,transform] [transition-duration:var(--dur-1)] [transition-timing-function:var(--ease-out)] hover:bg-accent hover:text-foreground active:scale-95"
       >
         <MoreHorizontal className="size-4" aria-hidden />
       </button>
@@ -83,7 +83,7 @@ export function AdminMenu({ slug, nombre, esReal }: { slug: string; nombre: stri
       {menuOpen ? (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-1.5 w-72 rounded-[var(--radius-data)] border bg-card p-1.5 shadow-[0_4px_16px_-4px_var(--shadow-teal,rgba(14,94,89,0.18))]"
+          className="pop-in absolute right-0 z-20 mt-1.5 w-72 origin-top-right rounded-[var(--radius-data)] border bg-card p-1.5 shadow-[0_4px_16px_-4px_var(--shadow-teal,rgba(14,94,89,0.18))]"
         >
           <div className="px-2 py-1 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
             Administración
