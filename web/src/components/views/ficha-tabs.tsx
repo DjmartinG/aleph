@@ -42,7 +42,7 @@ export function FichaTabs({
 
   return (
     <div>
-      <div role="tablist" className="mb-6 flex gap-1 border-b">
+      <div role="tablist" className="mb-6 flex gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => {
           const active = tab === t.key;
           return (
@@ -53,7 +53,7 @@ export function FichaTabs({
               aria-selected={active}
               onClick={() => setTab(t.key)}
               className={cn(
-                "relative -mb-px px-3 py-2 text-sm font-medium transition-colors [transition-timing-function:var(--ease-out)]",
+                "relative -mb-px whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors [transition-timing-function:var(--ease-out)]",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >

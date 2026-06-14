@@ -43,10 +43,18 @@ export function Stat({ label, parts, base, sub, state = "neutral", emphasis = fa
  * Panel de métricas: UN panel dividido por reglas de 1px tintadas al teal (no un grid de tarjetas
  * idénticas). La métrica-héroe lleva acento teal (barra izquierda + piso tenue) y ocupa 2 col en xl.
  */
+const GRID: Record<number, string> = {
+  3: "grid-cols-3",
+  4: "grid-cols-2 xl:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 xl:grid-cols-5",
+  6: "grid-cols-2 sm:grid-cols-3 xl:grid-cols-6",
+};
+
 export function StatPanel({ items }: { items: StatItem[] }) {
+  const grid = GRID[items.length] ?? "grid-cols-2 sm:grid-cols-3 xl:grid-cols-6";
   return (
     <div className="shadow-card overflow-hidden rounded-[var(--radius-data)] border bg-rule">
-      <div className="grid grid-cols-2 gap-px sm:grid-cols-3 xl:grid-cols-6">
+      <div className={cn("grid gap-px", grid)}>
         {items.map((s) => (
           <div
             key={s.label}

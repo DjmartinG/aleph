@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { Recalc, GoalSeek } from "@/lib/api";
 import { recalcular, resolverMeta } from "@/lib/actions";
 import { fmtPct, fmtCop } from "@/lib/format";
+import { Banner } from "@/components/banner";
 
 /** M4b — Panel de control sobre el P&G: sliders en vivo (forward) + goal-seek ("devolvernos").
  *  Las TIR/VPN son DIRECCIONALES (base mensual); el margen es exacto. La cifra oficial es la de la ficha. */
@@ -36,11 +37,10 @@ export function PanelControl({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-7">
-      <div className="rounded-[var(--radius-data)] border border-[var(--cg-amber)]/40 bg-[var(--cg-amber)]/10 p-3 text-sm text-foreground/80">
-        <span className="font-semibold text-[var(--cg-amber)]">Simulador.</span> Mueve los drivers y mira el
-        impacto. El <span className="font-medium">margen es exacto</span>; TIR y VPN son direccionales (base
-        mensual) — la cifra oficial es la de la pestaña Resumen.
-      </div>
+      <Banner tone="warning" label="Simulador">
+        Mueve los drivers y mira el impacto. El <span className="font-medium">margen es exacto</span>; TIR y
+        VPN son direccionales (base mensual) — la cifra oficial es la de la pestaña Resumen.
+      </Banner>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         {/* Sliders */}

@@ -2,6 +2,7 @@
 
 import type { Vehiculos } from "@/lib/api";
 import { fmtCop, fmtPct } from "@/lib/format";
+import { Banner } from "@/components/banner";
 
 /** M3 — Comparador de vehículos jurídico-financieros. Efecto fiscal + waterfall after-tax por
  *  estructura, en base consistente. La TIR auditada de la fiducia se muestra aparte como oficial. */
@@ -12,12 +13,7 @@ export function VehiculosView({ data }: { data: Vehiculos }) {
   return (
     <div className="space-y-7">
       {/* Advertencia: tasas por validar */}
-      <div className="rounded-[var(--radius-data)] border border-[var(--cg-amber)]/40 bg-[var(--cg-amber)]/10 p-4">
-        <div className="flex items-start gap-2">
-          <span className="mt-0.5 text-sm font-semibold text-[var(--cg-amber)]">Por validar</span>
-          <p className="text-sm text-foreground/80">{data.advertencia}</p>
-        </div>
-      </div>
+      <Banner tone="warning" label="Por validar">{data.advertencia}</Banner>
 
       {/* Cifra OFICIAL de la estructura real (fiducia auditada) */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-[var(--radius-data)] border bg-card p-5 sm:grid-cols-3">
