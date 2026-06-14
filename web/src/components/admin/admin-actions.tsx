@@ -2,35 +2,48 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Loader2, AlertTriangle, ShieldAlert } from "lucide-react";
-import { eliminarProyecto } from "@/lib/actions";
+import { Trash2, Loader2, AlertTriangle, ShieldAlert, BadgeCheck } from "lucide-react";
+import { eliminarProyecto, marcarProyectoReal } from "@/lib/actions";
 
 /**
- * Acciones de administrador sobre un proyecto. Hoy: ELIMINAR (borrado duro, irreversible). El gate
- * REAL lo hace el API (revalida el JWT + exige rol admin); este componente solo se renderiza para
- * admins (la ficha lo decide con isAdminUser). Confirmación in-place (escribir el nombre), sin modal.
+ * Acciones de administrador sobre un proyecto: marcar datos reales/ilustrativos y ELIMINAR (borrado
+ * duro, irreversible). El gate REAL lo hace el API (revalida el JWT + exige rol admin); este componente
+ * solo se renderiza para admins (la ficha lo decide con isAdminUser). Confirmación de borrado in-place
+ * (escribir el nombre), sin modal.
  */
-export function AdminActions({ slug, nombre }: { slug: string; nombre: string }) {
+export function AdminActions({ slug, nombre, esReal }: { slug: string; nombre: string; esReal: boolean }) {
   const router = useRouter();
+
+  // --- Marcar real / ilustrativo ---
+  const [togglePending, startToggle] = useTransition();
+  const [toggleErr, setToggleErr] = useState<string | null>(null);
+  function toggleReal() {
+    setToggleErr(null);
+    startToggle(async () => {
+      const res = await marcarProyectoReal(slug, !esReal);
+      if (res.ok) router.refresh();
+      else setToggleErr(res.message);
+    });
+  }
+
+  // --- Eliminar ---
   const [open, setOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const [delErr, setDelErr] = useState<string | null>(null);
+  const [delPending, startDel] = useTransition();
   const canDelete = confirmText.trim() === nombre.trim();
-
   function reset() {
     setOpen(false);
     setConfirmText("");
-    setErr(null);
+    setDelErr(null);
   }
-
   function del() {
     if (!canDelete) return;
-    setErr(null);
-    start(async () => {
+    setDelErr(null);
+    startDel(async () => {
       const res = await eliminarProyecto(slug);
       if (res.ok) router.push("/");
-      else setErr(res.message);
+      else setDelErr(res.message);
     });
   }
 
@@ -42,6 +55,32 @@ export function AdminActions({ slug, nombre }: { slug: string; nombre: string })
         <span className="text-xs text-muted-foreground">solo administradores</span>
       </div>
 
+      {/* Tipo de datos (no destructivo) */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-data)] border bg-card p-4">
+        <div className="flex items-center gap-2">
+          <BadgeCheck className={esReal ? "size-4 text-success" : "size-4 text-muted-foreground"} aria-hidden />
+          <div>
+            <div className="text-sm font-medium">
+              Tipo de datos: {esReal ? "reales" : "ilustrativos"}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Controla la etiqueta del proyecto (no afecta las cifras).
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={toggleReal}
+          disabled={togglePending}
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] border px-3 py-1.5 text-sm font-medium transition-colors [transition-timing-function:var(--ease-out)] hover:bg-accent disabled:opacity-60"
+        >
+          {togglePending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          {esReal ? "Marcar como ilustrativo" : "Marcar como real"}
+        </button>
+      </div>
+      {toggleErr ? <p className="mb-3 text-sm text-danger">{toggleErr}</p> : null}
+
+      {/* Eliminar (destructivo) */}
       <div className="rounded-[var(--radius-data)] border border-danger/30 bg-danger/5 p-4">
         {!open ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -76,12 +115,12 @@ export function AdminActions({ slug, nombre }: { slug: string; nombre: string })
               autoFocus
               className="w-full rounded-[var(--radius-data)] border bg-card px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors [transition-timing-function:var(--ease-out)] focus:border-danger placeholder:text-muted-foreground/40"
             />
-            {err ? <p className="text-sm text-danger">{err}</p> : null}
+            {delErr ? <p className="text-sm text-danger">{delErr}</p> : null}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={reset}
-                disabled={pending}
+                disabled={delPending}
                 className="rounded-[var(--radius-data)] px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
               >
                 Cancelar
@@ -89,10 +128,10 @@ export function AdminActions({ slug, nombre }: { slug: string; nombre: string })
               <button
                 type="button"
                 onClick={del}
-                disabled={!canDelete || pending}
+                disabled={!canDelete || delPending}
                 className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition-[opacity,transform] [transition-timing-function:var(--ease-out)] hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Trash2 className="size-4" aria-hidden />}
+                {delPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Trash2 className="size-4" aria-hidden />}
                 Eliminar definitivamente
               </button>
             </div>

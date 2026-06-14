@@ -149,6 +149,10 @@ class ScenarioWrite(BaseModel):
     par: dict
 
 
+class ProjectPatch(BaseModel):
+    es_real: bool
+
+
 def _actor(user: auth.Principal) -> str | None:
     return user.email or user.oid
 
@@ -194,6 +198,19 @@ def post_baseline(scenario_id: str, user: auth.Principal = Depends(auth.require_
 def delete_project(slug: str, user: auth.Principal = Depends(auth.require_admin)):
     """Borra un proyecto COMPLETO (sus escenarios + cache) por slug. Irreversible. Audita. Solo admin."""
     return write.eliminar_proyecto(slug, actor=_actor(user))
+
+
+@v1.get("/projects/{slug}/source")
+def get_project_source(slug: str, user: auth.Principal = Depends(auth.require_admin)):
+    """Devuelve el `par` CRUDO del escenario vigente + project_id/versión, para pre-llenar el formulario
+    de edición. Solo admin (es el input editable, no las cifras calculadas)."""
+    return write.obtener_para_editar(slug)
+
+
+@v1.patch("/projects/{slug}")
+def patch_project(slug: str, body: ProjectPatch, user: auth.Principal = Depends(auth.require_admin)):
+    """Marca el proyecto como datos reales / ilustrativos (no toca cifras ni snapshot). Admin."""
+    return write.marcar_real(slug, es_real=body.es_real, actor=_actor(user))
 
 
 app.include_router(v1)

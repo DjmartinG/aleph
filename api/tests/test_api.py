@@ -291,6 +291,31 @@ def test_write_eliminar_proyecto_inexistente_404(monkeypatch):
     assert ei.value.status_code == 404
 
 
+def test_write_marcar_real(monkeypatch):
+    fake = _fake_write(monkeypatch, {"projects": [{"id": "p1", "slug": "x"}]})
+    out = write.marcar_real("x", es_real=True, actor="me")
+    assert out["es_real"] is True and out["slug"] == "x"
+    assert any(c[0] == "projects" and c[1] == "update" for c in fake.calls())
+    assert any(c[0] == "audit_log" and c[1] == "insert" for c in fake.calls())
+
+
+def test_write_obtener_para_editar(monkeypatch):
+    """Devuelve el par crudo del escenario vigente + project_id/versión (para pre-llenar el form)."""
+    snap = {"meta": {"nombre": "X"}, "etapas": [{"und": 10}]}
+    _fake_write(monkeypatch, {
+        "projects": [{"id": "p1", "slug": "x", "nombre": "X", "es_real": False}],
+        "scenarios": [{"snapshot": snap, "version": 1, "status": "approved"}]})
+    out = write.obtener_para_editar("x")
+    assert out["project_id"] == "p1" and out["par"] == snap and out["version"] == 1 and out["es_real"] is False
+
+
+def test_write_obtener_para_editar_404(monkeypatch):
+    _fake_write(monkeypatch, {"projects": []})
+    with pytest.raises(HTTPException) as ei:
+        write.obtener_para_editar("nope")
+    assert ei.value.status_code == 404
+
+
 def test_health_data():
     """Salud de datos público (no sensible): fuente + nº de proyectos. Sirve para verificar el deploy."""
     j = client.get("/health/data").json()

@@ -3,15 +3,16 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Loader2, Check, AlertTriangle } from "lucide-react";
-import { crearYAprobarProyecto } from "@/lib/actions";
+import { crearYAprobarProyecto, editarYAprobarProyecto } from "@/lib/actions";
 import { fmtCop } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
- * Formulario de ALTA de proyecto (Fase 5). El usuario llena lo ESPECÍFICO del proyecto (datos,
- * etapas, costos, lote); los parámetros macro (WACC build-up, financieros, cronograma) van con el
- * ESTÁNDAR CG pre-cargado (editables en una fase posterior). Al enviar: arma el `par`, lo manda al
- * Server Action que crea + aprueba → el motor recalcula y la ficha queda visible.
+ * Formulario de proyecto (Fase 5 + admin Inc.2), reutilizado para CREAR y EDITAR. El usuario llena lo
+ * ESPECÍFICO del proyecto (datos, etapas, costos, lote); en CREAR, los parámetros macro (WACC build-up,
+ * financieros, cronograma) van con el ESTÁNDAR CG pre-cargado; en EDITAR, se PRESERVAN los del proyecto
+ * (buildPar hace overlay sobre el `par` original). Al enviar: arma el `par` y lo manda al Server Action
+ * (crear+aprobar, o nueva-versión+aprobar) → el motor recalcula y la ficha queda actualizada.
  *
  * NO calcula cifras: el `ventas` que muestra por etapa es una ESTIMACIÓN de previsualización
  * (und × precio × área / 1000) solo para orientar; las cifras oficiales las produce el motor.
@@ -44,12 +45,75 @@ type Etapa = {
   nom: string; und: string; metodo: (typeof METODOS)[number]; precio: string;
   area_und: string; vmes: string; pe_pct: string; fecha_inicio: string;
   dur_obra: string; escrituracion: string;
+  /** Etapa original (solo EDITAR): identidad estable para que buildPar haga overlay por IDENTIDAD,
+   *  no por posición (preserva los campos extra de ESTA etapa aunque se borren/agreguen otras). */
+  _orig?: Record<string, unknown>;
 };
 
 const etapaVacia = (n: number): Etapa => ({
   nom: `Etapa ${n}`, und: "", metodo: "$/m²", precio: "", area_und: "",
   vmes: "", pe_pct: "60", fecha_inicio: "", dur_obra: "26", escrituracion: "30",
 });
+
+/** Estado del formulario (campos como strings). Lo produce parseParToForm para pre-llenar al EDITAR. */
+export interface FormValues {
+  meta: { nombre: string; tipo: string; estado: string; ubicacion: string; zona: string };
+  etapas: Etapa[];
+  costos: { directos: string; indirectos: string; honorarios: string; util_lote: string };
+  loteBrutoMiles: string;
+  areas: { m2_vendibles: string; m2_construidos: string; lote_bruta: string; lote_util: string };
+}
+
+const s = (v: unknown): string => (v === null || v === undefined ? "" : String(v));
+/** fracción → string de porcentaje, sin ruido de coma flotante (0.045 → "4.5", 0.6 → "60").
+ *  toFixed(10) deja la pérdida del ida-y-vuelta por debajo de 1e-12 (muy por debajo del umbral). */
+const pctStr = (v: unknown): string =>
+  v === null || v === undefined || v === "" ? "" : String(+(Number(v) * 100).toFixed(10));
+
+/** Inverso de buildPar: convierte el `par` crudo del motor al estado del formulario (para EDITAR). */
+export function parseParToForm(par: Record<string, unknown>): FormValues {
+  const meta = (par.meta ?? {}) as Record<string, unknown>;
+  const etapas = (par.etapas ?? []) as Record<string, unknown>[];
+  const c = (par.costos_pct ?? {}) as Record<string, unknown>;
+  const a = (par.areas ?? {}) as Record<string, unknown>;
+  return {
+    meta: {
+      nombre: s(meta.nombre),
+      tipo: s(meta.tipo) || "VIS",
+      estado: s(meta.estado) || "prefactibilidad",
+      ubicacion: s(meta.ubicacion),
+      zona: s(meta.zona),
+    },
+    etapas: etapas.length
+      ? etapas.map((e) => ({
+          nom: s(e.nom),
+          und: s(e.und),
+          metodo: e.metodo === "$/und" ? "$/und" : "$/m²",
+          precio: s(e.precio),
+          area_und: s(e.area_und),
+          vmes: s(e.vmes),
+          pe_pct: pctStr(e.pe_pct),
+          fecha_inicio: s(e.fecha_inicio),
+          dur_obra: s(e.dur_obra),
+          escrituracion: s(e.escrituracion),
+          _orig: e, // identidad estable para el overlay por identidad en buildPar
+        }))
+      : [etapaVacia(1)],
+    costos: {
+      directos: pctStr(c.directos),
+      indirectos: pctStr(c.indirectos),
+      honorarios: pctStr(c.honorarios),
+      util_lote: pctStr(c.util_lote),
+    },
+    loteBrutoMiles: s(par.lote_bruto_miles),
+    areas: {
+      m2_vendibles: s(a.m2_vendibles),
+      m2_construidos: s(a.m2_construidos),
+      lote_bruta: s(a.lote_bruta),
+      lote_util: s(a.lote_util),
+    },
+  };
+}
 
 const num = (s: string): number => {
   const v = parseFloat(String(s).replace(/[^\d.-]/g, ""));
@@ -73,17 +137,37 @@ const textCls = inputCls.replace("text-right", "text-left").replace("num ", "");
 const selectCls =
   "w-full rounded-[var(--radius-data)] border bg-card px-2 py-1.5 text-sm text-foreground outline-none focus:border-primary";
 
-export function NuevoProyectoForm() {
+export function ProyectoForm({
+  mode = "create",
+  initial,
+  originalPar,
+  slug,
+  projectId,
+}: {
+  mode?: "create" | "edit";
+  initial?: FormValues;
+  /** `par` original (solo EDITAR): buildPar hace overlay sobre él para preservar WACC/financiero/extras. */
+  originalPar?: Record<string, unknown>;
+  slug?: string;
+  projectId?: string;
+} = {}) {
   const router = useRouter();
+  const isEdit = mode === "edit";
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
 
-  const [meta, setMeta] = useState({ nombre: "", tipo: "VIS", estado: "prefactibilidad", ubicacion: "", zona: "" });
-  const [etapas, setEtapas] = useState<Etapa[]>([etapaVacia(1)]);
-  const [costos, setCostos] = useState({ directos: "55", indirectos: "18", honorarios: "8", util_lote: "4.5" });
-  const [loteBrutoMiles, setLoteBrutoMiles] = useState("");
-  const [areas, setAreas] = useState({ m2_vendibles: "", m2_construidos: "", lote_bruta: "", lote_util: "" });
+  const [meta, setMeta] = useState(
+    initial?.meta ?? { nombre: "", tipo: "VIS", estado: "prefactibilidad", ubicacion: "", zona: "" },
+  );
+  const [etapas, setEtapas] = useState<Etapa[]>(initial?.etapas ?? [etapaVacia(1)]);
+  const [costos, setCostos] = useState(
+    initial?.costos ?? { directos: "55", indirectos: "18", honorarios: "8", util_lote: "4.5" },
+  );
+  const [loteBrutoMiles, setLoteBrutoMiles] = useState(initial?.loteBrutoMiles ?? "");
+  const [areas, setAreas] = useState(
+    initial?.areas ?? { m2_vendibles: "", m2_construidos: "", lote_bruta: "", lote_util: "" },
+  );
 
   const setEtapa = (i: number, patch: Partial<Etapa>) =>
     setEtapas((es) => es.map((e, j) => (j === i ? { ...e, ...patch } : e)));
@@ -112,28 +196,44 @@ export function NuevoProyectoForm() {
   }
 
   function buildPar(): Record<string, unknown> {
-    const etapasPar = etapas.map((e, i) => ({
-      cod: i + 1,
-      nom: e.nom.trim() || `Etapa ${i + 1}`,
-      und: numInt(e.und),
-      metodo: e.metodo,
-      precio: num(e.precio),
-      area_und: num(e.area_und),
-      ventas_miles: ventasEtapaMiles(e),
-      vmes: numInt(e.vmes),
-      frec: 1,
-      pe_pct: num(e.pe_pct) / 100,
-      fecha_inicio: e.fecha_inicio,
-      sucesora: i === 0 ? null : i, // encadenamiento: la etapa i sucede a la i-1 (cod = i)
-      desfase: 0,
-      obra_offset: 1,
-      dur_obra: numInt(e.dur_obra),
-      escrituracion: numInt(e.escrituracion),
-      emes: 45,
-      efrec: 1,
-    }));
+    // EDITAR: overlay sobre el par original (preserva financiero/WACC/cronograma). En las etapas,
+    // overlay por IDENTIDAD (e._orig), no por posición → al borrar/agregar etapas cada una conserva
+    // SUS campos extra (no se barajan). CREAR: defaults CG.
+    const etapaBaseCrear = { frec: 1, desfase: 0, obra_offset: 1, emes: 45, efrec: 1 };
+    const etapasPar = etapas.map((e, i) => {
+      const merged: Record<string, unknown> = {
+        ...(e._orig ?? etapaBaseCrear),
+        cod: i + 1,
+        nom: e.nom.trim() || `Etapa ${i + 1}`,
+        und: numInt(e.und),
+        metodo: e.metodo,
+        precio: num(e.precio),
+        area_und: num(e.area_und),
+        ventas_miles: ventasEtapaMiles(e),
+        vmes: numInt(e.vmes),
+        pe_pct: num(e.pe_pct) / 100,
+        fecha_inicio: e.fecha_inicio,
+        // Modelo DATADO: cada etapa arranca en SU fecha_inicio (sucesora=null). Forzar una cadena
+        // serial re-anclaba las etapas 2..N a la PE de la anterior e IGNORABA su fecha → cronograma
+        // corrompido (VPN podía cambiar de signo en un "editar sin cambios"). El formulario pide
+        // fecha por etapa, así que el modelo correcto es datado.
+        sucesora: null,
+        dur_obra: numInt(e.dur_obra),
+        escrituracion: numInt(e.escrituracion),
+      };
+      // El precio/ventas los recalcula el formulario → un ventas por vivienda/adicional VIEJO (de un
+      // proyecto con tipologías o No-VIS) quedaría obsoleto y corrompería el recaudo. Se eliminan: el
+      // motor cae a `ventas_miles`, o los re-deriva de `tipologias` si el proyecto las trae.
+      delete merged.ventas_vivienda_miles;
+      delete merged.ventas_adicional_miles;
+      return merged;
+    });
+    const baseCostos = (originalPar?.costos_pct as Record<string, unknown> | undefined) ?? COSTOS_EXTRA_CG;
+    const baseMeta = (originalPar?.meta as Record<string, unknown> | undefined) ?? {};
     const par: Record<string, unknown> = {
+      ...(originalPar ?? { cronograma: CRONOGRAMA_CG, financiero: { ...FINANCIERO_CG, wacc: WACC_CG } }),
       meta: {
+        ...baseMeta,
         nombre: meta.nombre.trim(),
         tipo: meta.tipo,
         estado: meta.estado,
@@ -144,15 +244,13 @@ export function NuevoProyectoForm() {
       },
       etapas: etapasPar,
       costos_pct: {
+        ...baseCostos,
         directos: num(costos.directos) / 100,
         indirectos: num(costos.indirectos) / 100,
         honorarios: num(costos.honorarios) / 100,
         util_lote: num(costos.util_lote) / 100,
-        ...COSTOS_EXTRA_CG,
       },
       lote_bruto_miles: num(loteBrutoMiles),
-      cronograma: CRONOGRAMA_CG,
-      financiero: { ...FINANCIERO_CG, wacc: WACC_CG },
       schema_version: 1,
     };
     if (Object.values(areas).some((v) => v.trim() !== "")) {
@@ -176,11 +274,19 @@ export function NuevoProyectoForm() {
     setErr(null);
     setWarn(null);
     start(async () => {
-      const res = await crearYAprobarProyecto({ par: buildPar(), nombre: meta.nombre.trim() });
+      const par = buildPar();
+      const res =
+        isEdit && projectId && slug
+          ? await editarYAprobarProyecto({ projectId, slug, par })
+          : await crearYAprobarProyecto({ par, nombre: meta.nombre.trim() });
       if (res.ok) {
         if (!res.checks_ok) {
-          // se creó, pero algún cuadre del motor no cierra: avisa antes de navegar.
-          setWarn("Proyecto creado, pero algún cuadre del motor no cierra. Revísalo en la ficha.");
+          // se guardó, pero algún cuadre del motor no cierra: avisa antes de navegar.
+          setWarn(
+            isEdit
+              ? "Cambios guardados, pero algún cuadre del motor no cierra. Revísalo en la ficha."
+              : "Proyecto creado, pero algún cuadre del motor no cierra. Revísalo en la ficha.",
+          );
         }
         router.push(`/proyectos/${res.slug}`);
       } else {
@@ -337,11 +443,22 @@ export function NuevoProyectoForm() {
         </div>
       </details>
 
-      {/* Nota de defaults CG */}
+      {/* Nota de defaults / preservación */}
       <p className="text-xs text-muted-foreground">
-        El costo de capital (WACC build-up), los supuestos financieros (crédito, fiducia, separación) y el
-        cronograma usan el <strong className="font-medium text-foreground">estándar CG</strong>. Serán
-        editables por proyecto en una fase posterior.
+        {isEdit ? (
+          <>
+            El costo de capital (WACC build-up), los supuestos financieros y el cronograma del proyecto se{" "}
+            <strong className="font-medium text-foreground">conservan</strong> al guardar (no se editan aquí).
+            Guardar crea una <strong className="font-medium text-foreground">versión nueva</strong> y la
+            aprueba; la anterior queda en el historial.
+          </>
+        ) : (
+          <>
+            El costo de capital (WACC build-up), los supuestos financieros (crédito, fiducia, separación) y el
+            cronograma usan el <strong className="font-medium text-foreground">estándar CG</strong>. Serán
+            editables por proyecto en una fase posterior.
+          </>
+        )}
       </p>
 
       {/* Errores / avisos */}
@@ -362,7 +479,7 @@ export function NuevoProyectoForm() {
       <div className="flex items-center justify-end gap-3 border-t border-[var(--rule)] pt-5">
         <button
           type="button"
-          onClick={() => router.push("/")}
+          onClick={() => router.push(isEdit && slug ? `/proyectos/${slug}` : "/")}
           className="rounded-[var(--radius-data)] px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           Cancelar
@@ -374,7 +491,13 @@ export function NuevoProyectoForm() {
           className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-[opacity,transform] [transition-timing-function:var(--ease-out)] hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-          {pending ? "Creando…" : "Crear y aprobar proyecto"}
+          {pending
+            ? isEdit
+              ? "Guardando…"
+              : "Creando…"
+            : isEdit
+              ? "Guardar cambios y re-aprobar"
+              : "Crear y aprobar proyecto"}
         </button>
       </div>
     </div>

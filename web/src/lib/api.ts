@@ -415,7 +415,7 @@ async function readDetail(res: Response, fallback: string): Promise<string> {
 async function apiWrite(
   path: string,
   body: unknown,
-  init: { method?: "POST" | "PUT" | "DELETE"; headers?: Record<string, string> } = {},
+  init: { method?: "POST" | "PUT" | "PATCH" | "DELETE"; headers?: Record<string, string> } = {},
 ): Promise<unknown> {
   const headers: Record<string, string> = {
     ...(await authHeaders()),
@@ -486,4 +486,48 @@ export async function deleteProject(slug: string): Promise<DeleteProjectResult> 
   return apiWrite(`/v1/projects/${encodeURIComponent(slug)}`, undefined, {
     method: "DELETE",
   }) as Promise<DeleteProjectResult>;
+}
+
+export interface ProjectSource {
+  project_id: string;
+  version: number;
+  es_real: boolean;
+  /** El `par` crudo del escenario vigente (input editable, para pre-llenar el formulario). */
+  par: Record<string, unknown>;
+}
+
+/** GET /v1/projects/{slug}/source — el `par` crudo del escenario vigente (admin). null si no existe. */
+export async function getProjectSource(slug: string): Promise<ProjectSource | null> {
+  const res = await apiFetch(`/v1/projects/${encodeURIComponent(slug)}/source`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API ${res.status} en source de ${slug}`);
+  return res.json() as Promise<ProjectSource>;
+}
+
+export interface ScenarioWriteResult {
+  scenario_id: string;
+  version: number;
+  status: string;
+}
+
+/** POST /v1/projects/{projectId}/scenarios — crea un escenario borrador NUEVO (siguiente versión). */
+export async function nuevoEscenario(
+  projectId: string,
+  par: Record<string, unknown>,
+): Promise<ScenarioWriteResult> {
+  return apiWrite(`/v1/projects/${encodeURIComponent(projectId)}/scenarios`, {
+    par,
+  }) as Promise<ScenarioWriteResult>;
+}
+
+export interface SetRealResult {
+  slug: string;
+  es_real: boolean;
+}
+
+/** PATCH /v1/projects/{slug} — marca el proyecto como datos reales / ilustrativos. Admin. */
+export async function setProjectReal(slug: string, esReal: boolean): Promise<SetRealResult> {
+  return apiWrite(`/v1/projects/${encodeURIComponent(slug)}`, { es_real: esReal }, {
+    method: "PATCH",
+  }) as Promise<SetRealResult>;
 }

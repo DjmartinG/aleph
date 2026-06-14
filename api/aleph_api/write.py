@@ -202,6 +202,39 @@ def aprobar(scenario_id: str, *, actor: str | None) -> dict:
     }
 
 
+def marcar_real(slug: str, *, es_real: bool, actor: str | None) -> dict:
+    """Marca un proyecto como datos REALES (confidenciales) o ILUSTRATIVOS. Flag a nivel de proyecto
+    (no toca el snapshot ni las cifras): solo cambia cómo se etiqueta en la UI. Audita."""
+    sb = _sb()
+    proj = sb.table("projects").select("id").eq("slug", slug).limit(1).execute().data
+    if not proj:
+        raise HTTPException(status_code=404, detail=f"Proyecto '{slug}' no encontrado")
+    sb.table("projects").update({"es_real": bool(es_real), "updated_by": actor}).eq("id", proj[0]["id"]).execute()
+    _audit(sb, "project", proj[0]["id"], "set_es_real", actor, diff={"es_real": bool(es_real)})
+    return {"slug": slug, "es_real": bool(es_real)}
+
+
+def obtener_para_editar(slug: str) -> dict:
+    """Devuelve el `par` CRUDO del escenario vigente (baseline o el approved de mayor versión) + el
+    project_id y la versión, para PRE-LLENAR el formulario de edición. Es el input editable (no las
+    cifras calculadas), por eso el endpoint exige admin. Editar = crear un escenario NUEVO con este
+    par modificado y aprobarlo (el aprobado vigente es inmutable; se versiona, no se sobrescribe)."""
+    sb = _sb()
+    proj = sb.table("projects").select("id,nombre,es_real").eq("slug", slug).limit(1).execute().data
+    if not proj:
+        raise HTTPException(status_code=404, detail=f"Proyecto '{slug}' no encontrado")
+    rows = (sb.table("scenarios").select("snapshot,version,status")
+            .eq("project_id", proj[0]["id"]).in_("status", ["baseline", "approved"])
+            .order("version", desc=True).execute().data) or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="El proyecto no tiene un escenario aprobado para editar")
+    # Pre-llenar desde la versión MÁS ALTA = el MISMO escenario que la lectura considera vigente
+    # (ver repo._snapshot_de_scenario). Así editas la versión que ves, no un baseline viejo.
+    elegido = rows[0]
+    return {"project_id": proj[0]["id"], "version": elegido["version"],
+            "es_real": bool(proj[0].get("es_real")), "par": elegido["snapshot"]}
+
+
 def eliminar_proyecto(slug: str, *, actor: str | None) -> dict:
     """Borra un proyecto COMPLETO por slug (resuelve slug→id): sus results_cache, sus scenarios y la
     fila del proyecto. AUDITA el borrado ANTES de ejecutarlo (queda rastro de qué se borró y quién).

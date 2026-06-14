@@ -5,7 +5,9 @@ import {
   approveScenario,
   createProject,
   deleteProject,
+  nuevoEscenario,
   postRun,
+  setProjectReal,
   WriteError,
   type MonteCarloParams,
   type MonteCarloResult,
@@ -92,7 +94,70 @@ export async function crearYAprobarProyecto(
   }
 }
 
-// ---------- Administración: eliminar proyecto (solo admin) ----------
+// ---------- Editar proyecto: nueva versión a partir del par modificado (solo admin) ----------
+
+export interface EditarProyectoInput {
+  projectId: string;
+  slug: string;
+  par: Record<string, unknown>;
+}
+
+/**
+ * Edita un proyecto creando un escenario NUEVO (siguiente versión) con el par modificado y
+ * aprobándolo → pasa a ser el vigente. El aprobado anterior queda INMUTABLE (versionado, no se
+ * sobrescribe; trigger 0002). Mismo patrón de 2 pasos y manejo de error que crear+aprobar.
+ */
+export async function editarYAprobarProyecto(
+  input: EditarProyectoInput,
+): Promise<CrearProyectoResult> {
+  let draft;
+  try {
+    draft = await nuevoEscenario(input.projectId, input.par);
+  } catch (e) {
+    if (e instanceof WriteError) return { ok: false, status: e.status, message: e.message };
+    throw e;
+  }
+  try {
+    const approved = await approveScenario(draft.scenario_id);
+    revalidatePath("/");
+    revalidatePath(`/proyectos/${input.slug}`);
+    return {
+      ok: true,
+      slug: input.slug,
+      scenario_id: draft.scenario_id,
+      tir_proyecto: approved.tir_proyecto,
+      checks_ok: approved.checks_ok,
+    };
+  } catch (e) {
+    if (e instanceof WriteError) {
+      return {
+        ok: false,
+        status: e.status,
+        message: `Se guardó la nueva versión como borrador, pero no se pudo aprobar: ${e.message}`,
+      };
+    }
+    throw e;
+  }
+}
+
+// ---------- Administración: marcar real / eliminar proyecto (solo admin) ----------
+
+export type MarcarRealResult =
+  | { ok: true; es_real: boolean }
+  | { ok: false; status: number; message: string };
+
+/** Marca el proyecto como datos reales / ilustrativos (flag de proyecto; no toca cifras). Admin. */
+export async function marcarProyectoReal(slug: string, esReal: boolean): Promise<MarcarRealResult> {
+  try {
+    const res = await setProjectReal(slug, esReal);
+    revalidatePath("/");
+    revalidatePath(`/proyectos/${slug}`);
+    return { ok: true, es_real: res.es_real };
+  } catch (e) {
+    if (e instanceof WriteError) return { ok: false, status: e.status, message: e.message };
+    throw e;
+  }
+}
 
 export type EliminarProyectoResult =
   | { ok: true; slug: string; scenarios: number }

@@ -67,8 +67,11 @@ def _snapshot_de_scenario(sb, slug: str) -> dict | None:
             .order("version", desc=True).execute().data) or []
     if not rows:
         return None
-    elegido = next((r for r in rows if r["status"] == "baseline"), rows[0])  # baseline manda
-    return elegido["snapshot"]
+    # VIGENTE = la versión MÁS ALTA (ya viene ordenada desc). Antes priorizaba baseline sobre version,
+    # lo que dejaba INVISIBLE una edición (approved de versión mayor) si el proyecto tenía un baseline
+    # fijado en una versión vieja. Como las versiones son únicas, "la más alta" es inequívoca y hace
+    # que editar+aprobar siempre se vea. (Hoy ningún proyecto tiene baseline: la lectura no cambia.)
+    return rows[0]["snapshot"]
 
 
 # ---------- API pública (espejo de storage.py) ----------

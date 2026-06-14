@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { getProject, getResults, getSensitivity, getSchedule, getWacc } from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
 import { fmtInt } from "@/lib/format";
@@ -46,16 +46,26 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
             {[meta.ubicacion, meta.zona, meta.tipo].filter(Boolean).join(" · ")}
           </p>
         </div>
-        {meta.unidades ? (
-          <span className="num whitespace-nowrap rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
-            {fmtInt(meta.unidades)} unidades
-          </span>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {meta.unidades ? (
+            <span className="num whitespace-nowrap rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
+              {fmtInt(meta.unidades)} unidades
+            </span>
+          ) : null}
+          {admin ? (
+            <Link
+              href={`/proyectos/${slug}/editar`}
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] border border-primary/40 px-3 py-1.5 text-sm font-medium text-primary transition-colors [transition-timing-function:var(--ease-out)] hover:bg-primary/10"
+            >
+              <Pencil className="size-3.5" aria-hidden /> Editar
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} />
 
-      {admin ? <AdminActions slug={slug} nombre={meta.nombre} /> : null}
+      {admin ? <AdminActions slug={slug} nombre={meta.nombre} esReal={es_real} /> : null}
     </div>
   );
 }

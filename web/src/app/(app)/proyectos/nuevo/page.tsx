@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { NuevoProyectoForm } from "@/components/forms/nuevo-proyecto-form";
+import { ProyectoForm } from "@/components/forms/nuevo-proyecto-form";
 
 export const metadata = { title: "Nuevo proyecto · ALEPH" };
 
@@ -22,7 +22,7 @@ export default function NuevoProyectoPage() {
         </p>
       </header>
 
-      <NuevoProyectoForm />
+      <ProyectoForm />
     </div>
   );
 }
