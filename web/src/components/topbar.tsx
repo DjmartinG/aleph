@@ -1,9 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { ChevronRight, RefreshCw } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AlephMark } from "@/components/aleph-mark";
+import { cn } from "@/lib/utils";
 
 function crumbs(pathname: string): string[] {
   if (!pathname || pathname === "/") return ["Portafolio"];
@@ -14,6 +16,8 @@ function crumbs(pathname: string): string[] {
 
 export function Topbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
   const trail = crumbs(pathname);
 
   return (
@@ -39,7 +43,19 @@ export function Topbar() {
         ))}
       </nav>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex items-center gap-1.5">
+        {/* Recargar: vuelve a traer los datos del servidor sin recargar la página ni re-loguear. */}
+        <button
+          type="button"
+          aria-label="Recargar datos"
+          title="Recargar datos del servidor"
+          onClick={() => startRefresh(() => router.refresh())}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] border px-2.5 py-1.5 text-sm text-muted-foreground transition-[color,background-color,transform] [transition-duration:var(--dur-1)] [transition-timing-function:var(--ease-out)] hover:bg-accent hover:text-foreground active:scale-95 disabled:opacity-60"
+        >
+          <RefreshCw className={cn("size-4", refreshing && "animate-spin")} aria-hidden />
+          <span className="hidden sm:inline">{refreshing ? "Recargando…" : "Recargar"}</span>
+        </button>
         <ThemeToggle />
         <div className="flex items-center gap-2 rounded-full border bg-card py-1 pl-1 pr-3">
           <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
