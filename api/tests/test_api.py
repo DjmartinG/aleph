@@ -378,3 +378,15 @@ def test_montecarlo_crystal_ball():
     assert cert is None or 0.0 <= cert["prob"] <= 1.0
     suma = sum(v["contribucion_pct"] for v in fc["tornado"].values())
     assert 99.0 <= suma <= 101.0    # el tornado suma ~100%
+
+
+def test_goal_seek_devolvernos():
+    if NAV not in SLUGS:
+        import pytest as _pt; _pt.skip("Navarra no disponible")
+    r = client.post(f"/v1/scenarios/{NAV}:base/goal-seek",
+                    json={"objetivo": "margen", "meta": 0.07, "driver": "precio"})
+    assert r.status_code == 200
+    j = r.json()
+    assert j["alcanzable"] in (True, False)
+    if j["alcanzable"]:
+        assert abs(j["valor"] - 0.07) < 1e-2 and "delta" in j

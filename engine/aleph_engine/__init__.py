@@ -23,6 +23,7 @@ from .modelo import (
 )
 from . import curvas
 from . import schema
+from . import goal_seek
 from . import simulacion
 from . import portfolio
 from . import metrics

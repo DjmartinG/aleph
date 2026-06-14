@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from aleph_engine import calcular, checks, config, finanzas, metrics, modelo, portfolio, simulacion
+from aleph_engine import calcular, checks, config, finanzas, goal_seek as gs, metrics, modelo, portfolio, simulacion
 
 from . import repo
 
@@ -275,6 +275,19 @@ def montecarlo_cb(par: dict, req: dict) -> dict:
     return simulacion.simular(
         par, supuestos=sup, n=int(req.get("n", 1000)), seed=req.get("seed", 42),
         hurdle=req.get("hurdle"), incluir_valores=bool(req.get("incluir_valores", True)))
+
+
+def goal_seek(par: dict, req: dict) -> dict:
+    """Goal-seek (M4): resuelve que driver (precio/costo/ritmo) lleva a una meta. `req`: objetivo, meta,
+    y `driver` (uno) o `drivers` (varios, por defecto los tres). No muta `par`."""
+    req = req or {}
+    objetivo = req.get("objetivo", "margen")
+    meta = float(req.get("meta", 0.0))
+    rango = tuple(req.get("rango", (-0.5, 0.5)))
+    if req.get("driver"):
+        return gs.resolver(par, objetivo, meta, req["driver"], rango=rango)
+    drivers = tuple(req.get("drivers", gs.DRIVERS))
+    return gs.alcanzar(par, objetivo, meta, drivers=drivers, rango=rango)
 
 # ---------- helpers de carga ----------
 
