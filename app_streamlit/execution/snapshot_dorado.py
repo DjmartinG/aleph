@@ -27,7 +27,7 @@ from aleph_engine import calcular, __version__ as ENGINE_V   # noqa: E402
 GOLDEN = RAIZ / "tests" / "golden"
 PUB = RAIZ / "proyectos"
 PRIV = RAIZ / "proyectos_privados"
-SLUGS = ["1_navarra", "2_dominica", "3_torres_campinas"]
+SLUGS = ["1_navarra", "2_dominica", "3_torres_campinas", "4_argos"]
 
 
 def _snapshot(par):
