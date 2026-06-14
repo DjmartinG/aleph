@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   approveScenario,
   createProject,
+  deleteProject,
   postRun,
   WriteError,
   type MonteCarloParams,
@@ -88,5 +89,27 @@ export async function crearYAprobarProyecto(
       };
     }
     throw e;
+  }
+}
+
+// ---------- Administración: eliminar proyecto (solo admin) ----------
+
+export type EliminarProyectoResult =
+  | { ok: true; slug: string; scenarios: number }
+  | { ok: false; status: number; message: string };
+
+/**
+ * Borra un proyecto completo (escenarios + cache). El API revalida el JWT y EXIGE rol admin (gate
+ * real); aquí solo orquestamos y traducimos el error. Irreversible: la UI exige confirmación.
+ */
+export async function eliminarProyecto(slug: string): Promise<EliminarProyectoResult> {
+  try {
+    const res = await deleteProject(slug);
+    revalidatePath("/");
+    revalidatePath("/pipeline");
+    return { ok: true, slug: res.slug, scenarios: res.scenarios_borrados };
+  } catch (e) {
+    if (e instanceof WriteError) return { ok: false, status: e.status, message: e.message };
+    throw e; // el redirect() de 401 debe propagarse
   }
 }

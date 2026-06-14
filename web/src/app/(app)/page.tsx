@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { getPortfolio, type Portfolio } from "@/lib/api";
+import { isAdminUser } from "@/lib/session";
 import { fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { FunnelBar } from "@/components/funnel-bar";
@@ -16,6 +17,7 @@ export default async function Page() {
   } catch (e) {
     errMsg = e instanceof Error ? e.message : "Error desconocido";
   }
+  const admin = await isAdminUser();
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-9 sm:px-6 lg:px-8">
@@ -32,12 +34,14 @@ export default async function Page() {
               {fmtInt(data.consolidado.n)} proyectos · {fmtInt(data.consolidado.unidades)} unidades
             </span>
           ) : null}
-          <Link
-            href="/proyectos/nuevo"
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-[opacity,transform] [transition-timing-function:var(--ease-out)] hover:opacity-90 active:scale-[0.98]"
-          >
-            <Plus className="size-4" aria-hidden /> Nuevo proyecto
-          </Link>
+          {admin ? (
+            <Link
+              href="/proyectos/nuevo"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-[opacity,transform] [transition-timing-function:var(--ease-out)] hover:opacity-90 active:scale-[0.98]"
+            >
+              <Plus className="size-4" aria-hidden /> Nuevo proyecto
+            </Link>
+          ) : null}
         </div>
       </header>
 

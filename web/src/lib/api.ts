@@ -415,17 +415,18 @@ async function readDetail(res: Response, fallback: string): Promise<string> {
 async function apiWrite(
   path: string,
   body: unknown,
-  init: { method?: "POST" | "PUT"; headers?: Record<string, string> } = {},
+  init: { method?: "POST" | "PUT" | "DELETE"; headers?: Record<string, string> } = {},
 ): Promise<unknown> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...(await authHeaders()),
     ...init.headers,
   };
+  const hasBody = body !== undefined && body !== null;
+  if (hasBody) headers["Content-Type"] = "application/json";
   const res = await fetch(`${API_BASE}${path}`, {
     method: init.method ?? "POST",
     headers,
-    body: JSON.stringify(body ?? {}),
+    body: hasBody ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
   if (res.status === 401) {
@@ -472,4 +473,17 @@ export async function createProject(
 /** POST /v1/scenarios/{id}/approve — aprueba un borrador (recalcula + congela). Lanza WriteError. */
 export async function approveScenario(scenarioId: string): Promise<ApproveResult> {
   return apiWrite(`/v1/scenarios/${encodeURIComponent(scenarioId)}/approve`, {}) as Promise<ApproveResult>;
+}
+
+export interface DeleteProjectResult {
+  deleted: boolean;
+  slug: string;
+  scenarios_borrados: number;
+}
+
+/** DELETE /v1/projects/{slug} — borra un proyecto completo (escenarios + cache). Admin. WriteError. */
+export async function deleteProject(slug: string): Promise<DeleteProjectResult> {
+  return apiWrite(`/v1/projects/${encodeURIComponent(slug)}`, undefined, {
+    method: "DELETE",
+  }) as Promise<DeleteProjectResult>;
 }

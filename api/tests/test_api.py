@@ -271,6 +271,26 @@ def test_write_aprobar_par_incalculable_422(monkeypatch):
     assert ei.value.status_code == 422
 
 
+def test_write_eliminar_proyecto_borra_y_audita(monkeypatch):
+    """Borrado de proyecto por slug: audita ANTES + borra scenarios + projects (cache por escenario)."""
+    fake = _fake_write(monkeypatch, {
+        "projects": [{"id": "p1", "slug": "x", "nombre": "X", "es_real": False}],
+        "scenarios": [{"id": "s1"}, {"id": "s2"}]})
+    out = write.eliminar_proyecto("x", actor="me@cg.com")
+    assert out["deleted"] is True and out["slug"] == "x" and out["scenarios_borrados"] == 2
+    assert any(c[0] == "audit_log" and c[1] == "insert" for c in fake.calls())  # auditó el borrado
+    assert any(c[0] == "results_cache" and c[1] == "delete" for c in fake.calls())
+    assert any(c[0] == "scenarios" and c[1] == "delete" for c in fake.calls())
+    assert any(c[0] == "projects" and c[1] == "delete" for c in fake.calls())
+
+
+def test_write_eliminar_proyecto_inexistente_404(monkeypatch):
+    _fake_write(monkeypatch, {"projects": []})
+    with pytest.raises(HTTPException) as ei:
+        write.eliminar_proyecto("nope", actor="me")
+    assert ei.value.status_code == 404
+
+
 def test_health_data():
     """Salud de datos público (no sensible): fuente + nº de proyectos. Sirve para verificar el deploy."""
     j = client.get("/health/data").json()

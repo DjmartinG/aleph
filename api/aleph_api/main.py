@@ -190,4 +190,10 @@ def post_baseline(scenario_id: str, user: auth.Principal = Depends(auth.require_
     return write.fijar_baseline(scenario_id, actor=_actor(user))
 
 
+@v1.delete("/projects/{slug}")
+def delete_project(slug: str, user: auth.Principal = Depends(auth.require_admin)):
+    """Borra un proyecto COMPLETO (sus escenarios + cache) por slug. Irreversible. Audita. Solo admin."""
+    return write.eliminar_proyecto(slug, actor=_actor(user))
+
+
 app.include_router(v1)

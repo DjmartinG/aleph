@@ -14,6 +14,24 @@ import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 const entraConfigured = !!process.env.AUTH_MICROSOFT_ENTRA_ID_ID;
 const apiScope = process.env.ALEPH_API_SCOPE;
 
+/**
+ * Extrae el claim `roles` del access token de Entra (app roles del registro de la API). Se decodifica
+ * SIN verificar firma: es solo para gating COSMÉTICO de la UI (mostrar/ocultar acciones de admin); la
+ * compuerta REAL la hace el API, que sí valida el JWT y exige rol admin. El token viene de Entra.
+ */
+function rolesFromAccessToken(accessToken?: string): string[] {
+  if (!accessToken) return [];
+  try {
+    const payload = accessToken.split(".")[1];
+    if (!payload) return [];
+    const b64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const claims = JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
+    return Array.isArray(claims.roles) ? claims.roles : [];
+  } catch {
+    return [];
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: entraConfigured
     ? [
@@ -28,16 +46,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     : [],
   callbacks: {
     async jwt({ token, account }) {
-      // En el primer sign-in, captura el access token (audiencia del API) y su expiración.
+      // En el primer sign-in, captura el access token (audiencia del API), su expiración y los roles.
       if (account) {
         token.apiToken = account.access_token;
         token.apiTokenExp = account.expires_at;
+        token.roles = rolesFromAccessToken(account.access_token);
       }
       return token;
     },
     async session({ session, token }) {
       session.apiToken = token.apiToken;
       session.apiTokenExp = token.apiTokenExp;
+      session.roles = token.roles ?? [];
+      session.isAdmin = (token.roles ?? []).some((r) => r.toLowerCase() === "admin");
       return session;
     },
   },

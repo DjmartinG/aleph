@@ -202,6 +202,27 @@ def aprobar(scenario_id: str, *, actor: str | None) -> dict:
     }
 
 
+def eliminar_proyecto(slug: str, *, actor: str | None) -> dict:
+    """Borra un proyecto COMPLETO por slug (resuelve slug→id): sus results_cache, sus scenarios y la
+    fila del proyecto. AUDITA el borrado ANTES de ejecutarlo (queda rastro de qué se borró y quién).
+    Borrado DURO e irreversible — la UI exige confirmación explícita; solo admin (gate en el API)."""
+    sb = _sb()
+    proj = (sb.table("projects").select("id,slug,nombre,es_real")
+            .eq("slug", slug).limit(1).execute().data)
+    if not proj:
+        raise HTTPException(status_code=404, detail=f"Proyecto '{slug}' no encontrado")
+    pid = proj[0]["id"]
+    # Auditar primero: si el borrado falla a media, queda registro de la intención.
+    _audit(sb, "project", pid, "delete", actor,
+           diff={"slug": proj[0]["slug"], "nombre": proj[0].get("nombre"), "es_real": proj[0].get("es_real")})
+    scs = sb.table("scenarios").select("id").eq("project_id", pid).execute().data or []
+    for s in scs:
+        sb.table("results_cache").delete().eq("scenario_id", s["id"]).execute()
+    sb.table("scenarios").delete().eq("project_id", pid).execute()
+    sb.table("projects").delete().eq("id", pid).execute()
+    return {"deleted": True, "slug": slug, "scenarios_borrados": len(scs)}
+
+
 def fijar_baseline(scenario_id: str, *, actor: str | None) -> dict:
     """`approved → baseline`: degrada el baseline previo del proyecto y fija este (un baseline/proyecto)."""
     sb = _sb()
