@@ -397,6 +397,72 @@ def montecarlo_tir(par, n=300, rango_precio=(-0.15, 0.15), rango_costo=(-0.10, 0
     }
 
 
+def mc_contexto(par, *, escrituracion_sigue_obra=True):
+    """Contexto base para los trials del Monte Carlo: ignora el override de fiducia (la cifra auditada
+    es fija) y captura el PE base para que la escrituracion siga a la obra. Fuente unica usada por
+    `mc_trial` (y por el motor Monte Carlo profesional, montecarlo.py)."""
+    base = dict(par)
+    base.pop("fiducia", None)
+    base_etapas = par.get("etapas", []) or []
+    base_tip = par.get("tipologias")
+    base_pe = {}
+    base_esc = {}
+    if escrituracion_sigue_obra:
+        try:
+            hb = _hitos(par)
+            for e in base_etapas:
+                cod = e.get("cod")
+                if cod in hb:
+                    base_pe[cod] = hb[cod].get("pe_idx", 0)
+                    base_esc[cod] = e.get("escrituracion", e.get("dur_obra", 24) + 6)
+        except Exception:
+            base_pe = {}
+    return {"base": base, "etapas": base_etapas, "tip": base_tip, "pe": base_pe, "esc": base_esc}
+
+
+def mc_trial(ctx, dp, dc, dv):
+    """UN trial del Monte Carlo de TIR/VPN dado `ctx` (mc_contexto) y deltas de precio/costo/ritmo.
+    Misma logica por-trial que `montecarlo_tir` (verificada por test de consistencia). Devuelve las
+    cifras de decision del escenario."""
+    base = ctx["base"]
+    base_etapas = ctx["etapas"]
+    base_tip = ctx["tip"]
+    base_pe = ctx["pe"]
+    base_esc = ctx["esc"]
+    p = dict(base)
+    p["etapas"] = [dict(e) for e in base_etapas]
+    if base_tip is not None:
+        p["tipologias"] = [dict(t) for t in base_tip]
+    p["_costo_scale"] = base.get("_costo_scale", 1.0) * (1 + dc)
+    for e in p["etapas"]:
+        vm = e.get("vmes", 6) or 6
+        e["vmes"] = max(1, int(round(vm * (1 + dv))))
+    normalizar_tipologias(p)
+    f = 1 + dp
+    for e in p["etapas"]:
+        e["ventas_miles"] = (e.get("ventas_miles", 0) or 0) * f
+        if e.get("ventas_vivienda_miles") is not None:
+            e["ventas_vivienda_miles"] *= f
+        if e.get("ventas_adicional_miles") is not None:
+            e["ventas_adicional_miles"] *= f
+    p["ventas_miles"] = sum(e.get("ventas_miles", 0) for e in p["etapas"])
+    pg = pyg(p)
+    hitos = _hitos(p)
+    if base_pe:
+        for e in p["etapas"]:
+            cod = e.get("cod")
+            if cod in hitos and cod in base_pe:
+                delta = hitos[cod].get("pe_idx", 0) - base_pe[cod]
+                e["escrituracion"] = max(1, base_esc[cod] + delta)
+    recaudo = _recaudo(p, hitos)
+    ap = apalancamiento.flujo_apalancado(p, pg, hitos, recaudo)
+    return {
+        "tir_proyecto": ap.get("tir_proyecto"), "tir_equity": ap.get("tir_equity"),
+        "vpn_proyecto": ap.get("vpn_proyecto"), "margen": pg.get("margen_oper"),
+        "exposicion_maxima": ap.get("max_necesidad_caja"), "breakeven_mes": ap.get("payback_mes"),
+    }
+
+
 # ----------------------------- tipologías (ingresos por producto) -----------------------------
 HOUSING = ("apartamento", "comercio")        # generan unidad escriturable (separación/CI/subrogación)
 ADICIONAL = ("parqueadero", "deposito")      # ingreso adicional (No VIS); no son unidad de vivienda
