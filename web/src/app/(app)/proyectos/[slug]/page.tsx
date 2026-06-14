@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil } from "lucide-react";
-import { getProject, getResults, getSensitivity, getSchedule, getWacc } from "@/lib/api";
+import { getProject, getResults, getSensitivity, getSchedule, getWacc, getVehiculos } from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
 import { fmtInt } from "@/lib/format";
 import { PhaseBadge } from "@/components/phase-badge";
@@ -10,12 +10,13 @@ import { AdminActions } from "@/components/admin/admin-actions";
 
 export default async function ProyectoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [project, results, sensitivity, schedule, wacc, admin] = await Promise.all([
+  const [project, results, sensitivity, schedule, wacc, vehiculos, admin] = await Promise.all([
     getProject(slug),
     getResults(slug),
     getSensitivity(slug),
     getSchedule(slug),
     getWacc(slug),
+    getVehiculos(slug),
     isAdminUser(),
   ]);
   if (!project || !results) notFound();
@@ -63,7 +64,7 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
         </div>
       </header>
 
-      <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} />
+      <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} vehiculos={vehiculos} />
 
       {admin ? <AdminActions slug={slug} nombre={meta.nombre} esReal={es_real} /> : null}
     </div>

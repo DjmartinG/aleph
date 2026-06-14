@@ -128,6 +128,13 @@ def get_wacc(scenario_id: str):
     return build.wacc(slug, par, R)
 
 
+@v1.get("/scenarios/{scenario_id}/vehiculos")
+def get_vehiculos(scenario_id: str):
+    slug = _slug_de_escenario(scenario_id)
+    par, _ = build.cargar_calcular(slug)
+    return build.vehiculos(slug, par)
+
+
 @v1.post("/scenarios/{scenario_id}/run")
 def post_run(scenario_id: str, req: dict | None = None):
     slug = _slug_de_escenario(scenario_id)

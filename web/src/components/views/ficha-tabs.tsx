@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { ProjectDetail, Results, Sensitivity, Schedule, Wacc } from "@/lib/api";
+import type { ProjectDetail, Results, Sensitivity, Schedule, Wacc, Vehiculos } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { FichaResumen } from "@/components/views/ficha-resumen";
 import { FlujoView } from "@/components/views/ficha-flujo";
 import { CronogramaView } from "@/components/views/ficha-cronograma";
 import { WaccView } from "@/components/views/ficha-wacc";
 import { SensibilidadView } from "@/components/views/ficha-sensibilidad";
+import { VehiculosView } from "@/components/views/ficha-vehiculos";
 
-type Tab = "resumen" | "flujo" | "cronograma" | "capital" | "sensibilidad";
+type Tab = "resumen" | "flujo" | "cronograma" | "capital" | "sensibilidad" | "vehiculos";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "resumen", label: "Resumen" },
@@ -17,6 +18,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "cronograma", label: "Cronograma" },
   { key: "capital", label: "Costo de capital" },
   { key: "sensibilidad", label: "Sensibilidad" },
+  { key: "vehiculos", label: "Vehículos" },
 ];
 
 export function FichaTabs({
@@ -25,12 +27,14 @@ export function FichaTabs({
   sensitivity,
   schedule,
   wacc,
+  vehiculos,
 }: {
   project: ProjectDetail;
   results: Results;
   sensitivity: Sensitivity | null;
   schedule: Schedule | null;
   wacc: Wacc | null;
+  vehiculos: Vehiculos | null;
 }) {
   const [tab, setTab] = useState<Tab>("resumen");
 
@@ -86,6 +90,15 @@ export function FichaTabs({
         ) : (
           <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
             Sensibilidad no disponible.
+          </div>
+        )
+      ) : null}
+      {tab === "vehiculos" ? (
+        vehiculos ? (
+          <VehiculosView data={vehiculos} />
+        ) : (
+          <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+            Comparador de vehículos no disponible.
           </div>
         )
       ) : null}

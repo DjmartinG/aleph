@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from aleph_engine import calcular, checks, config, finanzas, goal_seek as gs, metrics, modelo, portfolio, simulacion
+from aleph_engine import calcular, checks, config, finanzas, goal_seek as gs, metrics, modelo, portfolio, simulacion, tributario
 
 from . import repo
 
@@ -310,3 +310,20 @@ def items_portafolio():
             _log.warning("Proyecto '%s' omitido del portafolio (%s)", slug, e.__class__.__name__)
             continue
     return out
+
+
+def vehiculos(slug: str, par: dict) -> dict:
+    """Comparador de vehiculos juridico-financieros (M3 GET /scenarios/{id}/vehiculos).
+
+    Efecto FISCAL (renta por vehiculo + VIS/No-VIS) y del WATERFALL (after-tax: renta+GMF+dividendos)
+    de cada estructura, en base mensual CONSISTENTE; la TIR auditada de la fiducia se reporta aparte
+    como cifra oficial. Las tasas de GMF (4x1000) y dividendos son PLACEHOLDERS [VALIDAR asesor fiscal].
+    """
+    c = tributario.comparar(par)
+    return {
+        "scenario_id": f"{slug}:base", "project_id": slug,
+        "advertencia": "Cifras DIRECCIONALES de apoyo a la decision, no asesoria tributaria. Las tasas "
+                       "de GMF (4x1000) y dividendos son supuestos POR VALIDAR con el asesor fiscal; la "
+                       "TIR de comparacion es mensual (la oficial de la fiducia es la auditada anual).",
+        **c,
+    }

@@ -104,8 +104,17 @@ class Proyecto(BaseModel):
     lote_bruto_miles: float
     meta: Optional[Meta] = None
     schema_version: int = 1
+    vehiculo: Optional[str] = None  # M3: estructura legal (vehiculos.claves()); None/ausente = 'fiducia'
     # areas, cronograma, tipologias, directos_cap, indirectos_cap, gastos_fijos, fiducia,
     # ventas_miles, _nota… → extra
+
+    @field_validator("vehiculo")
+    @classmethod
+    def _vehiculo_valido(cls, v: Optional[str]) -> Optional[str]:
+        from . import vehiculos
+        if v is not None and not vehiculos.existe(v):
+            raise ValueError(f"vehiculo desconocido: {v!r}; válidos: {vehiculos.claves()}")
+        return v
 
 
 def parse(d: dict) -> Proyecto:

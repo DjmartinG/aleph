@@ -13,6 +13,8 @@ indicadores (TIR proyecto, TIR equity, VPN, máxima necesidad de caja).
 from . import curvas
 from . import finanzas
 from . import config
+from . import vehiculos
+from . import tributario
 from .flujo import aplicar_gastos_fijos, acumular
 
 
@@ -169,9 +171,13 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
     # Si el proyecto trae el Flujo de Caja Libre anual real de la fiducia (hoja FC LOTE CG -V2K:
     # Aportes → Devoluciones → Retornos → FCL), la TIR/VPN del PROYECTO y del SOCIO se calculan
     # sobre esa serie anual a la TIO. Es la cifra auditada de CG (no la aproximación mensual).
+    # Vehículo: SOLO la fiducia usa el FCL auditado; los demás recalculan + overlay fiscal (M3 Fase 2).
+    _veh = vehiculos.obtener(par.get("vehiculo"))
+    _es_fiducia = (_veh.waterfall == "fiducia_override")
+
     fd = par.get("fiducia") or {}
     fcl_p = fd.get("fcl_proyecto")
-    if fcl_p:
+    if fcl_p and _es_fiducia:
         tio_f = fd.get("tio", tio)
         out["fiducia_real"] = True
         out["fcl_proyecto_anual"] = fcl_p
@@ -183,4 +189,19 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
             out["fcl_socio_anual"] = fcl_s
             out["tir_equity"] = _tir_periodo(fcl_s)
             out["vpn_socio"] = _vpn(fcl_s, tio_f)
+    elif not _es_fiducia:
+        # NO-fiducia: ignora el override (congela hitos), aplica la carga tributaria del vehículo al
+        # flujo (renta + GMF + dividendos si es opaco) y recalcula TIR/VPN AFTER-TAX. [VALIDAR tasas].
+        _ov = tributario.overlay_after_tax(retorno, flujo_equity, vehiculo=_veh.clave,
+                                           renta_total=pg.get("renta", 0.0))
+        out["vehiculo"] = _veh.clave
+        out["vehiculo_nombre"] = _veh.nombre
+        out["after_tax"] = True
+        out["transparente"] = _veh.transparente
+        out["carga_tributaria"] = _ov["carga_total"]
+        out["carga_detalle"] = {"renta": _ov["renta"], "gmf": _ov["gmf"], "dividendos": _ov["dividendos"]}
+        out["tir_proyecto"] = _tir(_ov["retorno_at"])
+        out["vpn_proyecto"] = sum(f / (1 + tio_m) ** t for t, f in enumerate(_ov["retorno_at"]))
+        out["tir_equity"] = _tir(_ov["flujo_equity_at"])
+        out["nota_vehiculo"] = _ov["nota_timing"]
     return out

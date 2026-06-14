@@ -564,3 +564,44 @@ export async function setProjectReal(slug: string, esReal: boolean): Promise<Set
     method: "PATCH",
   }) as Promise<SetRealResult>;
 }
+
+
+// ---------- Comparador de vehículos jurídico-financieros (M3) ----------
+
+export interface VehiculoFila {
+  vehiculo: string;
+  nombre_vehiculo: string;
+  es_vis: boolean;
+  renta: number;
+  udi: number;
+  tasa: number;
+  etiqueta: string;
+  exencion_vis_aplicada: boolean;
+  transparente: boolean;
+  tir_proyecto_at: number;
+  tir_socio_at: number;
+  carga_tributaria: number;
+  carga_detalle: { renta: number; gmf: number; dividendos: number };
+  delta_udi_vs_fiducia: number;
+  delta_tir_socio_vs_fiducia: number;
+  delta_carga_vs_fiducia: number;
+  es_referencia: boolean;
+}
+
+export interface Vehiculos {
+  scenario_id: string;
+  project_id: string;
+  advertencia: string;
+  base_comparacion: string;
+  oficial_fiducia: { tir_proyecto_auditada: number | null; tir_socio_auditada: number | null; fuente: string };
+  nota: string;
+  vehiculos: VehiculoFila[];
+}
+
+/** GET /v1/scenarios/{slug}:base/vehiculos. null si no existe (404). */
+export async function getVehiculos(slug: string): Promise<Vehiculos | null> {
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/vehiculos`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API ${res.status} en vehiculos de ${slug}`);
+  return res.json() as Promise<Vehiculos>;
+}
