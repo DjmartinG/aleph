@@ -1,0 +1,29 @@
+name: Refresco mensual de supuestos macro
+
+# Llama al endpoint dedicado del API (token de servicio, SOLO PROPONE). Lo vigente sigue exigiendo
+# aprobacion admin con Entra (/v1/macro/aprobar). Requiere los secretos del repo:
+#   ALEPH_API_URL        -> base del API (p.ej. https://cg-aleph-api.azurewebsites.net)
+#   ALEPH_REFRESH_TOKEN  -> mismo valor que la env var ALEPH_REFRESH_TOKEN del App Service
+
+on:
+  schedule:
+    - cron: "0 9 1 * *"     # dia 1 de cada mes, 09:00 UTC (~04:00 Colombia)
+  workflow_dispatch: {}      # permite dispararlo a mano desde la pestana Actions
+
+jobs:
+  refrescar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /macro/cron-refresh
+        env:
+          API_URL: ${{ secrets.ALEPH_API_URL }}
+          TOKEN: ${{ secrets.ALEPH_REFRESH_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$API_URL" ] || [ -z "$TOKEN" ]; then
+            echo "Faltan los secretos ALEPH_API_URL / ALEPH_REFRESH_TOKEN"; exit 1
+          fi
+          code=$(curl -sS -o /tmp/out.json -w "%{http_code}" -X POST \
+            "$API_URL/macro/cron-refresh" -H "X-Refresh-Token: $TOKEN")
+          echo "HTTP $code"; cat /tmp/out.json || true
+          test "$code" = "200"

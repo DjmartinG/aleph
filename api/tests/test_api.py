@@ -348,3 +348,16 @@ def test_macro_rutas_registradas_y_gate_sin_supabase():
     # la ruta está en el OpenAPI
     paths = client.get("/openapi.json").json()["paths"]
     assert "/v1/macro" in paths and "/v1/macro/refresh" in paths and "/v1/macro/aprobar" in paths
+
+
+def test_cron_refresh_token_gate(monkeypatch):
+    # sin token configurado en el servidor -> 401 (deshabilitado)
+    monkeypatch.delenv("ALEPH_REFRESH_TOKEN", raising=False)
+    assert client.post("/macro/cron-refresh", headers={"X-Refresh-Token": "x"}).status_code == 401
+    # con token configurado pero header equivocado -> 401
+    monkeypatch.setenv("ALEPH_REFRESH_TOKEN", "secreto")
+    assert client.post("/macro/cron-refresh", headers={"X-Refresh-Token": "malo"}).status_code == 401
+    # token correcto -> pasa el gate y llama refrescar (monkeypatch: sin red/Supabase)
+    monkeypatch.setattr("aleph_api.macro_store.refrescar", lambda *a, **k: {"propuestos": 0, "recolectados": 0})
+    r = client.post("/macro/cron-refresh", headers={"X-Refresh-Token": "secreto"})
+    assert r.status_code == 200 and r.json()["propuestos"] == 0

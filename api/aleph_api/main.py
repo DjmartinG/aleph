@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 
 from aleph_engine import __version__ as ENGINE_V
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
@@ -242,6 +243,18 @@ def post_macro_refresh(user: auth.Principal = Depends(auth.require_admin)):
 def post_macro_aprobar(body: MacroAprobar, user: auth.Principal = Depends(auth.require_admin)):
     """Aprueba propuestas por clave -> pasan a vigentes (admin)."""
     return macro_store.aprobar(body.claves)
+
+
+
+@app.post("/macro/cron-refresh", tags=["macro"])
+def post_macro_cron_refresh(x_refresh_token: str | None = Header(default=None, alias="X-Refresh-Token")):
+    """Refresco MENSUAL para el cron (GitHub Action). Autoriza con TOKEN DE SERVICIO (no Entra) y SOLO
+    PROPONE — la compuerta de revision sigue exigiendo aprobacion admin con Entra (/v1/macro/aprobar).
+    Deshabilitado (401) si no hay `ALEPH_REFRESH_TOKEN` configurado en el servidor."""
+    tok = os.environ.get("ALEPH_REFRESH_TOKEN")
+    if not tok or not x_refresh_token or not secrets.compare_digest(x_refresh_token, tok):
+        raise HTTPException(status_code=401, detail="token de refresco invalido o no configurado")
+    return macro_store.refrescar()
 
 
 app.include_router(v1)
