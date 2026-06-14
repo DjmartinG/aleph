@@ -1,15 +1,123 @@
 {
   "_nota": "Proyecto activo CG (plantilla). Cifras ilustrativas — ingresa los datos reales en la plataforma.",
-  "meta": {"nombre": "Torres de Campiñas", "ubicacion": "Pereira", "zona": "Campiñas", "tipo": "VIS", "unidades": 913, "moneda": "miles COP", "estado": "aprobado"},
-  "areas": {"m2_vendibles": 47476, "m2_construidos": 65000, "lote_bruta": 33000, "lote_util": 26000},
+  "meta": {
+    "nombre": "Torres de Campiñas",
+    "ubicacion": "Pereira",
+    "zona": "Campiñas",
+    "tipo": "VIS",
+    "unidades": 913,
+    "moneda": "miles COP",
+    "estado": "aprobado"
+  },
+  "areas": {
+    "m2_vendibles": 47476,
+    "m2_construidos": 65000,
+    "lote_bruta": 33000,
+    "lote_util": 26000
+  },
   "etapas": [
-    {"cod": 1, "nom": "Etapa 1", "und": 305, "metodo": "$/m²", "precio": 3850000, "area_und": 52, "ventas_miles": 61061000, "vmes": 12, "frec": 1, "pe_pct": 0.60, "fecha_inicio": "2026-01-01", "sucesora": null, "desfase": 0, "obra_offset": 1, "dur_obra": 24, "escrituracion": 30, "emes": 45, "efrec": 1},
-    {"cod": 2, "nom": "Etapa 2", "und": 304, "metodo": "$/m²", "precio": 4000000, "area_und": 52, "ventas_miles": 63232000, "vmes": 12, "frec": 1, "pe_pct": 0.60, "sucesora": 1, "desfase": 0, "obra_offset": 1, "dur_obra": 24, "escrituracion": 30, "emes": 45, "efrec": 1},
-    {"cod": 3, "nom": "Etapa 3", "und": 304, "metodo": "$/m²", "precio": 4150000, "area_und": 52, "ventas_miles": 65603200, "vmes": 12, "frec": 1, "pe_pct": 0.60, "sucesora": 2, "desfase": 0, "obra_offset": 1, "dur_obra": 24, "escrituracion": 30, "emes": 45, "efrec": 1}
+    {
+      "cod": 1,
+      "nom": "Etapa 1",
+      "und": 305,
+      "metodo": "$/m²",
+      "precio": 3850000,
+      "area_und": 52,
+      "ventas_miles": 61061000,
+      "vmes": 12,
+      "frec": 1,
+      "pe_pct": 0.6,
+      "fecha_inicio": "2026-01-01",
+      "sucesora": null,
+      "desfase": 0,
+      "obra_offset": 1,
+      "dur_obra": 24,
+      "escrituracion": 30,
+      "emes": 45,
+      "efrec": 1
+    },
+    {
+      "cod": 2,
+      "nom": "Etapa 2",
+      "und": 304,
+      "metodo": "$/m²",
+      "precio": 4000000,
+      "area_und": 52,
+      "ventas_miles": 63232000,
+      "vmes": 12,
+      "frec": 1,
+      "pe_pct": 0.6,
+      "sucesora": 1,
+      "desfase": 0,
+      "obra_offset": 1,
+      "dur_obra": 24,
+      "escrituracion": 30,
+      "emes": 45,
+      "efrec": 1
+    },
+    {
+      "cod": 3,
+      "nom": "Etapa 3",
+      "und": 304,
+      "metodo": "$/m²",
+      "precio": 4150000,
+      "area_und": 52,
+      "ventas_miles": 65603200,
+      "vmes": 12,
+      "frec": 1,
+      "pe_pct": 0.6,
+      "sucesora": 2,
+      "desfase": 0,
+      "obra_offset": 1,
+      "dur_obra": 24,
+      "escrituracion": 30,
+      "emes": 45,
+      "efrec": 1
+    }
   ],
-  "costos_pct": {"directos": 0.55, "indirectos": 0.18, "honorarios": 0.08, "util_lote": 0.045, "recon_codensa": 0.002, "hon_construccion": 0.035, "hon_gerencia": 0.03, "hon_ventas": 0.015},
+  "costos_pct": {
+    "directos": 0.55,
+    "indirectos": 0.18,
+    "honorarios": 0.08,
+    "util_lote": 0.045,
+    "recon_codensa": 0.002,
+    "hon_construccion": 0.035,
+    "hon_gerencia": 0.03,
+    "hon_ventas": 0.015
+  },
   "lote_bruto_miles": 16000000,
-  "cronograma": {"dur_obra": 40, "moda_pert": 24, "curva": "Gauss", "rel_materiales": 0.8, "ea_materiales": 0.06, "ea_mano_obra": 0.12},
-  "financiero": {"renta": 0.35, "split_cg": 0.70, "pct_ci": 0.30, "sep_und_miles": 5000, "diferido_sep": 4, "tasa_credito_ea": 0.155, "cobertura_cc": 0.80, "monto_cc_pct": 0.80, "tir_apalancada_ref": 0.20,
-    "wacc": {"beta_us": 1.29, "tax_us": 13.3, "de_us": 21.56, "tax_col": 33.0, "de_col": 233.3, "rf": 0.12, "rm": 12.44, "rp": 3.14, "inf_col": 5.1, "inf_us": 2.9, "tasa_d": 15.0, "spread": 10.43, "eq_w": 30.0}}
+  "cronograma": {
+    "dur_obra": 40,
+    "moda_pert": 24,
+    "curva": "Gauss",
+    "rel_materiales": 0.8,
+    "ea_materiales": 0.06,
+    "ea_mano_obra": 0.12
+  },
+  "financiero": {
+    "renta": 0.35,
+    "split_cg": 0.7,
+    "pct_ci": 0.3,
+    "sep_und_miles": 5000,
+    "diferido_sep": 4,
+    "tasa_credito_ea": 0.155,
+    "cobertura_cc": 0.8,
+    "monto_cc_pct": 0.8,
+    "tir_apalancada_ref": 0.2,
+    "wacc": {
+      "beta_us": 1.29,
+      "tax_us": 13.3,
+      "de_us": 21.56,
+      "tax_col": 33.0,
+      "de_col": 233.3,
+      "rf": 4.3,
+      "rm": 8.53,
+      "rp": 2.85,
+      "inf_col": 5.1,
+      "inf_us": 2.9,
+      "tasa_d": 15.0,
+      "spread": 10.43,
+      "eq_w": 30.0
+    }
+  }
 }
