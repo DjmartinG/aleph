@@ -7,6 +7,7 @@ import { monthLabel } from "@/lib/timeline";
 import { GanttChart } from "@/components/charts/gantt-chart";
 import { AbsorptionChart } from "@/components/charts/absorption-chart";
 import { RecaudoChart } from "@/components/charts/recaudo-chart";
+import { MiniStat } from "@/components/mini-stat";
 
 export function CronogramaView({ schedule }: { schedule: Schedule }) {
   const s = schedule;
@@ -30,14 +31,14 @@ export function CronogramaView({ schedule }: { schedule: Schedule }) {
   return (
     <div className="space-y-9">
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
-        <Mini label="Unidades" value={fmtInt(s.unidades_total)} note={`${s.etapas.length} etapas`} />
-        <Mini
+        <MiniStat label="Unidades" value={fmtInt(s.unidades_total)} note={`${s.etapas.length} etapas`} />
+        <MiniStat
           label="Inicio ventas"
           value={kpis.firstVenta >= 0 ? monthLabel(s.base_date, kpis.firstVenta) : "—"}
           note="primera venta"
         />
-        <Mini label="Meses con ventas" value={fmtInt(kpis.ventasMeses)} note="ritmo de absorción" />
-        <Mini label="Recaudo total" value={fmtCop(kpis.recaudoTotal)} note="separ. + CI + subrog." />
+        <MiniStat label="Meses con ventas" value={fmtInt(kpis.ventasMeses)} note="ritmo de absorción" />
+        <MiniStat label="Recaudo total" value={fmtCop(kpis.recaudoTotal)} note="separ. + CI + subrog." />
       </div>
 
       <Section
@@ -117,15 +118,6 @@ function Section({
   );
 }
 
-function Mini({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="num mt-0.5 text-base font-semibold">{value}</div>
-      {note ? <div className="text-[0.7rem] text-muted-foreground">{note}</div> : null}
-    </div>
-  );
-}
 
 function Swatch({ color, label, faint }: { color: string; label: string; faint?: boolean }) {
   return (

@@ -5,6 +5,7 @@ import type { FlujoApalancado } from "@/lib/api";
 import { fmtCop, fmtInt } from "@/lib/format";
 import { CashFlowChart, type CashPoint } from "@/components/charts/cash-flow-chart";
 import { cn } from "@/lib/utils";
+import { MiniStat } from "@/components/mini-stat";
 
 type Modo = "proyecto" | "inversionista";
 
@@ -85,15 +86,15 @@ export function FlujoView({ flujo }: { flujo: FlujoApalancado }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
-        <Mini
+        <MiniStat
           label="Exposición máx"
           value={maxExposure ? fmtCop(maxExposure.value) : "—"}
           note={maxExposure ? `mes ${maxExposure.m + 1}` : "sin déficit"}
           danger={!!maxExposure}
         />
-        <Mini label="Crédito máx" value={fmtCop(flujo.credito_max)} note="pico de saldo" />
-        <Mini label="Aportes socio" value={fmtCop(flujo.aportes_total)} note="equity" />
-        <Mini
+        <MiniStat label="Crédito máx" value={fmtCop(flujo.credito_max)} note="pico de saldo" />
+        <MiniStat label="Aportes socio" value={fmtCop(flujo.aportes_total)} note="equity" />
+        <MiniStat
           label="Payback"
           value={flujo.payback_mes != null ? `${fmtInt(flujo.payback_mes)} m` : "n/d"}
           note="recuperación"
@@ -103,22 +104,3 @@ export function FlujoView({ flujo }: { flujo: FlujoApalancado }) {
   );
 }
 
-function Mini({
-  label,
-  value,
-  note,
-  danger,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-  danger?: boolean;
-}) {
-  return (
-    <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={cn("num mt-0.5 text-base font-semibold", danger && "text-danger")}>{value}</div>
-      {note ? <div className="text-[0.7rem] text-muted-foreground">{note}</div> : null}
-    </div>
-  );
-}

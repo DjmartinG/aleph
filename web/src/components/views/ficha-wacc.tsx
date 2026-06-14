@@ -2,6 +2,7 @@
 
 import type { Wacc } from "@/lib/api";
 import { fmtPct, splitPct } from "@/lib/format";
+import { MiniStat } from "@/components/mini-stat";
 
 function fmtNum(x: number | null | undefined): string {
   return x === null || x === undefined || !isFinite(x) ? "—" : x.toFixed(2);
@@ -32,9 +33,9 @@ export function WaccView({ wacc }: { wacc: Wacc }) {
           </div>
           <div className="text-[0.7rem] text-muted-foreground">COP · build-up CAPM</div>
         </div>
-        <Mini label="Ke (equity)" value={fmtPct(w.ke_cop)} note="recursos propios" />
-        <Mini label="Kd (después imp.)" value={fmtPct(w.kd_despues_imp)} note={`escudo fiscal ${fmtPct(w.t_col, 0)}`} />
-        <Mini label="TIO" value={fmtPct(w.tio ?? null)} note="tasa mínima (hurdle)" />
+        <MiniStat size="md" label="Ke (equity)" value={fmtPct(w.ke_cop)} note="recursos propios" />
+        <MiniStat size="md" label="Kd (después imp.)" value={fmtPct(w.kd_despues_imp)} note={`escudo fiscal ${fmtPct(w.t_col, 0)}`} />
+        <MiniStat size="md" label="TIO" value={fmtPct(w.tio ?? null)} note="tasa mínima (hurdle)" />
       </div>
 
       {/* Composición del WACC */}
@@ -135,15 +136,6 @@ function Step({ label, value, op, strong }: { label: string; value: string; op?:
   );
 }
 
-function Mini({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="num mt-1 text-xl font-semibold tracking-tight">{value}</div>
-      {note ? <div className="text-[0.7rem] text-muted-foreground">{note}</div> : null}
-    </div>
-  );
-}
 
 function Sup({ label, value }: { label: string; value: string }) {
   return (

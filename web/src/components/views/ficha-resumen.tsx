@@ -4,6 +4,7 @@ import { StatPanel, type StatItem } from "@/components/stat";
 import { Figure } from "@/components/figure";
 import { ChecksBadge } from "@/components/checks-badge";
 import { SectionTitle } from "@/components/section-title";
+import { MiniStat } from "@/components/mini-stat";
 
 /** "TIR proyecto · proyecto (desapalancada)" → ["TIR proyecto", "proyecto (desapalancada)"]. */
 function splitLabel(s: string): [string, string] {
@@ -48,10 +49,10 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
 
       {/* Costo de capital y financiación — soporte */}
       <div className="mt-9 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
-        <Mini label="WACC" value={fmtPct(ind.wacc)} note="Damodaran" />
-        <Mini label="TIO" value={fmtPct(ind.tio)} note="tasa objetivo" />
-        <Mini label="Crédito máx" value={fmtCop(ind.credito_max)} note="pico" />
-        <Mini
+        <MiniStat label="WACC" value={fmtPct(ind.wacc)} note="Damodaran" />
+        <MiniStat label="TIO" value={fmtPct(ind.tio)} note="tasa objetivo" />
+        <MiniStat label="Crédito máx" value={fmtCop(ind.credito_max)} note="pico" />
+        <MiniStat
           label="Payback"
           value={ind.payback_mes != null ? `${fmtInt(ind.payback_mes)} m` : "n/d"}
           note="meses"
@@ -133,15 +134,6 @@ function TechRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Mini({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="num mt-0.5 text-base font-semibold">{value}</div>
-      {note ? <div className="text-[0.7rem] text-muted-foreground">{note}</div> : null}
-    </div>
-  );
-}
 
 function Ledger({ pyg, margen }: { pyg: Pyg; margen: number | null }) {
   return (
