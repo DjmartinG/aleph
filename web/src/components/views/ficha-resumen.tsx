@@ -37,7 +37,12 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
 
       {/* P&G — el lienzo central de la decisión (M7) */}
       <section className="mt-8">
-        <SectionTitle right={`margen ${fmtPct(ind.margen_oper)}`}>Estado de resultados (P&amp;G)</SectionTitle>
+        <SectionTitle
+          right={`margen ${fmtPct(ind.margen_oper)}`}
+          subtitle="De ingresos a utilidad neta. Honorarios y utilidad del lote retornan al desarrollador."
+        >
+          Estado de resultados (P&amp;G)
+        </SectionTitle>
         <Ledger pyg={pyg} margen={ind.margen_oper} />
       </section>
 
@@ -54,7 +59,12 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
       </div>
 
       <section className="mt-9">
-        <SectionTitle right={okAll ? "todos OK" : "revisar"}>Cuadres</SectionTitle>
+        <SectionTitle
+          right={okAll ? "todos OK" : "revisar"}
+          subtitle="Chequeos de consistencia del modelo: recaudo, P&amp;G y crédito deben cuadrar."
+        >
+          Cuadres
+        </SectionTitle>
         <div className="flex flex-wrap gap-2 rounded-[var(--radius-data)] border bg-card p-4">
           {results.checks.map((c) => (
             <ChecksBadge key={c.clave} nombre={c.nombre} ok={c.ok} />
@@ -64,7 +74,7 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
 
       {project.urbanistico ? (
         <section className="mt-9">
-          <SectionTitle right="áreas e índices">Ficha técnica</SectionTitle>
+          <SectionTitle right="áreas e índices" subtitle="Áreas, índices urbanísticos y valores por m².">Ficha técnica</SectionTitle>
           <FichaTecnica u={project.urbanistico} />
         </section>
       ) : null}

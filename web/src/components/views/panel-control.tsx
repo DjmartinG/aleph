@@ -38,8 +38,9 @@ export function PanelControl({ slug }: { slug: string }) {
   return (
     <div className="space-y-7">
       <Banner tone="warning" label="Simulador">
-        Mueve los drivers y mira el impacto. El <span className="font-medium">margen es exacto</span>; TIR y
-        VPN son direccionales (base mensual) — la cifra oficial es la de la pestaña Resumen.
+        Mueve los drivers para ver el impacto. El <span className="font-medium">margen es exacto</span>; la
+        TIR y el VPN son <span className="font-medium">simulados</span> (base mensual, sirven para comparar) —
+        la cifra oficial está en la pestaña Resumen.
       </Banner>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
@@ -61,9 +62,9 @@ export function PanelControl({ slug }: { slug: string }) {
         {/* KPIs en vivo */}
         <div className={"grid grid-cols-2 gap-x-6 gap-y-5 rounded-[var(--radius-data)] border bg-card p-5 transition-opacity " + (pending ? "opacity-60" : "")}>
           <Kpi label="Margen" hero value={fmtPct(r?.margen)} delta={pct(r?.margen, b?.margen)} />
-          <Kpi label="TIR proyecto · dir." value={fmtPct(r?.tir_proyecto)} delta={pct(r?.tir_proyecto, b?.tir_proyecto)} />
-          <Kpi label="TIR socio · dir." value={fmtPct(r?.tir_equity)} delta={pct(r?.tir_equity, b?.tir_equity)} />
-          <Kpi label="VPN proyecto · dir." value={fmtCop(r?.vpn_proyecto)} delta={cop(r?.vpn_proyecto, b?.vpn_proyecto)} />
+          <Kpi label="TIR proyecto · sim." value={fmtPct(r?.tir_proyecto)} delta={pct(r?.tir_proyecto, b?.tir_proyecto)} />
+          <Kpi label="TIR socio · sim." value={fmtPct(r?.tir_equity)} delta={pct(r?.tir_equity, b?.tir_equity)} />
+          <Kpi label="VPN proyecto · sim." value={fmtCop(r?.vpn_proyecto)} delta={cop(r?.vpn_proyecto, b?.vpn_proyecto)} />
           <Kpi label="Exposición máx." value={fmtCop(r?.exposicion_maxima)} delta={cop(r?.exposicion_maxima, b?.exposicion_maxima)} />
           <Kpi label="Punto de equilibrio" value={r ? `mes ${r.breakeven_mes}` : "—"} />
         </div>
