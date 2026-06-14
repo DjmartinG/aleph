@@ -10,7 +10,7 @@ import { Line } from "@visx/shape";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
 import { localPoint } from "@visx/event";
 import type { ProjectItem } from "@/lib/api";
-import { fmtCop, fmtPct } from "@/lib/format";
+import { fmtCop, fmtPct, TIR_DEGENERADA } from "@/lib/format";
 
 const M = { top: 16, right: 18, bottom: 38, left: 46 };
 
@@ -43,7 +43,7 @@ export function ValueMap({
   const pts: Pt[] = useMemo(
     () =>
       items
-        .filter((i) => i.tir != null && i.margen != null && i.ventas != null)
+        .filter((i) => i.tir != null && i.tir > TIR_DEGENERADA && i.margen != null && i.ventas != null)
         .map((i) => ({
           nombre: i.nombre,
           tir: i.tir as number,

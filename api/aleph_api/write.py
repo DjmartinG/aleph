@@ -99,16 +99,29 @@ def crear_proyecto(par: dict, *, slug: str | None, nombre: str | None, es_real: 
     nombre = nombre or (par.get("meta") or {}).get("nombre") or "Proyecto"
     slug = _slugify(slug or nombre)
     if sb.table("projects").select("id").eq("slug", slug).limit(1).execute().data:
-        raise HTTPException(status_code=409, detail=f"Ya existe un proyecto con slug '{slug}'")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Ya existe un proyecto cuyo nombre genera el identificador '{slug}'. "
+                   f"Usa un nombre distinguible.")
     proj = sb.table("projects").insert({
         "company_id": _company_id(sb), "slug": slug, "nombre": nombre,
         "es_real": bool(es_real), "fase": _fase(par), "updated_by": actor,
     }).execute().data[0]
-    sc = sb.table("scenarios").insert({
-        "project_id": proj["id"], "version": 1, "status": "draft",
-        "snapshot": _con_schema(par), "label": "draft v1", "created_by": actor,
-    }).execute().data[0]
-    _audit(sb, "scenario", sc["id"], "create_draft", actor)
+    # Atomicidad débil: insertar el escenario + auditar; si algo falla DESPUÉS de crear el proyecto,
+    # COMPENSAMOS borrándolo para no dejar un proyecto sin escenario que ocupe el slug e impida
+    # reintentar (la transacción fuerte vía RPC es el endurecimiento de Fase 3, ver la directiva).
+    try:
+        sc = sb.table("scenarios").insert({
+            "project_id": proj["id"], "version": 1, "status": "draft",
+            "snapshot": _con_schema(par), "label": "draft v1", "created_by": actor,
+        }).execute().data[0]
+        _audit(sb, "scenario", sc["id"], "create_draft", actor)
+    except Exception:
+        try:
+            sb.table("projects").delete().eq("id", proj["id"]).execute()
+        except Exception:
+            pass
+        raise
     return {"project_id": proj["id"], "scenario_id": sc["id"], "slug": slug, "version": 1, "status": "draft"}
 
 
@@ -162,7 +175,16 @@ def aprobar(scenario_id: str, *, actor: str | None) -> dict:
         raise HTTPException(status_code=409, detail=f"Solo se aprueba un borrador; este está '{sc['status']}'")
     par = sc["snapshot"]
     _validar(par)
-    R = calcular(json.loads(json.dumps(par)))                 # recálculo con el motor (copia; no muta)
+    # El motor puede CRASHEAR con un par que pasó schema.parse pero está incompleto para calcular
+    # (p.ej. `financiero.wacc` ausente → KeyError, porque en el contrato WACC es Optional). El
+    # formulario siempre manda WACC, pero un par enviado por API directo no. Traducimos cualquier
+    # fallo de cálculo a un 422 LEGIBLE (no un 500 opaco) para que el mensaje sea accionable.
+    try:
+        R = calcular(json.loads(json.dumps(par)))             # recálculo con el motor (copia; no muta)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"El proyecto no se pudo calcular: {e}") from e
     R_norm = json.loads(json.dumps(R, default=str))
     cuadres = checks.correr(R)
     sb.table("scenarios").update({"status": "approved"}).eq("id", scenario_id).eq("status", "draft").execute()

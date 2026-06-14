@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getPortfolio, type Portfolio, type ProjectItem } from "@/lib/api";
-import { fmtCop, fmtInt, splitCop, splitPct } from "@/lib/format";
+import { fmtCop, fmtInt, splitCop, splitTir } from "@/lib/format";
 import { Figure } from "@/components/figure";
 import { PhaseBadge } from "@/components/phase-badge";
 
@@ -95,7 +95,7 @@ function Card({ p }: { p: ProjectItem }) {
       ) : null}
       <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-rule pt-2.5 text-xs">
         <Metric label="Ventas" parts={splitCop(p.ventas)} />
-        <Metric label="TIR ref." parts={splitPct(p.tir)} />
+        <Metric label="TIR ref." parts={splitTir(p.tir)} />
         <Metric label="VPN" parts={splitCop(p.vpn)} danger={p.vpn != null && p.vpn < 0} />
       </dl>
     </Link>

@@ -56,8 +56,12 @@ const num = (s: string): number => {
   return Number.isFinite(v) ? v : 0;
 };
 
+/** Para campos que el motor exige ENTEROS (unidades, ventas/mes, meses): el contrato (schema.py)
+ *  los tipa como int y Pydantic rechaza un float fraccionario con un 422 técnico → redondeamos. */
+const numInt = (s: string): number => Math.round(num(s));
+
 const ventasEtapaMiles = (e: Etapa): number => {
-  const base = num(e.und) * num(e.precio);
+  const base = numInt(e.und) * num(e.precio);
   return Math.round((e.metodo === "$/m²" ? base * num(e.area_und) : base) / 1000);
 };
 
@@ -87,7 +91,7 @@ export function NuevoProyectoForm() {
   const delEtapa = (i: number) => setEtapas((es) => (es.length > 1 ? es.filter((_, j) => j !== i) : es));
 
   const ventasTotal = useMemo(() => etapas.reduce((s, e) => s + ventasEtapaMiles(e), 0), [etapas]);
-  const undTotal = useMemo(() => etapas.reduce((s, e) => s + num(e.und), 0), [etapas]);
+  const undTotal = useMemo(() => etapas.reduce((s, e) => s + numInt(e.und), 0), [etapas]);
   const costosSuma = num(costos.directos) + num(costos.indirectos) + num(costos.honorarios) + num(costos.util_lote);
 
   function validate(): string | null {
@@ -111,20 +115,20 @@ export function NuevoProyectoForm() {
     const etapasPar = etapas.map((e, i) => ({
       cod: i + 1,
       nom: e.nom.trim() || `Etapa ${i + 1}`,
-      und: num(e.und),
+      und: numInt(e.und),
       metodo: e.metodo,
       precio: num(e.precio),
       area_und: num(e.area_und),
       ventas_miles: ventasEtapaMiles(e),
-      vmes: num(e.vmes),
+      vmes: numInt(e.vmes),
       frec: 1,
       pe_pct: num(e.pe_pct) / 100,
       fecha_inicio: e.fecha_inicio,
       sucesora: i === 0 ? null : i, // encadenamiento: la etapa i sucede a la i-1 (cod = i)
       desfase: 0,
       obra_offset: 1,
-      dur_obra: num(e.dur_obra),
-      escrituracion: num(e.escrituracion),
+      dur_obra: numInt(e.dur_obra),
+      escrituracion: numInt(e.escrituracion),
       emes: 45,
       efrec: 1,
     }));

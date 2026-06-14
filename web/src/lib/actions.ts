@@ -55,7 +55,14 @@ export async function crearYAprobarProyecto(
       es_real: input.es_real,
     });
   } catch (e) {
-    if (e instanceof WriteError) return { ok: false, status: e.status, message: e.message };
+    if (e instanceof WriteError) {
+      // 409 = el nombre genera un slug ya existente (puede ser un intento previo que no se aprobó).
+      const message =
+        e.status === 409
+          ? `${e.message} Si fue un intento anterior que no se aprobó, usa un nombre distinguible.`
+          : e.message;
+      return { ok: false, status: e.status, message };
+    }
     throw e; // p.ej. el control-flow de redirect() (401) DEBE propagarse
   }
 

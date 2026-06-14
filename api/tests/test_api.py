@@ -132,6 +132,9 @@ class _FakeTable:
     def upsert(self, payload, **k):
         self._op = ("upsert", payload); return self
 
+    def delete(self):
+        self._op = ("delete", None); return self
+
     def eq(self, *a, **k):
         return self
 
@@ -256,6 +259,16 @@ def test_write_aprobar_recalcula_cache_y_audita(monkeypatch):
     assert out["status"] == "approved" and "tir_proyecto" in out and "checks_ok" in out
     assert any(c[0] == "results_cache" for c in fake.calls())     # guardó el cache
     assert any(c[0] == "audit_log" and c[1] == "insert" for c in fake.calls())
+
+
+def test_write_aprobar_par_incalculable_422(monkeypatch):
+    """Un par que PASA schema.parse pero CRASHEA calcular() (financiero sin wacc) → 422 LEGIBLE,
+    no un 500 opaco. El formulario nunca lo dispara (siempre manda WACC); blinda el API directo."""
+    _fake_write(monkeypatch, {"scenarios": [
+        {"id": "s1", "project_id": "p1", "version": 1, "status": "draft", "snapshot": _par_min()}]})
+    with pytest.raises(HTTPException) as ei:
+        write.aprobar("s1", actor="me")
+    assert ei.value.status_code == 422
 
 
 def test_health_data():

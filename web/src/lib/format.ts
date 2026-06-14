@@ -50,3 +50,25 @@ export function splitPct(x: number | null | undefined, dec = 2): [string, string
   if (x === null || x === undefined || !isFinite(x)) return ["n/d", ""];
   return [(x * 100).toFixed(dec), "%"];
 }
+
+/**
+ * Umbral de TIR degenerada (IRR sin sentido económico). Una TIR por debajo de esto NO es una tasa
+ * real: es un artefacto del solver cuando el flujo no cruza cero (greenfield / proyecto de 1 etapa).
+ * Fuente única de verdad del umbral; consúmela, no la repitas con un literal suelto.
+ */
+export const TIR_DEGENERADA = -0.5;
+
+/** True si una TIR es degenerada (null/no-finita o < umbral): no debe mostrarse como "-99%"/"-100%". */
+export function tirEsDegenerada(tir: number | null | undefined): boolean {
+  return tir === null || tir === undefined || !isFinite(tir) || tir < TIR_DEGENERADA;
+}
+
+/**
+ * TIR para PRESENTACIÓN, aplicando la regla de la constitución ("Proyectos greenfield → mostrar
+ * '— greenfield', jamás TIR −99%"): una TIR degenerada se muestra como "—" con sufijo "greenfield",
+ * nunca como "-100%". El resto se formatea como splitPct. Devuelve [magnitud, sufijo].
+ */
+export function splitTir(tir: number | null | undefined, dec = 2): [string, string] {
+  if (tirEsDegenerada(tir)) return ["—", "greenfield"];
+  return splitPct(tir, dec);
+}

@@ -1,5 +1,5 @@
 import type { ProjectDetail, Pyg, Results, Urbanistico } from "@/lib/api";
-import { fmtCop, fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
+import { fmtCop, fmtInt, fmtPct, splitCop, splitPct, splitTir } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { Figure } from "@/components/figure";
 import { ChecksBadge } from "@/components/checks-badge";
@@ -18,8 +18,8 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
   const [tsL, tsB] = splitLabel(ind.tir_socio_label);
 
   const stats: StatItem[] = [
-    { label: tpL, parts: splitPct(ind.tir_proyecto), base: tpB || "desapalancada", emphasis: true },
-    { label: tsL, parts: splitPct(ind.tir_socio), base: tsB || "apalancada" },
+    { label: tpL, parts: splitTir(ind.tir_proyecto), base: tpB || "desapalancada", emphasis: true },
+    { label: tsL, parts: splitTir(ind.tir_socio), base: tsB || "apalancada" },
     {
       label: ind.vpn_label || "VPN @TIO",
       parts: splitCop(ind.vpn_proyecto),

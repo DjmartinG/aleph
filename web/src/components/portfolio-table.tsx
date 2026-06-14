@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { ProjectItem } from "@/lib/api";
-import { fmtInt, splitCop, splitPct } from "@/lib/format";
+import { fmtInt, splitCop, splitTir, tirEsDegenerada } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Figure } from "@/components/figure";
 import { PhaseBadge } from "@/components/phase-badge";
@@ -57,8 +57,8 @@ export function PortfolioTable({ items }: { items: ProjectItem[] }) {
                   </Td>
                   <Td className="text-right">
                     <Figure
-                      parts={splitPct(p.tir)}
-                      className={p.tir == null ? "text-muted-foreground" : undefined}
+                      parts={splitTir(p.tir)}
+                      className={tirEsDegenerada(p.tir) ? "text-muted-foreground" : undefined}
                     />
                   </Td>
                   <Td className="text-right">
