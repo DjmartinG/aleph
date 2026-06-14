@@ -27,8 +27,6 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
       state: ind.vpn_proyecto != null && ind.vpn_proyecto < 0 ? "negative" : "positive",
     },
     { label: "Margen oper.", parts: splitPct(ind.margen_oper), base: "sobre ventas" },
-    { label: "Ventas", parts: splitCop(pyg.ventas), base: "totales" },
-    { label: "Utilidad oper.", parts: splitCop(pyg.util_oper), base: "consolidada" },
   ];
 
   const okAll = results.checks.every((c) => c.ok);
@@ -37,7 +35,14 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
     <div>
       <StatPanel items={stats} />
 
-      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
+      {/* P&G — el lienzo central de la decisión (M7) */}
+      <section className="mt-8">
+        <SectionTitle right={`margen ${fmtPct(ind.margen_oper)}`}>Estado de resultados (P&amp;G)</SectionTitle>
+        <Ledger pyg={pyg} margen={ind.margen_oper} />
+      </section>
+
+      {/* Costo de capital y financiación — soporte */}
+      <div className="mt-9 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
         <Mini label="WACC" value={fmtPct(ind.wacc)} note="Damodaran" />
         <Mini label="TIO" value={fmtPct(ind.tio)} note="tasa objetivo" />
         <Mini label="Crédito máx" value={fmtCop(ind.credito_max)} note="pico" />
@@ -55,11 +60,6 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
             <ChecksBadge key={c.clave} nombre={c.nombre} ok={c.ok} />
           ))}
         </div>
-      </section>
-
-      <section className="mt-9">
-        <SectionTitle>Estado de resultados (P&amp;G)</SectionTitle>
-        <Ledger pyg={pyg} margen={ind.margen_oper} />
       </section>
 
       {project.urbanistico ? (

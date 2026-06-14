@@ -6,7 +6,7 @@ import { isAdminUser } from "@/lib/session";
 import { fmtInt } from "@/lib/format";
 import { PhaseBadge } from "@/components/phase-badge";
 import { FichaTabs } from "@/components/views/ficha-tabs";
-import { AdminActions } from "@/components/admin/admin-actions";
+import { AdminMenu } from "@/components/admin/admin-menu";
 
 export default async function ProyectoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -61,12 +61,11 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
               <Pencil className="size-3.5" aria-hidden /> Editar
             </Link>
           ) : null}
+          {admin ? <AdminMenu slug={slug} nombre={meta.nombre} esReal={es_real} /> : null}
         </div>
       </header>
 
       <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} vehiculos={vehiculos} />
-
-      {admin ? <AdminActions slug={slug} nombre={meta.nombre} esReal={es_real} /> : null}
     </div>
   );
 }
