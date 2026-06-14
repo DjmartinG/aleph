@@ -7,10 +7,13 @@ import {
   deleteProject,
   nuevoEscenario,
   postRun,
+  postMonteCarloCB,
   setProjectReal,
   WriteError,
   type MonteCarloParams,
   type MonteCarloResult,
+  type MonteCarloCBParams,
+  type MonteCarloCBResult,
 } from "@/lib/api";
 
 /**
@@ -22,6 +25,15 @@ export async function runMonteCarlo(
   params: MonteCarloParams,
 ): Promise<MonteCarloResult> {
   return postRun(slug, params);
+}
+
+
+/** Server Action: Monte Carlo Crystal Ball (distribuciones, percentiles, certeza, tornado). */
+export async function runMonteCarloCB(
+  slug: string,
+  params: MonteCarloCBParams,
+): Promise<MonteCarloCBResult> {
+  return postMonteCarloCB(slug, params);
 }
 
 // ---------- Escritura (Fase 5): crear + aprobar un proyecto ----------

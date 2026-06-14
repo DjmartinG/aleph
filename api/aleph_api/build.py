@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from aleph_engine import calcular, checks, config, finanzas, metrics, modelo, portfolio
+from aleph_engine import calcular, checks, config, finanzas, metrics, modelo, portfolio, simulacion
 
 from . import repo
 
@@ -261,6 +261,20 @@ def run(par: dict, req: dict) -> dict:
     return modelo.montecarlo_tir(par, n=n, rango_precio=rp, rango_costo=rc, rango_ventas=rv,
                                  seed=seed, escrituracion_sigue_obra=sigue)
 
+
+
+def montecarlo_cb(par: dict, req: dict) -> dict:
+    """Monte Carlo Crystal Ball (M5): distribuciones por variable, percentiles, bandas de certeza y
+    tornado de contribucion a la varianza. No muta `par`. `req` puede traer n/seed/hurdle y una lista
+    `supuestos` [{variable,dist,params,nombre}]; si no, usa las distribuciones por defecto."""
+    req = req or {}
+    sup = None
+    if req.get("supuestos"):
+        sup = [simulacion.Supuesto(x["variable"], x["dist"], x.get("params", {}), x.get("nombre", ""))
+               for x in req["supuestos"]]
+    return simulacion.simular(
+        par, supuestos=sup, n=int(req.get("n", 1000)), seed=req.get("seed", 42),
+        hurdle=req.get("hurdle"), incluir_valores=bool(req.get("incluir_valores", True)))
 
 # ---------- helpers de carga ----------
 

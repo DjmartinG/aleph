@@ -361,3 +361,20 @@ def test_cron_refresh_token_gate(monkeypatch):
     monkeypatch.setattr("aleph_api.macro_store.refrescar", lambda *a, **k: {"propuestos": 0, "recolectados": 0})
     r = client.post("/macro/cron-refresh", headers={"X-Refresh-Token": "secreto"})
     assert r.status_code == 200 and r.json()["propuestos"] == 0
+
+
+def test_montecarlo_crystal_ball():
+    if NAV not in SLUGS:
+        import pytest as _pt; _pt.skip("Navarra no disponible")
+    r = client.post(f"/v1/scenarios/{NAV}:base/montecarlo",
+                    json={"n": 40, "seed": 3, "incluir_valores": False})
+    assert r.status_code == 200
+    j = r.json()
+    assert "forecasts" in j and "tir_proyecto" in j["forecasts"]
+    fc = j["forecasts"]["tir_proyecto"]
+    assert "stats" in fc and "tornado" in fc
+    assert fc["stats"]["p10"] <= fc["stats"]["p50"] <= fc["stats"]["p90"]   # percentiles ordenados
+    cert = fc.get("certeza")
+    assert cert is None or 0.0 <= cert["prob"] <= 1.0
+    suma = sum(v["contribucion_pct"] for v in fc["tornado"].values())
+    assert 99.0 <= suma <= 101.0    # el tornado suma ~100%

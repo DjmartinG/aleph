@@ -374,6 +374,39 @@ export async function postRun(slug: string, params: MonteCarloParams): Promise<M
   return res.json() as Promise<MonteCarloResult>;
 }
 
+
+// ---------- Monte Carlo Crystal Ball (M5) ----------
+export interface MCForecastStats {
+  n: number; media: number; mediana: number; std: number; min: number; max: number;
+  p5: number; p10: number; p25: number; p50: number; p75: number; p90: number; p95: number;
+}
+export interface MCCerteza { umbral: number; signo: string; prob: number }
+export interface MCTornadoVar { rho: number; contribucion_pct: number }
+export interface MCForecast {
+  nombre: string;
+  stats: MCForecastStats;
+  certeza: MCCerteza | null;
+  tornado: Record<string, MCTornadoVar>;
+  valores?: number[];
+}
+export interface MonteCarloCBResult {
+  n: number; seed: number; hurdle: number;
+  supuestos: { variable: string; dist: string; params: Record<string, number>; nombre: string }[];
+  forecasts: Record<string, MCForecast>;
+}
+export interface MonteCarloCBParams { n?: number; seed?: number; hurdle?: number; incluir_valores?: boolean }
+
+/** POST /v1/scenarios/{slug}:base/montecarlo — Crystal Ball (distribuciones, percentiles, certeza, tornado). */
+export async function postMonteCarloCB(slug: string, params: MonteCarloCBParams): Promise<MonteCarloCBResult> {
+  const res = await apiFetch(`/v1/scenarios/${encodeURIComponent(slug)}:base/montecarlo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`API ${res.status} al correr Monte Carlo de ${slug}`);
+  return res.json() as Promise<MonteCarloCBResult>;
+}
+
 // ---------- Escritura (Fase 5): crear/aprobar proyectos (SOLO admin) ----------
 // El API es el gate autoritativo: valida el `par` con `schema.parse` (422), exige rol admin (403) y
 // recalcula con el motor al aprobar. Aquí solo adjuntamos el token y traducimos los errores a algo

@@ -135,6 +135,14 @@ def post_run(scenario_id: str, req: dict | None = None):
     return build.run(par, req or {})
 
 
+@v1.post("/scenarios/{scenario_id}/montecarlo")
+def post_montecarlo(scenario_id: str, req: dict | None = None):
+    """Monte Carlo Crystal Ball del escenario: distribuciones, percentiles, certeza y tornado (M5)."""
+    slug = _slug_de_escenario(scenario_id)
+    par, _R = _par_o_404(slug)
+    return build.montecarlo_cb(par, req or {})
+
+
 # ---------- Escritura (Fase 2): crear/editar borradores → aprobar → baseline ----------
 # TODO write exige rol admin (`require_admin`); gerencia es solo-lectura. El `par` se valida con el
 # contrato del motor (write._validar) antes de persistir. NO toca el motor (cifras intactas).
