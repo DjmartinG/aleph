@@ -45,7 +45,7 @@ function SignInPanel({ expired, callbackUrl = "/" }: { expired: boolean; callbac
       <button
         type="button"
         onClick={() => void signIn("microsoft-entra-id", { callbackUrl })}
-        className="inline-flex items-center gap-2 rounded-[var(--radius-data)] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity [transition-timing-function:var(--ease-out)] hover:opacity-90"
+        className="inline-flex items-center gap-2 rounded-[var(--radius-data)] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-[opacity,transform] [transition-timing-function:var(--ease-out)] hover:opacity-90 active:scale-[0.98]"
       >
         Entrar con Microsoft
       </button>

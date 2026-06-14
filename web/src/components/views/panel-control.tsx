@@ -177,7 +177,7 @@ function GoalSeekPanel({ slug }: { slug: string }) {
         </label>
         <button
           type="button" onClick={resolver} disabled={pending}
-          className="rounded-[var(--radius-data)] bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity [transition-timing-function:var(--ease-out)] disabled:opacity-50"
+          className="rounded-[var(--radius-data)] bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-[opacity,transform] [transition-timing-function:var(--ease-out)] hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
         >
           {pending ? "Resolviendo…" : "Resolver"}
         </button>

@@ -56,7 +56,7 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
           {admin ? (
             <Link
               href={`/proyectos/${slug}/editar`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] border border-primary/40 px-3 py-1.5 text-sm font-medium text-primary transition-colors [transition-timing-function:var(--ease-out)] hover:bg-primary/10"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] border border-primary/40 px-3 py-1.5 text-sm font-medium text-primary transition-[color,background-color,transform] [transition-timing-function:var(--ease-out)] hover:bg-primary/10 active:scale-[0.98]"
             >
               <Pencil className="size-3.5" aria-hidden /> Editar
             </Link>
