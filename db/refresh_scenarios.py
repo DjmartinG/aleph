@@ -45,9 +45,10 @@ try:
 except ImportError:
     sys.exit("Falta aleph_engine. Instálalo:  pip install -e ./engine  (o corre con PYTHONPATH=engine)")
 
-# Los 3 proyectos REALES que están en producción (project_count=3). Argos (M8) NO está en prod: es un
-# alta separada, fuera del alcance de este refresco de WACC.
-SLUGS = ["1_navarra", "2_dominica", "3_torres_campinas"]
+# Los 3 proyectos REALES que están en producción (project_count=3). OJO: el slug en la BD lleva sufijo
+# `_REAL` (así los importó el ETL desde `proyectos`); el JSON local es `{slug}.json` y el golden
+# `{slug}_snapshot.json`. Argos (M8) NO está en prod: alta separada, fuera del alcance de este refresco.
+SLUGS = ["1_navarra_REAL", "2_dominica_REAL", "3_torres_campinas_REAL"]
 
 PRIV = ROOT / "data" / "proyectos_privados"
 GOLDEN = ROOT / "engine" / "tests" / "golden"
@@ -104,7 +105,7 @@ def gate_dorado(exigir_golden: bool = False) -> dict[str, dict]:
     out: dict[str, dict] = {}
     print("== GATE DORADO (verificación local antes de tocar Supabase) ==")
     for slug in SLUGS:
-        src = PRIV / f"{slug}_REAL.json"
+        src = PRIV / f"{slug}.json"
         if not src.is_file():
             sys.exit(f"FALTA el JSON REAL local: {src}. (Son los datos confidenciales; este script se "
                      f"corre desde tu máquina, donde existen.)")
@@ -119,7 +120,7 @@ def gate_dorado(exigir_golden: bool = False) -> dict[str, dict]:
         ap = R.get("apalancamiento") or {}
 
         # (a) comparar contra el golden REAL local (la fuente de verdad ya verificada por los tests)
-        gpath = GOLDEN / f"{slug}_REAL_snapshot.json"
+        gpath = GOLDEN / f"{slug}_snapshot.json"
         if gpath.is_file():
             gap = (json.load(open(gpath, encoding="utf-8")).get("result") or {}).get("apalancamiento") or {}
             for c in _CAMPOS:
@@ -138,7 +139,7 @@ def gate_dorado(exigir_golden: bool = False) -> dict[str, dict]:
         if not _aprox(ap.get("wacc"), WACC_OBJETIVO, tol_rel=3e-3):
             sys.exit(f"ABORT {slug}: WACC {ap.get('wacc')} != objetivo {WACC_OBJETIVO} (18.71%). "
                      f"¿Los JSON locales tienen kd_us=5.9 y rp=3.43? NO se escribe nada.")
-        if slug == "1_navarra" and not _aprox(ap.get("tir_proyecto"), NAVARRA_TIR_PROYECTO):
+        if slug == "1_navarra_REAL" and not _aprox(ap.get("tir_proyecto"), NAVARRA_TIR_PROYECTO):
             sys.exit(f"ABORT navarra: TIR proyecto {ap.get('tir_proyecto')} != dorado {NAVARRA_TIR_PROYECTO}.")
 
         nombre = (par.get("meta") or {}).get("nombre") or slug
@@ -230,9 +231,9 @@ def main() -> None:
     if not args.apply:
         print("DRY-RUN: nada se escribió. Vuelve a correr con --apply para aplicar.")
     else:
-        print("\n*** LISTO el refresco del DATO (scenarios v2 approved). ***")
+        print("\n*** LISTO el refresco del DATO (nueva versión approved de scenarios). ***")
         print("!! IMPORTANTE — el API RECALCULA EN VIVO con el motor desplegado (NO usa caché). Si el")
-        print("   REDEPLOY del API (motor M1-M8, SHA 2c533db) NO está hecho, prod queda en estado")
+        print("   REDEPLOY del API (motor M1-M8, SHA de main) NO está hecho, prod queda en estado")
         print("   FRANKENSTEIN: el WACC 18.71% sale bien (va explícito en el dato) PERO tir_equity y la")
         print("   exención VIS se recalculan con código VIEJO. ORDEN CORRECTO: redeploy PRIMERO, refresco")
         print("   después (así nunca hay cifras de decisión viejas). Si ya redeployaste, estás OK.")
