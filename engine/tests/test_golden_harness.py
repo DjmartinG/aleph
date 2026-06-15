@@ -5,10 +5,8 @@ Re-ejecuta `aleph_engine.calcular()` sobre la entrada CONGELADA de cada snapshot
 salida contra el `result` congelado, recursivamente, con tolerancia **0.1% relativa** (abs 1e-6 para
 casi-cero). Si cualquier cifra del motor se mueve más de eso, ROMPE EL BUILD.
 
-ESTADO (PROMPT 2.3): `aleph_engine.calcular` AÚN NO existe (se extrae en PROMPT 3). Mientras no
-exista, este test se SALTA (skip) — el harness ya está cableado y leyendo los snapshots, listo para
-exigir paridad de cifras en cuanto la lógica se porte. Es el equivalente, del lado del engine, de
-`app_streamlit/tests/test_golden_snapshot.py`.
+Los snapshots viven en `engine/tests/golden/` (`_golden.find_snapshots()`). Los `*_REAL_snapshot.json`
+(datos confidenciales) son gitignored y solo corren en local; los ilustrativos corren en CI.
 """
 import copy
 import json
@@ -59,7 +57,7 @@ def _desviaciones(esperado, actual, ruta=""):
 
 
 @pytest.mark.skipif(_calcular is None, reason="aleph_engine.calcular aún no extraído (llega en PROMPT 3)")
-@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados (¿falta app_streamlit/tests/golden?)")
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados (¿falta engine/tests/golden?)")
 @pytest.mark.parametrize("snap_path", SNAPS, ids=lambda p: os.path.basename(p))
 def test_snapshot_dorado_no_cambia(snap_path):
     snap = json.load(open(snap_path, encoding="utf-8"))

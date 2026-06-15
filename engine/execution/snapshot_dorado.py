@@ -20,13 +20,13 @@ import json
 import sys
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parents[1]   # app_factibilidad/
-sys.path.insert(0, str(RAIZ))
+ROOT = Path(__file__).resolve().parents[2]   # raíz del monorepo (engine/execution/ → engine → raíz)
+sys.path.insert(0, str(ROOT / "engine"))      # aleph_engine importable aunque no esté pip-installed
 from aleph_engine import calcular, __version__ as ENGINE_V   # noqa: E402
 
-GOLDEN = RAIZ / "tests" / "golden"
-PUB = RAIZ / "proyectos"
-PRIV = RAIZ / "proyectos_privados"
+GOLDEN = ROOT / "engine" / "tests" / "golden"
+PUB = ROOT / "data" / "proyectos"
+PRIV = ROOT / "data" / "proyectos_privados"
 SLUGS = ["1_navarra", "2_dominica", "3_torres_campinas", "4_argos"]
 
 

@@ -21,7 +21,8 @@ _BASE = {
     "lote_bruto_miles": 1000.0,
 }
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Datos en data/ (raíz), reubicados al retirar Streamlit.
+RAIZ = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
 # Ilustrativos (en el repo) + reales (gitignored, presentes solo en local). En CI corren los del repo.
 PROYECTOS = sorted(glob.glob(os.path.join(RAIZ, "proyectos", "*.json"))) + \
             sorted(glob.glob(os.path.join(RAIZ, "proyectos_privados", "*.json")))

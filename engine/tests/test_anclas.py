@@ -23,7 +23,8 @@ import pytest
 
 from aleph_engine import calcular
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Los datos (proyectos/ + proyectos_privados/) viven en data/ (raíz), reubicados al retirar Streamlit.
+RAIZ = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
 _MONEY = {"util_oper", "ventas", "ap_vpn_proyecto", "ap_credito_max"}
 
 

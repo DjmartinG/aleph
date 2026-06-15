@@ -3,7 +3,7 @@
 #
 # ANTES de correr esto: aplica el esquema una vez (pega db/migrations/0001_aleph_schema.sql en el
 # SQL Editor de Supabase). Este wrapper solo ejecuta el ETL (lee `proyectos` → projects/scenarios).
-# Usa SUPABASE_URL/KEY del entorno o de app_streamlit/.streamlit/secrets.toml. Es idempotente.
+# Usa SUPABASE_URL/KEY del entorno o de .streamlit/secrets.toml. Es idempotente.
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
 

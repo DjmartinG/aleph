@@ -17,7 +17,16 @@ build/
 .tmp/
 .tmp*
 *.tmp
-# Basura suelta en la RAÍZ (capturas, logs). Las imágenes de producto viven en web/public/ o
-# app_streamlit/assets/, no en la raíz, así que ignorar PNG/LOG sueltos en raíz es seguro.
+# Basura suelta en la RAÍZ (capturas, logs). Las imágenes de producto viven en web/public/,
+# así que ignorar PNG/LOG sueltos en raíz es seguro.
 /*.png
 /*.log
+
+# Datos REALES confidenciales + secretos (reubicados de app_streamlit/ al retirar Streamlit, jun-2026).
+# NUNCA al repo. Los proyectos ILUSTRATIVOS (data/proyectos/) y los snapshots ilustrativos SÍ se commitean.
+/data/proyectos_privados/
+*_REAL.json
+*_REAL_snapshot.json
+*_privado.json
+/.streamlit/secrets.toml
+.streamlit/secrets.toml

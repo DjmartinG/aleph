@@ -49,7 +49,7 @@ def test_wacc_estructura_y_estabilidad():
     coherentes entre sí, sobre los parámetros WACC del proyecto ilustrativo del repo."""
     import json
     import os
-    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    raiz = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
     par = json.load(open(os.path.join(raiz, "proyectos", "2_dominica.json"), encoding="utf-8"))
     w = par["financiero"]["wacc"]
     wacc = finanzas.calcular_wacc(w)
