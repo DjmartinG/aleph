@@ -61,6 +61,11 @@ def _assert_cifras(got, exp):
 
 
 # ----------------------------- ANCLAS AUDITADAS (proyectos reales) -----------------------------
+# NOTA 2026-06-14: los `ap_tir_equity` de los proyectos NO-fiducia se sincronizaron a la baseline
+# YA APROBADA del fix de flujo_equity (PR #22, docs/acta_flujo_equity_20260614.md). PR #22 regeneró
+# los snapshots pero dejó esta copia con valores viejos (el suite app_streamlit quedó rojo). El WACC
+# (beta_d/rp) NO toca tir_equity; estos valores == los snapshots commiteados. Navarra REAL (fiducia
+# override 41,72%) no cambia.
 AUDITADAS = {
     "proyectos_privados/1_navarra_REAL.json": {
         "util_oper": 11362332.97, "margen_oper": 0.04947, "ventas": 229682047.11,
@@ -69,12 +74,12 @@ AUDITADAS = {
     },
     "proyectos_privados/2_dominica_REAL.json": {
         "util_oper": 11250275.94, "margen_oper": 0.086214, "ventas": 130492117.68,
-        "ap_tir_proyecto": 0.565495, "ap_vpn_proyecto": 14618570.85, "ap_tir_equity": -0.502256,
+        "ap_tir_proyecto": 0.565495, "ap_vpn_proyecto": 14618570.85, "ap_tir_equity": 0.688779,
         "ap_credito_max": 28656605.22, "ap_fiducia_real": False, "fl_tir_proyecto": 0.227671,
     },
     "proyectos_privados/3_torres_campinas_REAL.json": {
         "util_oper": 6168954.37, "margen_oper": 0.025616, "ventas": 240822586.45,
-        "ap_tir_proyecto": -0.993595, "ap_vpn_proyecto": -6021481.08, "ap_tir_equity": None,
+        "ap_tir_proyecto": -0.993595, "ap_vpn_proyecto": -6021481.08, "ap_tir_equity": -0.236457,
         "ap_credito_max": 44520453.32, "ap_fiducia_real": False, "fl_tir_proyecto": -0.093104,
     },
 }
@@ -83,17 +88,17 @@ AUDITADAS = {
 REGRESION = {
     "proyectos/1_navarra.json": {
         "util_oper": 11077849.5, "margen_oper": 0.056003, "ventas": 197808500,
-        "ap_tir_proyecto": -0.999974, "ap_vpn_proyecto": 7882913.89, "ap_tir_equity": -0.287159,
+        "ap_tir_proyecto": -0.999974, "ap_vpn_proyecto": 7882913.89, "ap_tir_equity": -0.339514,
         "ap_credito_max": 31208497.89, "ap_fiducia_real": False, "fl_tir_proyecto": 0.073032,
     },
     "proyectos/2_dominica.json": {
         "util_oper": 7367968.0, "margen_oper": 0.070477, "ventas": 104544000,
-        "ap_tir_proyecto": 0.227289, "ap_vpn_proyecto": 4737027.6, "ap_tir_equity": 0.014209,
+        "ap_tir_proyecto": 0.227289, "ap_vpn_proyecto": 4737027.6, "ap_tir_equity": 0.284826,
         "ap_credito_max": 33414522.81, "ap_fiducia_real": False, "fl_tir_proyecto": 0.10234,
     },
     "proyectos/3_torres_campinas.json": {
         "util_oper": 11914741.4, "margen_oper": 0.062743, "ventas": 189896200,
-        "ap_tir_proyecto": -0.997034, "ap_vpn_proyecto": 9653588.09, "ap_tir_equity": -0.218692,
+        "ap_tir_proyecto": -0.997034, "ap_vpn_proyecto": 9653588.09, "ap_tir_equity": -0.286135,
         "ap_credito_max": 21756832.57, "ap_fiducia_real": False, "fl_tir_proyecto": 0.091906,
     },
 }
