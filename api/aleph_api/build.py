@@ -41,6 +41,11 @@ def indicadores(R: dict) -> dict:
         "credito_max": ap.get("credito_max"), "credito_prom": ap.get("credito_prom"),
         "intereses_total": ap.get("intereses_total"), "max_necesidad_caja": ap.get("max_necesidad_caja"),
         "valor_financiable": ap.get("valor_financiable"), "margen_oper": pg.get("margen_oper"),
+        # --- Veredicto de Valor (EVA del proyecto) — ADITIVO: ¿genera o destruye valor sobre el WACC? ---
+        "crea_valor": ap.get("crea_valor"), "crea_valor_label": metrics.etiqueta("crea_valor"),
+        "valor_creado": ap.get("valor_creado"), "valor_creado_label": metrics.etiqueta("valor_creado"),
+        "spread_valor": ap.get("spread_valor"), "spread_valor_label": metrics.etiqueta("spread_valor"),
+        "valor_metodo": "Valor sobre el costo del capital (WACC). Veredicto = TIR proyecto vs WACC.",
     }
 
 
@@ -242,8 +247,20 @@ def portafolio(items) -> dict:
     # Se reusa la MISMA TIR de los items (apal. ref. / proyecto), consistente con la tabla y sin el
     # TIR degenerado -99% de proyectos greenfield (la constitución prohíbe mostrarlo).
     margen = {s: (R.get("pyg") or {}).get("margen_oper") for s, _p, R in items}
+    # Veredicto de Valor por item + CONSOLIDADO del portafolio (¿genera valor sobre el WACC?).
+    ver = {s: (R.get("apalancamiento") or {}) for s, _p, R in items}
     for d in pipe:
+        apx = ver.get(d["slug"]) or {}
         d["margen"] = margen.get(d["slug"])
+        d["crea_valor"] = apx.get("crea_valor")
+        d["valor_creado"] = apx.get("valor_creado")
+    evaluados = [a for a in ver.values() if a.get("crea_valor") is not None]   # excluye greenfield
+    total_vc = sum(a.get("valor_creado") or 0.0 for a in evaluados) if evaluados else None
+    consolidado["valor_creado"] = total_vc
+    consolidado["crea_valor"] = (total_vc > 0) if total_vc is not None else None
+    consolidado["n_genera"] = sum(1 for a in evaluados if a.get("crea_valor") is True)
+    consolidado["n_evaluados"] = len(evaluados)
+    consolidado["valor_metodo"] = "Veredicto del portafolio = Σ valor creado @WACC (excluye greenfield)."
     return {"consolidado": consolidado, "embudo": embudo, "items": pipe}
 
 

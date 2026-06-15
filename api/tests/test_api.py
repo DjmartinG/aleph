@@ -36,6 +36,23 @@ def test_portfolio():
     assert all({"nombre", "tir", "margen", "ventas", "tipo"} <= it.keys() for it in j["items"])
 
 
+@pytest.mark.skipif(not SLUGS, reason="no hay proyectos disponibles")
+def test_veredicto_valor_eva():
+    """Veredicto de Valor (EVA) — ADITIVO: en el portafolio (item + consolidado) y en los indicadores
+    del proyecto, con etiqueta de base. Navarra genera valor (TIR proyecto > WACC)."""
+    p = client.get("/v1/portfolio").json()
+    c = p["consolidado"]
+    assert {"crea_valor", "valor_creado", "n_genera", "n_evaluados"} <= c.keys()
+    assert all("crea_valor" in it and "valor_creado" in it for it in p["items"])
+    if NAV in SLUGS:
+        ind = client.get(f"/v1/scenarios/{NAV}:base/results").json()["indicadores"]
+        assert {"crea_valor", "valor_creado", "spread_valor", "crea_valor_label", "valor_metodo"} <= ind.keys()
+        assert "Veredicto de valor" in ind["crea_valor_label"]
+        if ind["tir_proyecto"] and ind["tir_proyecto"] > -0.5:   # Navarra: 37.60% > WACC → genera
+            assert ind["crea_valor"] is True and ind["spread_valor"] > 0 and ind["valor_creado"] > 0
+            assert ind["spread_valor"] == pytest.approx(ind["tir_proyecto"] - ind["wacc"], abs=1e-6)
+
+
 @pytest.mark.skipif(NAV not in SLUGS, reason="Navarra no disponible")
 def test_project_y_results_fieles_al_motor():
     pj = client.get(f"/v1/projects/{NAV}").json()
