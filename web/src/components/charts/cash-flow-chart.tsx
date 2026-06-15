@@ -11,6 +11,8 @@ import { Group } from "@visx/group";
 import { curveMonotoneX } from "@visx/curve";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
 import { localPoint } from "@visx/event";
+import { mesesHastaHoy } from "@/lib/timeline";
+import { TodayMarker } from "./today-marker";
 import { fmtCop } from "@/lib/format";
 
 export interface CashPoint {
@@ -19,7 +21,7 @@ export interface CashPoint {
   credito: number;
 }
 
-const M = { top: 18, right: 18, bottom: 28, left: 70 };
+const M = { top: 20, right: 18, bottom: 28, left: 70 };
 
 /** Eje Y compacto: magnitud en "mil M" sin el sufijo (lo dice el título de la gráfica). */
 function tickY(v: number): string {
@@ -30,15 +32,17 @@ function tickY(v: number): string {
 export function CashFlowChart({
   data,
   maxExposure,
+  baseDate = null,
   height = 320,
 }: {
   data: CashPoint[];
   maxExposure: { m: number; value: number } | null;
+  baseDate?: string | null;
   height?: number;
 }) {
   return (
     <div style={{ width: "100%", height }}>
-      <ParentSize>{({ width }) => <Inner width={width} height={height} data={data} maxExposure={maxExposure} />}</ParentSize>
+      <ParentSize>{({ width }) => <Inner width={width} height={height} data={data} maxExposure={maxExposure} baseDate={baseDate} />}</ParentSize>
     </div>
   );
 }
@@ -48,11 +52,13 @@ function Inner({
   height,
   data,
   maxExposure,
+  baseDate,
 }: {
   width: number;
   height: number;
   data: CashPoint[];
   maxExposure: { m: number; value: number } | null;
+  baseDate: string | null;
 }) {
   const iw = Math.max(0, width - M.left - M.right);
   const ih = Math.max(0, height - M.top - M.bottom);
@@ -72,6 +78,7 @@ function Inner({
     const pad = (hi - lo) * 0.08 || 1;
     return scaleLinear({ domain: [lo - pad, hi + pad], range: [ih, 0], nice: true });
   }, [data, ih]);
+  const hoy = useMemo(() => mesesHastaHoy(baseDate), [baseDate]);
 
   const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<CashPoint>();
 
@@ -123,6 +130,10 @@ function Inner({
               <Line from={{ x: xScale(maxExposure.m), y: 0 }} to={{ x: xScale(maxExposure.m), y: ih }} stroke="var(--danger)" strokeOpacity={0.35} strokeDasharray="2,3" />
               <circle cx={xScale(maxExposure.m)} cy={yScale(maxExposure.value)} r={4.5} fill="var(--danger)" stroke="var(--card)" strokeWidth={2} />
             </Group>
+          ) : null}
+
+          {hoy != null && hoy >= 0 && hoy <= Math.max(1, n - 1) ? (
+            <TodayMarker x={xScale(hoy)} ih={ih} iw={iw} />
           ) : null}
 
           <AxisLeft
