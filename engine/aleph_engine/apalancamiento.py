@@ -99,6 +99,14 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
     subr = recaudo.get("subrogacion", [])
     sub_m = [subr[i] if i < len(subr) else 0.0 for i in range(N)]
     tasa_cc = (1 + fin.get("tasa_credito_ea", config.TASA_CREDITO_EA)) ** (1 / 12) - 1
+
+    # Reintegros del desarrollador (honorarios + util_lote): se restan como COSTO en 'operativo' pero
+    # RETORNAN al desarrollador/socio → se reincorporan proporcional al recaudo. Se calcula ANTES del
+    # bucle porque el flujo de EQUITY (apalancado) TAMBIÉN los recibe: equity = retorno + crédito neto.
+    reintegro_extra = pg["honorarios"] + pg["util_lote"]
+    tot_rec = sum(ingresos_m) or 1.0
+    retorno = [operativo[m] + reintegro_extra * (ingresos_m[m] / tot_rec) for m in range(N)]
+
     saldo = 0.0; intereses = 0.0; desemb_acum = 0.0
     saldo_serie = [0.0] * N; flujo_equity = [0.0] * N
     for m in range(N):
@@ -109,25 +117,20 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
         saldo += desembolso
         amort = min(sub_m[m], saldo); saldo -= amort           # subrogaciones amortizan el CC
         saldo_serie[m] = saldo
-        # flujo al equity = operativo + crédito neto recibido − intereses
-        flujo_equity[m] = operativo[m] + desembolso - amort - interes
+        # flujo al equity = RETORNO al socio (operativo + reintegros) + crédito neto − intereses.
+        # FIX (auditoría): antes partía de 'operativo' (sin reincorporar honorarios+util_lote) → la TIR
+        # socio MENSUAL salía negativa (−3,3%); ahora parte de 'retorno' (con los reintegros), como debe.
+        flujo_equity[m] = retorno[m] + desembolso - amort - interes
     cap = cupo
 
     acum = acumular(operativo)
 
-    # ---- flujo de RETORNO AL DESARROLLADOR (criterio CG para TIR/VPN) ----
-    # CG evalúa el proyecto sobre los REINTEGROS = honorarios + utilidad operativa + utilidad lote
-    # (PREFACTIBILIDAD "PROYECTO (Reembolsables+Honorarios+Util.Lote+Utilidad)"), descontados a la
-    # TIO (15% EA), NO sobre la utilidad operativa sola ni a WACC. Los honorarios y la utilidad del
-    # lote se restan en el flujo de obra como costo, pero RETORNAN al desarrollador → se reintegran a
-    # la curva de retorno (proporcional al recaudo, que es cuando el proyecto libera caja al socio).
-    # honorarios y util_lote se restan como costo en 'operativo' pero RETORNAN al desarrollador →
-    # se reincorporan a la curva de retorno (proporcional al recaudo). El crédito NO entra aquí: la
-    # TIR/VPN del PROYECTO es sin apalancamiento (el socio apalancado va en flujo_equity). Así
+    # ---- flujo de RETORNO AL DESARROLLADOR (criterio CG para la TIR/VPN del PROYECTO, desapalancado) ----
+    # `retorno` ya se calculó arriba (lo comparte el flujo de equity apalancado). CG evalúa el PROYECTO
+    # sobre los REINTEGROS = honorarios + utilidad operativa + utilidad lote, descontados a la TIO (15%
+    # EA), NO sobre la utilidad operativa sola ni a WACC. El crédito NO entra en `retorno` (la TIR/VPN
+    # del PROYECTO es SIN apalancamiento; el socio apalancado va en flujo_equity). Así
     # sum(retorno) = total_ingresos − directos − indirectos − lote_bruto = reintegros del proyecto.
-    reintegro_extra = pg["honorarios"] + pg["util_lote"]
-    tot_rec = sum(ingresos_m) or 1.0
-    retorno = [operativo[m] + reintegro_extra * (ingresos_m[m] / tot_rec) for m in range(N)]
 
     # tasa de descuento = TIO (tasa de oportunidad). Por defecto 15% EA (criterio CG); si el proyecto
     # define financiero.tio se usa esa. (El WACC Damodaran queda disponible pero no es el descuento CG.)

@@ -127,14 +127,18 @@ def test_fiducia_waterfall_intacto_override():
 
 # GOLDEN por vehículo (congela el waterfall recalculado after-tax; las tasas son [VALIDAR] →
 # cuando el asesor las ajuste, este test FALLA a propósito y obliga a un acta de re-baseline).
+# RE-BASELINE 2026-06-14 (docs/acta_flujo_equity_20260614.md, APROBADO por Martín): el fix de
+# flujo_equity (reincorpora honorarios+util_lote al socio) llevó la TIR socio mensual de −3,3%/−6,1%
+# (absurda) a +14,4%/+11,4% (plausible). La carga de la SAS (opaca) sube: sus dividendos dependen del
+# equity distribuido. La fiducia OFICIAL (auditada, 41,72%) NO cambia (usa el FCL override).
 _GOLDEN_NAVARRA = {
-    "fiducia":                  {"tir_socio_at": -0.033042, "carga": 9434326.135},
-    "encargo_fiduciario":       {"tir_socio_at": -0.033042, "carga": 13411142.675},
-    "consorcio":                {"tir_socio_at": -0.033042, "carga": 13411142.675},
-    "union_temporal":           {"tir_socio_at": -0.033042, "carga": 13411142.675},
-    "cuentas_en_participacion": {"tir_socio_at": -0.033042, "carga": 13411142.675},
-    "sas_spv":                  {"tir_socio_at": -0.061403, "carga": 17727811.321},
-    "fcp":                      {"tir_socio_at": -0.033042, "carga": 13411142.675},
+    "fiducia":                  {"tir_socio_at": 0.143556, "carga": 9434326.135},
+    "encargo_fiduciario":       {"tir_socio_at": 0.143556, "carga": 13411142.675},
+    "consorcio":                {"tir_socio_at": 0.143556, "carga": 13411142.675},
+    "union_temporal":           {"tir_socio_at": 0.143556, "carga": 13411142.675},
+    "cuentas_en_participacion": {"tir_socio_at": 0.143556, "carga": 13411142.675},
+    "sas_spv":                  {"tir_socio_at": 0.113699, "carga": 20922139.588},
+    "fcp":                      {"tir_socio_at": 0.143556, "carga": 13411142.675},
 }
 
 
@@ -158,15 +162,17 @@ _PRIV_TORRES = os.path.join(os.path.dirname(__file__), "..", "..",
 
 
 def test_comparar_greenfield_no_crashea():
-    """comparar() sobre un proyecto GREENFIELD (Torres: IRR del flujo de equity degenerada → TIR socio
-    = None) NO debe crashear: delta_tir_socio queda None en vez de tronar con `None - None` (antes:
-    TypeError → HTTP 500 en GET /v1/scenarios/{id}/vehiculos sobre Torres, un proyecto REAL existente)."""
+    """comparar() sobre Torres (GREENFIELD, TIR proyecto degenerada) NO debe crashear. La resta de TIR
+    socio es SEGURA: None si algún operando es None (antes: `None − None` → TypeError → HTTP 500 en el
+    endpoint de vehículos sobre Torres, un proyecto REAL existente). Robusto aunque la TIR socio mensual
+    sea hoy un negativo válido (el fix de flujo_equity la sacó de None) y no None."""
     if not os.path.exists(_PRIV_TORRES):
         pytest.skip("Torres REAL no disponible (CI sin datos privados)")
     par = json.load(open(_PRIV_TORRES, encoding="utf-8"))
     c = tributario.comparar(par)                       # antes lanzaba TypeError
     assert c["vehiculos"]                               # devolvió filas, no crasheó
-    nones = [f for f in c["vehiculos"] if f.get("tir_socio_at") is None]
-    assert nones, "se esperaba al menos una TIR socio None en un greenfield"
-    assert all(f["delta_tir_socio_vs_fiducia"] is None for f in nones)   # delta None, no crash
-    assert all(isinstance(f["delta_udi_vs_fiducia"], (int, float)) for f in c["vehiculos"])  # udi/carga numéricos
+    for f in c["vehiculos"]:
+        # la resta nunca crashea: el delta de TIR socio es None (si la TIR es None) o un número
+        d = f["delta_tir_socio_vs_fiducia"]
+        assert d is None or isinstance(d, (int, float))
+        assert isinstance(f["delta_udi_vs_fiducia"], (int, float))      # udi/carga siempre numéricos
