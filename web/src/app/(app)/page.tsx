@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Plus } from "lucide-react";
 import { getPortfolio, type Portfolio } from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
@@ -15,6 +16,7 @@ export default async function Page() {
   try {
     data = await getPortfolio();
   } catch (e) {
+    unstable_rethrow(e); // re-lanza el redirect a /login (401 = sesión expirada) y notFound; deja pasar errores reales
     errMsg = e instanceof Error ? e.message : "Error desconocido";
   }
   const admin = await isAdminUser();
@@ -100,15 +102,21 @@ function Dashboard({ data }: { data: Portfolio }) {
 }
 
 function ErrorPanel({ message }: { message: string }) {
+  const authOn = !!process.env.AUTH_MICROSOFT_ENTRA_ID_ID;
   return (
     <div className="rounded-[var(--radius-data)] border border-danger/30 bg-danger/5 p-6">
       <h2 className="font-semibold text-danger">No se pudo cargar el portafolio</h2>
       <p className="mt-1 text-sm text-muted-foreground">{message}</p>
       <p className="mt-3 text-sm text-muted-foreground">
-        ¿Está corriendo el API en local? Levántalo con{" "}
-        <code className="rounded bg-muted px-1 py-0.5">./dev_api.ps1</code> (puerto 8000, auth
-        apagada) o define{" "}
-        <code className="rounded bg-muted px-1 py-0.5">ALEPH_API_URL</code>.
+        {authOn ? (
+          "No se pudo conectar con el servicio. Reintenta en unos segundos; si el problema persiste, vuelve a iniciar sesión o avisa a soporte."
+        ) : (
+          <>
+            ¿Está corriendo el API en local? Levántalo con{" "}
+            <code className="rounded bg-muted px-1 py-0.5">./dev_api.ps1</code> (puerto 8000, auth
+            apagada) o define <code className="rounded bg-muted px-1 py-0.5">ALEPH_API_URL</code>.
+          </>
+        )}
       </p>
     </div>
   );

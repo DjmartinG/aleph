@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { getPortfolio, type Portfolio, type ProjectItem } from "@/lib/api";
 import { fmtCop, fmtInt, splitCop, splitTir } from "@/lib/format";
 import { Figure } from "@/components/figure";
@@ -10,6 +11,7 @@ export default async function PipelinePage() {
   try {
     data = await getPortfolio();
   } catch (e) {
+    unstable_rethrow(e); // re-lanza el redirect a /login (401 = sesión expirada) y notFound; deja pasar errores reales
     errMsg = e instanceof Error ? e.message : "Error desconocido";
   }
 
