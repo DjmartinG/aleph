@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ALEPH</title>
+  <script src="https://res.cdn.office.net/teams-js/2.0.0/js/MicrosoftTeams.min.js"></script>
+  <style>
+    :root { --teal:#0E5E59; --amber:#F4AF20; }
+    * { margin:0; box-sizing:border-box; }
+    html,body { height:100%; }
+    body { background:var(--teal); color:#fff; font-family:'Segoe UI',Inter,system-ui,sans-serif;
+           display:flex; align-items:center; justify-content:center; text-align:center; padding:24px; }
+    .card { max-width:420px; }
+    .mark { width:96px; height:96px; margin:0 auto 22px; border:8px solid #fff; border-radius:50%;
+            display:flex; align-items:center; justify-content:center; }
+    .mark .dot { width:26px; height:26px; border-radius:50%; background:var(--amber); }
+    h1 { font-size:28px; font-weight:600; letter-spacing:.28em; margin-left:.28em; }
+    p { margin-top:10px; font-size:14px; opacity:.82; line-height:1.5; }
+    .btn { margin-top:26px; display:inline-block; background:#fff; color:var(--teal); font-size:15px;
+           font-weight:600; border:none; border-radius:8px; padding:12px 26px; cursor:pointer;
+           transition:opacity .15s ease; text-decoration:none; }
+    .btn:hover { opacity:.9; }
+    .hint { margin-top:14px; font-size:12px; opacity:.6; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark"><div class="dot"></div></div>
+    <h1>ALEPH</h1>
+    <p>Plataforma de evaluación financiera de proyectos inmobiliarios de CG Constructora.</p>
+    <button class="btn" id="open" type="button">Abrir ALEPH</button>
+    <p class="hint">Se abre en tu navegador con tu cuenta de Microsoft.</p>
+  </main>
+  <script>
+    var URL_APP = "https://aleph-4iiv.vercel.app";
+    function openApp() {
+      try {
+        if (window.microsoftTeams && microsoftTeams.app && microsoftTeams.app.openLink) {
+          microsoftTeams.app.openLink(URL_APP);
+          return;
+        }
+      } catch (e) {}
+      window.open(URL_APP, "_blank", "noopener");
+    }
+    document.getElementById("open").addEventListener("click", openApp);
+    // Inicializa el SDK de Teams si estamos dentro de Teams (no falla si no).
+    try {
+      if (window.microsoftTeams && microsoftTeams.app && microsoftTeams.app.initialize) {
+        microsoftTeams.app.initialize().catch(function () {});
+      }
+    } catch (e) {}
+  </script>
+</body>
+</html>

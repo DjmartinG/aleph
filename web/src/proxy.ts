@@ -25,6 +25,7 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Corre en todo MENOS las rutas de auth (/api/auth/*), los assets y el favicon.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon.svg).*)"],
+  // Corre en todo MENOS: rutas de auth (/api/*), assets, favicon, y el lanzador público de Teams
+  // (teams.html — debe cargar SIN login dentro del iframe de Teams; abre la app en el navegador).
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon.svg|teams.html).*)"],
 };
