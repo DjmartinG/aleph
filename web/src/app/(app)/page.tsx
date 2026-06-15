@@ -5,6 +5,7 @@ import { getPortfolio, type Portfolio } from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
 import { fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
+import { ValorBanner } from "@/components/valor-banner";
 import { FunnelBar } from "@/components/funnel-bar";
 import { PortfolioTable } from "@/components/portfolio-table";
 import { ValueMap } from "@/components/charts/value-map";
@@ -77,6 +78,18 @@ function Dashboard({ data }: { data: Portfolio }) {
   return (
     <div>
       <StatPanel items={stats} />
+
+      {/* Veredicto de Valor del PORTAFOLIO (EVA): ¿genera o destruye valor sobre el WACC? */}
+      <div className="mt-6">
+        <ValorBanner
+          scope="portafolio"
+          creaValor={c.crea_valor}
+          spread={null}
+          valorCreado={c.valor_creado}
+          metodo={c.valor_metodo}
+          extra={`${c.n_genera}/${c.n_evaluados}`}
+        />
+      </div>
 
       <section className="mt-10">
         <SectionTitle>Embudo por fase</SectionTitle>

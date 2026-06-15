@@ -2,6 +2,7 @@ import type { ProjectDetail, Pyg, Results, Urbanistico } from "@/lib/api";
 import { fmtCop, fmtInt, fmtPct, splitCop, splitPct, splitTir } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { Figure } from "@/components/figure";
+import { ValorBanner } from "@/components/valor-banner";
 import { ChecksBadge } from "@/components/checks-badge";
 import { SectionTitle } from "@/components/section-title";
 import { MiniStat } from "@/components/mini-stat";
@@ -35,6 +36,16 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
   return (
     <div>
       <StatPanel items={stats} />
+
+      {/* Veredicto de Valor (EVA): ¿genera o destruye valor sobre el WACC? — junto al héroe */}
+      <div className="mt-6">
+        <ValorBanner
+          creaValor={ind.crea_valor}
+          spread={ind.spread_valor}
+          valorCreado={ind.valor_creado}
+          metodo={ind.valor_metodo}
+        />
+      </div>
 
       {/* P&G — el lienzo central de la decisión (M7) */}
       <section className="mt-8">
