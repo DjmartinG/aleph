@@ -113,7 +113,8 @@ def calcular_wacc(p, detalle=False):
 
     Cadena: beta de la deuda → desapalancar beta US (CON beta de deuda) → reapalancar a la estructura
     de Colombia → Ke USD → + riesgo país (EMBI) → paridad de inflación a COP → Kd COP (compuesto) →
-    WACC = E·Ke$COP + D·Kd·(1−t). Reproduce la hoja k.beta (WACC Navarra = 21,54%).
+    WACC = E·Ke$COP + D·Kd·(1−t). WACC Navarra = 17,31% tras la recalibración M1 (antes 21,54%; ver
+    docs/acta_rebaseline_wacc_20260614.md). Es indicador de EXHIBICIÓN: las decisiones se descuentan @TIO.
 
     `detalle=True` devuelve todos los eslabones intermedios (para la sección Costo de Capital).
     """

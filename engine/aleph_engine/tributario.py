@@ -107,12 +107,19 @@ def comparar(par: dict, claves: list[str] | None = None) -> dict:
 
     claves = claves or vehiculos.claves()
     ref = _fila(vehiculos.FIDUCIA)
+
+    # Resta SEGURA: la TIR (proyecto/socio) puede ser None en proyectos greenfield (IRR degenerada, sin
+    # cruce de cero en el flujo de equity) → `None - None` crasheaba con TypeError (500 en el endpoint
+    # de vehículos sobre Torres). udi/carga siempre son numéricos; la guardia es defensiva pero barata.
+    def _delta(a, b):
+        return (a - b) if (a is not None and b is not None) else None
+
     filas = []
     for clave in claves:
         f = _fila(clave)
-        f["delta_udi_vs_fiducia"] = f["udi"] - ref["udi"]
-        f["delta_tir_socio_vs_fiducia"] = f["tir_socio_at"] - ref["tir_socio_at"]
-        f["delta_carga_vs_fiducia"] = f["carga_tributaria"] - ref["carga_tributaria"]
+        f["delta_udi_vs_fiducia"] = _delta(f["udi"], ref["udi"])
+        f["delta_tir_socio_vs_fiducia"] = _delta(f["tir_socio_at"], ref["tir_socio_at"])
+        f["delta_carga_vs_fiducia"] = _delta(f["carga_tributaria"], ref["carga_tributaria"])
         f["es_referencia"] = clave == vehiculos.FIDUCIA
         filas.append(f)
 

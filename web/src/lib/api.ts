@@ -305,7 +305,7 @@ export interface WaccInputs {
   inf_col: number | null; inf_us: number | null;
 }
 
-/** Build-up CAPM completo. Tasas como fracción decimal (0.2154 = 21.54%). */
+/** Build-up CAPM completo. Tasas como fracción decimal (0.1731 = 17.31%). */
 export interface Wacc {
   scenario_id: string;
   project_id: string;

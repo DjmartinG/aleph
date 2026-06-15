@@ -17,10 +17,18 @@ export default async function EditarProyectoPage({ params }: { params: Promise<{
 
   const initial = parseParToForm(source.par);
   const nombre = initial.meta.nombre || slug;
-  // Los proyectos con `tipologias` (mezcla de unidades por torre/clase) NO son editables por este
-  // formulario simple: el motor re-deriva und/precio/ventas desde el bloque de tipologías, así que un
-  // cambio aquí se descartaría EN SILENCIO. Se bloquea honestamente hasta tener edición de tipologías.
+  // Dos estructuras NO son editables por este formulario simple (lo cambiarían en silencio):
+  // (1) `tipologias` (mezcla de unidades por torre/clase): el motor re-deriva und/precio/ventas de ahí.
+  // (2) Cadena `sucesora` (etapas encadenadas al hito de la anterior, sin fecha propia): el formulario
+  //     es DATADO (fuerza sucesora=null + exige fecha por etapa), así que editarlas moverÍa el
+  //     cronograma "sin querer". Se bloquean honestamente hasta soportar cada estructura.
   const tieneTipologias = source.par.tipologias != null;
+  const etapasArr = (source.par.etapas as { sucesora?: unknown }[] | undefined) ?? [];
+  const tieneCadena = etapasArr.some((e) => e.sucesora != null);
+  const bloqueado = tieneTipologias || tieneCadena;
+  const razonBloqueo = tieneTipologias
+    ? "Sus unidades y precios vienen de una mezcla de tipologías (por torre/clase) que el motor re-deriva de ese bloque."
+    : "Sus etapas están encadenadas (cada una arranca en el hito de la anterior, sin fecha propia); este formulario simple usa fechas explícitas por etapa.";
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-9 sm:px-6 lg:px-8">
@@ -39,16 +47,15 @@ export default async function EditarProyectoPage({ params }: { params: Promise<{
         </p>
       </header>
 
-      {tieneTipologias ? (
+      {bloqueado ? (
         <div className="flex items-start gap-3 rounded-[var(--radius-data)] border border-warning/30 bg-warning/5 p-5 text-sm">
           <Info className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
           <div className="space-y-2">
-            <p className="font-medium text-foreground">Este proyecto usa tipologías y aún no es editable aquí.</p>
+            <p className="font-medium text-foreground">Este proyecto aún no es editable aquí.</p>
             <p className="text-muted-foreground">
-              Sus unidades y precios vienen de una <strong>mezcla de tipologías</strong> (por torre/clase). El
-              motor las re-deriva de ese bloque, así que editarlas en este formulario simple se descartaría
-              sin aviso. La edición de tipologías llega en una fase dedicada. Mientras tanto, los datos de
-              este proyecto se conservan intactos.
+              {razonBloqueo} Editarlo en este formulario simple <strong>movería sus cifras sin querer</strong>,
+              así que se bloquea honestamente hasta soportar esa estructura. Mientras tanto, los datos de este
+              proyecto se conservan intactos.
             </p>
             <Link
               href={`/proyectos/${slug}`}

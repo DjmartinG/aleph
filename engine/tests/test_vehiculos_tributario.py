@@ -151,3 +151,22 @@ def test_golden_vehiculos_navarra():
     assert porveh["sas_spv"]["carga_tributaria"] > porveh["consorcio"]["carga_tributaria"]
     assert porveh["consorcio"]["delta_carga_vs_fiducia"] > 0
     assert porveh["fiducia"]["es_referencia"] is True
+
+
+_PRIV_TORRES = os.path.join(os.path.dirname(__file__), "..", "..",
+                            "app_streamlit", "proyectos_privados", "3_torres_campinas_REAL.json")
+
+
+def test_comparar_greenfield_no_crashea():
+    """comparar() sobre un proyecto GREENFIELD (Torres: IRR del flujo de equity degenerada → TIR socio
+    = None) NO debe crashear: delta_tir_socio queda None en vez de tronar con `None - None` (antes:
+    TypeError → HTTP 500 en GET /v1/scenarios/{id}/vehiculos sobre Torres, un proyecto REAL existente)."""
+    if not os.path.exists(_PRIV_TORRES):
+        pytest.skip("Torres REAL no disponible (CI sin datos privados)")
+    par = json.load(open(_PRIV_TORRES, encoding="utf-8"))
+    c = tributario.comparar(par)                       # antes lanzaba TypeError
+    assert c["vehiculos"]                               # devolvió filas, no crasheó
+    nones = [f for f in c["vehiculos"] if f.get("tir_socio_at") is None]
+    assert nones, "se esperaba al menos una TIR socio None en un greenfield"
+    assert all(f["delta_tir_socio_vs_fiducia"] is None for f in nones)   # delta None, no crash
+    assert all(isinstance(f["delta_udi_vs_fiducia"], (int, float)) for f in c["vehiculos"])  # udi/carga numéricos
