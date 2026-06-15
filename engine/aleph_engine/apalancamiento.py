@@ -15,6 +15,7 @@ from . import finanzas
 from . import config
 from . import vehiculos
 from . import tributario
+from . import valor
 from .flujo import aplicar_gastos_fijos, acumular
 
 
@@ -155,6 +156,9 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
             payback = i; break
 
     pos = [x for x in saldo_serie if x > 0]
+    # Serie + periodicidad usadas por el VPN@TIO de decisión (la sobreescriben las ramas fiducia/vehículo).
+    # Se reusa para el `valor_creado` (VPN@WACC) — espejo exacto del VPN@TIO pero descontado al WACC.
+    _flujo_vpn, _vpn_anual = retorno, False
     out = {
         "ingresos": ingresos_m, "costos": costos_m, "operativo": operativo,
         "acumulado": acum, "saldo_credito": saldo_serie, "flujo_equity": flujo_equity,
@@ -187,6 +191,7 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
         out["anio0_fiducia"] = fd.get("anio0")
         out["tir_proyecto"] = _tir_periodo(fcl_p)
         out["vpn_proyecto"] = _vpn(fcl_p, tio_f)
+        _flujo_vpn, _vpn_anual = fcl_p, True      # FCL auditado: serie ANUAL → VPN@WACC anual
         fcl_s = fd.get("fcl_socio_cg")
         if fcl_s:
             out["fcl_socio_anual"] = fcl_s
@@ -205,6 +210,13 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
         out["carga_detalle"] = {"renta": _ov["renta"], "gmf": _ov["gmf"], "dividendos": _ov["dividendos"]}
         out["tir_proyecto"] = _tir(_ov["retorno_at"])
         out["vpn_proyecto"] = sum(f / (1 + tio_m) ** t for t, f in enumerate(_ov["retorno_at"]))
+        _flujo_vpn, _vpn_anual = _ov["retorno_at"], False   # after-tax: serie MENSUAL → WACC mensual-equiv
         out["tir_equity"] = _tir(_ov["flujo_equity_at"])
         out["nota_vehiculo"] = _ov["nota_timing"]
+
+    # ---- Veredicto de Valor (EVA del proyecto) — ADITIVO: no mueve TIR/VPN@TIO/flujo ----
+    # crea_valor = TIR proyecto > WACC (ambas anuales); spread_valor = TIR − WACC; valor_creado =
+    # VPN del MISMO flujo de decisión pero descontado al WACC (no a la TIO). Greenfield → None.
+    out["valor_creado"] = valor.vpn_al_wacc(_flujo_vpn, wacc, anual=_vpn_anual) if wacc else None
+    out["crea_valor"], out["spread_valor"] = valor.veredicto_binario(out["tir_proyecto"], wacc)
     return out

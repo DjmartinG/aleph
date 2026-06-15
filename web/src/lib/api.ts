@@ -59,6 +59,12 @@ export interface PortfolioConsolidado {
   tir_ref: number | null;
   tir_eq: number | null;
   credito_max: number;
+  // Veredicto de Valor del PORTAFOLIO (Σ valor creado @WACC; excluye greenfield).
+  crea_valor: boolean | null;
+  valor_creado: number | null;
+  n_genera: number;
+  n_evaluados: number;
+  valor_metodo: string;
 }
 
 export interface FunnelStage {
@@ -80,6 +86,9 @@ export interface ProjectItem {
   und: number;
   ubicacion: string;
   tipo: string;
+  /** Veredicto de Valor del item (null = greenfield). */
+  crea_valor: boolean | null;
+  valor_creado: number | null;
 }
 
 export interface Portfolio {
@@ -164,6 +173,14 @@ export interface Indicadores {
   max_necesidad_caja: number | null;
   valor_financiable: number | null;
   margen_oper: number | null;
+  // Veredicto de Valor (EVA del proyecto): ¿genera o destruye valor sobre el WACC?
+  crea_valor: boolean | null;       // null = greenfield (TIR degenerada) → "— greenfield"
+  crea_valor_label: string;
+  valor_creado: number | null;      // VPN @WACC (miles COP)
+  valor_creado_label: string;
+  spread_valor: number | null;      // TIR proyecto − WACC (fracción)
+  spread_valor_label: string;
+  valor_metodo: string;
 }
 
 export interface Pyg {

@@ -6179,7 +6179,10 @@
       },
       "anio0": 2026,
       "payback_mes": 49,
-      "fiducia_real": false
+      "fiducia_real": false,
+      "valor_creado": 2262144.483501885,
+      "crea_valor": true,
+      "spread_valor": 0.04016356020622727
     }
   }
 }

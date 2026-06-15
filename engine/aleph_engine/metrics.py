@@ -21,6 +21,7 @@ PCT = "%"
 COP_MILES = "COP_miles"
 MES = "mes"
 RATIO = "ratio"
+BOOL = "bool"     # veredicto binario (la UI lo muestra como GENERA/DESTRUYE, no como número)
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,22 @@ REGISTRO: dict[str, Metric] = {
         "payback_mes", "Payback", "mes desde inicio",
         "Mes en que el flujo acumulado del proyecto se vuelve positivo.",
         MES, ("apalancamiento", "payback_mes"), "rentabilidad"),
+
+    # --- Veredicto de Valor (EVA del proyecto): ¿genera o destruye valor sobre el WACC? ---
+    "crea_valor": Metric(
+        "crea_valor", "Veredicto de valor", "TIR proyecto vs WACC",
+        "¿El proyecto genera valor sobre el costo del capital? (TIR proyecto > WACC). "
+        "Greenfield/TIR degenerada → sin veredicto.",
+        BOOL, ("apalancamiento", "crea_valor"), "valor"),
+    "valor_creado": Metric(
+        "valor_creado", "Valor creado", "VPN @WACC",
+        "VPN del flujo del proyecto descontado al WACC (valor sobre el costo del capital). "
+        "Espejo del VPN@TIO pero al WACC; positivo cuando la TIR proyecto supera al WACC.",
+        COP_MILES, ("apalancamiento", "valor_creado"), "valor"),
+    "spread_valor": Metric(
+        "spread_valor", "Spread de desarrollo", "TIR proyecto − WACC",
+        "Diferencia entre la TIR del proyecto y el WACC, en puntos.",
+        PCT, ("apalancamiento", "spread_valor"), "valor"),
 
     # --- Caja y financiamiento (crédito constructor / fiducia) ---
     "exposicion_maxima": Metric(
