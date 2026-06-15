@@ -44,8 +44,7 @@ def test_tornado_suma_100_y_detecta_dominante():
 
 
 def _algun_input_par():
-    for f in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "..", "..",
-                    "app_streamlit", "tests", "golden", "*_snapshot.json"))):
+    for f in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "golden", "*_snapshot.json"))):
         return json.load(open(f, encoding="utf-8"))["input_par"]
     return None
 

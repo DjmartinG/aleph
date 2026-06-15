@@ -7,7 +7,7 @@ prod. Como un snapshot APROBADO es INMUTABLE (migración 0002), refrescar = crea
 aprobada (NO editar la vieja). `repo.cargar` lee la versión más alta → prod pasa a leer la nueva.
 
 Qué hace por cada proyecto real (navarra/dominica/torres = los 3 que están en prod):
-  1. Lee el `par` ACTUAL del JSON REAL local (`app_streamlit/proyectos_privados/{slug}_REAL.json`).
+  1. Lee el `par` ACTUAL del JSON REAL local (`data/proyectos_privados/{slug}_REAL.json`).
   2. Valida con `schema.parse` (la MISMA compuerta del motor que el ETL y la API).
   3. GATE DORADO: recalcula `calcular(par)` y lo COMPARA contra el golden REAL local (tol 0.1%) +
      ancla dura (WACC 18.71% en los 3; Navarra TIR proyecto 37.60%). Si algo no cuadra → ABORTA TODO
@@ -20,7 +20,7 @@ SEGURO: DRY-RUN por defecto (NO escribe). Pasa `--apply` para escribir. Re-ejecu
 `--check-only` corre solo el gate dorado local (sin Supabase) — útil para verificar sin credenciales.
 
 Requisitos: `SUPABASE_URL` + `SUPABASE_KEY` (service_role) en entorno o en
-`app_streamlit/.streamlit/secrets.toml`; el motor instalado (`pip install -e ./engine`).
+`.streamlit/secrets.toml`; el motor instalado (`pip install -e ./engine`).
 
 Uso:  python db/refresh_scenarios.py               # dry-run (muestra qué haría, no escribe)
       python db/refresh_scenarios.py --apply       # aplica (crea v2 approved)
@@ -37,7 +37,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "app_streamlit"))   # por si el motor no está instalado pero sí en el repo
+sys.path.insert(0, str(ROOT / "engine"))   # por si el motor no está instalado pero sí en el repo
 
 try:
     from aleph_engine import calcular, config, schema
@@ -49,8 +49,8 @@ except ImportError:
 # alta separada, fuera del alcance de este refresco de WACC.
 SLUGS = ["1_navarra", "2_dominica", "3_torres_campinas"]
 
-PRIV = ROOT / "app_streamlit" / "proyectos_privados"
-GOLDEN = ROOT / "app_streamlit" / "tests" / "golden"
+PRIV = ROOT / "data" / "proyectos_privados"
+GOLDEN = ROOT / "engine" / "tests" / "golden"
 
 # Anclas DURAS del re-baseline (belt-and-suspenders sobre la comparación contra el golden).
 WACC_OBJETIVO = 0.187126          # 18.71% en los 3 (mismo bloque WACC)
@@ -64,12 +64,12 @@ def _config_supabase() -> tuple[str, str]:
     url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY")
     if url and key:
         return url, key
-    sec = ROOT / "app_streamlit" / ".streamlit" / "secrets.toml"
+    sec = ROOT / ".streamlit" / "secrets.toml"
     if sec.is_file():
         data = tomllib.loads(sec.read_text(encoding="utf-8"))
         if data.get("SUPABASE_URL") and data.get("SUPABASE_KEY"):
             return data["SUPABASE_URL"], data["SUPABASE_KEY"]
-    sys.exit("Faltan SUPABASE_URL/SUPABASE_KEY (entorno o app_streamlit/.streamlit/secrets.toml).")
+    sys.exit("Faltan SUPABASE_URL/SUPABASE_KEY (entorno o .streamlit/secrets.toml).")
 
 
 def _hash(par: dict) -> str:
@@ -129,7 +129,7 @@ def gate_dorado(exigir_golden: bool = False) -> dict[str, dict]:
         elif exigir_golden:
             sys.exit(f"ABORT {slug}: falta el golden {gpath.name} y estás en --apply. El golden es la "
                      f"fuente de verdad auditada; no es opcional al escribir datos REALES. Regenera los "
-                     f"snapshots (python app_streamlit/execution/snapshot_dorado.py) o, si SABES lo que "
+                     f"snapshots (python engine/execution/snapshot_dorado.py) o, si SABES lo que "
                      f"haces, usa --skip-golden-check.")
         else:
             print(f"  ! {slug}: sin golden local ({gpath.name}); se omite la comparación contra golden.")

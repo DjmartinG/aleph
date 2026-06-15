@@ -96,7 +96,7 @@ import json
 import os
 
 _PRIV = os.path.join(os.path.dirname(__file__), "..", "..",
-                     "app_streamlit", "proyectos_privados", "1_navarra_REAL.json")
+                     "data", "proyectos_privados", "1_navarra_REAL.json")
 
 
 def _navarra():
@@ -158,7 +158,7 @@ def test_golden_vehiculos_navarra():
 
 
 _PRIV_TORRES = os.path.join(os.path.dirname(__file__), "..", "..",
-                            "app_streamlit", "proyectos_privados", "3_torres_campinas_REAL.json")
+                            "data", "proyectos_privados", "3_torres_campinas_REAL.json")
 
 
 def test_comparar_greenfield_no_crashea():

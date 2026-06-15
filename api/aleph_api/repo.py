@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Capa de datos de la API: lee los proyectos. Misma convención que `app_streamlit/storage.py`.
+"""Capa de datos de la API: lee los proyectos (del modelo objetivo en Supabase, o de `data/` en local).
 
 Dos fuentes (con fallback "nunca se rompe"):
   - Si hay `SUPABASE_URL` + `SUPABASE_KEY` en el entorno → tabla `public.proyectos`
     (columnas `slug`, `nombre`, `es_real`, `data` jsonb = el dict `par`).
-  - Si no → JSON locales del monorepo: `app_streamlit/proyectos_privados/{slug}_REAL.json` (reales,
-    PRIORIDAD) sobre `app_streamlit/proyectos/{slug}.json` (ilustrativos públicos).
+  - Si no → JSON locales del monorepo: `data/proyectos_privados/{slug}_REAL.json` (reales,
+    PRIORIDAD) sobre `data/proyectos/{slug}.json` (ilustrativos públicos).
 
 Devuelve el `par` (dict) tal cual; el motor lo consume. NO calcula nada.
 """
@@ -22,7 +22,7 @@ log = logging.getLogger("aleph_api.repo")
 def _repo_root() -> str | None:
     d = os.path.dirname(os.path.abspath(__file__))
     while True:
-        if os.path.isdir(os.path.join(d, "engine")) and os.path.isdir(os.path.join(d, "app_streamlit")):
+        if os.path.isdir(os.path.join(d, "engine")) and os.path.isdir(os.path.join(d, "data")):
             return d
         parent = os.path.dirname(d)
         if parent == d:
@@ -32,7 +32,7 @@ def _repo_root() -> str | None:
 
 def _dirs():
     root = _repo_root()
-    base = os.path.join(root, "app_streamlit") if root else "."
+    base = os.path.join(root, "data") if root else "."
     return os.path.join(base, "proyectos"), os.path.join(base, "proyectos_privados")
 
 

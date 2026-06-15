@@ -2,7 +2,7 @@
 # deploy_api.sh — despliega la API FastAPI (`aleph_api`) a Azure App Service con TAG = SHA del commit.
 #   Uso:  ./deploy_api.sh        (desde la raíz del monorepo, con la working tree LIMPIA)
 #
-# Hermano de deploy_streamlit.sh, para el API (PROMPT 4 · Fase 4d). tag = SHA (deploy determinista,
+# Despliegue del API (PROMPT 4 · Fase 4d). tag = SHA (deploy determinista,
 # regla 4): imagen trazable + tag único => App Service SIEMPRE re-baja la imagen (esquiva el digest
 # cacheado de ":latest").
 #

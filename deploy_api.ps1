@@ -1,7 +1,7 @@
 # deploy_api.ps1 — despliega la API FastAPI (`aleph_api`) a Azure App Service con TAG = SHA (Windows / PowerShell).
 #   Uso:  .\deploy_api.ps1        (desde la raíz del monorepo, con la working tree LIMPIA)
 #
-# Hermano de deploy_streamlit.ps1, para el API (PROMPT 4 · Fase 4d). tag = SHA del commit (deploy
+# Despliegue del API (PROMPT 4 · Fase 4d). tag = SHA del commit (deploy
 # determinista, regla 4): imagen trazable + tag único => App Service SIEMPRE re-baja la imagen.
 #
 # La imagen (Dockerfile.api) BUNDLEA el motor (engine/) + la API (api/aleph_api/) => contexto = raíz.

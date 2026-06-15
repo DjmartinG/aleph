@@ -1,8 +1,8 @@
 # Paquete `aleph_engine`: el motor financiero PURO de ALEPH (Python, sin Streamlit/FastAPI/Supabase).
 #
-# Estado: PROMPT 3 · bloque 1 — la lógica financiera (calcular/pyg/flujo/WACC/curva S/indicadores/EVM)
-# se MOVIÓ tal cual desde `app_streamlit/cg_engine`. El harness dorado (tests/) re-ejecuta el motor y
-# exige paridad de cifras (tol. 0.1%). Próximo bloque: repuntar `app_streamlit` a este paquete.
+# La lógica financiera (calcular/pyg/flujo/WACC/curva S/indicadores/EVM) es la fuente ÚNICA de verdad.
+# El harness dorado (tests/) re-ejecuta el motor y exige paridad de cifras (tol. 0.1%).
+# (Streamlit fue retirado en jun-2026; el stack productivo es engine + api + web.)
 #
 # Instalable: una futura integración (API FastAPI, ERP/CRM) lo reutiliza como dependencia
 # (`pip install -e ./engine`) sin copiar lógica.

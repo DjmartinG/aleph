@@ -17,7 +17,7 @@ from ._golden import find_snapshots
 SNAPS = find_snapshots()
 
 
-@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados (¿falta app_streamlit/tests/golden?)")
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados (¿falta engine/tests/golden?)")
 @pytest.mark.parametrize("snap_path", SNAPS, ids=lambda p: os.path.basename(p))
 def test_input_par_cumple_el_contrato(snap_path):
     snap = json.load(open(snap_path, encoding="utf-8"))

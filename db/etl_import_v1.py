@@ -13,7 +13,7 @@ Como el snapshot se guarda SIN transformar y `calcular()` es determinista, la mi
 mover ninguna cifra (es copia + recálculo con el mismo motor). Re-ejecutar no duplica.
 
 Requisitos: `SUPABASE_URL` + `SUPABASE_KEY` (service_role) en el entorno, o en
-`app_streamlit/.streamlit/secrets.toml`. Antes de correr esto: aplicar `db/migrations/0001_aleph_schema.sql`.
+`.streamlit/secrets.toml`. Antes de correr esto: aplicar `db/migrations/0001_aleph_schema.sql`.
 
 Uso:  python db/etl_import_v1.py
 """
@@ -42,7 +42,7 @@ def _config_supabase() -> tuple[str, str]:
     url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY")
     if url and key:
         return url, key
-    sec = ROOT / "app_streamlit" / ".streamlit" / "secrets.toml"
+    sec = ROOT / ".streamlit" / "secrets.toml"
     if sec.is_file():
         data = tomllib.loads(sec.read_text(encoding="utf-8"))
         if data.get("SUPABASE_URL") and data.get("SUPABASE_KEY"):
