@@ -45,7 +45,7 @@ export function ValorBanner({
           <span className={cn("size-2.5 shrink-0 rounded-full", dot)} aria-hidden />
           <div>
             <div className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-              Valor económico{scope === "portafolio" ? " · portafolio" : ""}
+              Valor económico (EVA){scope === "portafolio" ? " · portafolio" : ""}
             </div>
             <div className={cn("text-lg font-semibold tracking-tight", tone)}>
               {veredicto}
