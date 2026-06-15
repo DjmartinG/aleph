@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "9bc7ae35-76f1-4a26-8270-ca94a92d23f9",
+  "packageName": "com.cgconstructora.aleph",
+  "developer": {
+    "name": "CG Constructora S.A.S.",
+    "websiteUrl": "https://aleph-4iiv.vercel.app",
+    "privacyUrl": "https://aleph-4iiv.vercel.app",
+    "termsOfUseUrl": "https://aleph-4iiv.vercel.app"
+  },
+  "name": {
+    "short": "ALEPH",
+    "full": "ALEPH — Factibilidad CG"
+  },
+  "description": {
+    "short": "Evaluación financiera de proyectos inmobiliarios de CG Constructora.",
+    "full": "ALEPH es la plataforma de evaluación financiera de proyectos inmobiliarios de CG Constructora. Abre la aplicación (con tu cuenta de Microsoft) desde Teams."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0E5E59",
+  "staticTabs": [
+    {
+      "entityId": "aleph-launch",
+      "name": "ALEPH",
+      "contentUrl": "https://aleph-4iiv.vercel.app/teams.html",
+      "scopes": ["personal"]
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["aleph-4iiv.vercel.app"]
+}
