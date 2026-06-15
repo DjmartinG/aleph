@@ -72,7 +72,7 @@ export function FichaTabs({
       </div>
 
       {tab === "resumen" ? <FichaResumen project={project} results={results} /> : null}
-      {tab === "flujo" ? <FlujoView flujo={results.flujo.apalancado} /> : null}
+      {tab === "flujo" ? <FlujoView flujo={results.flujo.apalancado} baseDate={schedule?.base_date ?? null} /> : null}
       {tab === "cronograma" ? (
         schedule ? (
           <CronogramaView schedule={schedule} />

@@ -16,7 +16,7 @@ function lastSignificant(arr: number[]): number {
   return last;
 }
 
-export function FlujoView({ flujo }: { flujo: FlujoApalancado }) {
+export function FlujoView({ flujo, baseDate = null }: { flujo: FlujoApalancado; baseDate?: string | null }) {
   const [modo, setModo] = useState<Modo>("proyecto");
 
   const { data, maxExposure } = useMemo(() => {
@@ -82,7 +82,7 @@ export function FlujoView({ flujo }: { flujo: FlujoApalancado }) {
       </div>
 
       <div className="rounded-[var(--radius-data)] border bg-card p-3">
-        <CashFlowChart data={data} maxExposure={maxExposure} />
+        <CashFlowChart data={data} maxExposure={maxExposure} baseDate={baseDate} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
