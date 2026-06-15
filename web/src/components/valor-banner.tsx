@@ -23,7 +23,8 @@ export function ValorBanner({
   scope?: "proyecto" | "portafolio";
   extra?: string;
 }) {
-  const estado = creaValor === null ? "greenfield" : creaValor ? "genera" : "destruye";
+  // `== null` cubre null Y undefined (API viejo aún sin EVA) → neutro, nunca un falso "destruye".
+  const estado = creaValor == null ? "greenfield" : creaValor ? "genera" : "destruye";
   const veredicto =
     estado === "genera" ? "Genera valor" : estado === "destruye" ? "Destruye valor" : "Sin veredicto";
   const tone =

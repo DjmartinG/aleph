@@ -79,17 +79,19 @@ function Dashboard({ data }: { data: Portfolio }) {
     <div>
       <StatPanel items={stats} />
 
-      {/* Veredicto de Valor del PORTAFOLIO (EVA): ¿genera o destruye valor sobre el WACC? */}
-      <div className="mt-6">
-        <ValorBanner
-          scope="portafolio"
-          creaValor={c.crea_valor}
-          spread={null}
-          valorCreado={c.valor_creado}
-          metodo={c.valor_metodo}
-          extra={`${c.n_genera}/${c.n_evaluados}`}
-        />
-      </div>
+      {/* Veredicto de Valor del PORTAFOLIO (EVA). Solo si el API ya lo expone (degrada limpio). */}
+      {c.valor_metodo ? (
+        <div className="mt-6">
+          <ValorBanner
+            scope="portafolio"
+            creaValor={c.crea_valor}
+            spread={null}
+            valorCreado={c.valor_creado}
+            metodo={c.valor_metodo}
+            extra={`${c.n_genera}/${c.n_evaluados}`}
+          />
+        </div>
+      ) : null}
 
       <section className="mt-10">
         <SectionTitle>Embudo por fase</SectionTitle>
