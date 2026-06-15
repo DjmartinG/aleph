@@ -113,14 +113,17 @@ def calcular_wacc(p, detalle=False):
 
     Cadena: beta de la deuda → desapalancar beta US (CON beta de deuda) → reapalancar a la estructura
     de Colombia → Ke USD → + riesgo país (EMBI) → paridad de inflación a COP → Kd COP (compuesto) →
-    WACC = E·Ke$COP + D·Kd·(1−t). WACC Navarra = 17,31% tras la recalibración M1 (antes 21,54%; ver
-    docs/acta_rebaseline_wacc_20260614.md). Es indicador de EXHIBICIÓN: las decisiones se descuentan @TIO.
+    WACC = E·Ke$COP + D·Kd·(1−t). WACC Navarra = 18,71% (jun-2026, ver docs/acta_rebaseline_wacc2_betad_rp_20260614.md):
+    `kd_us` se ancló a 5,9% (spread BBB del comparable grado-de-inversión → beta_d 0,38, antes 1,19
+    indefendible) y `rp` subió a 3,43% (Colombia BB- de S&P abr-2026; el riesgo país va AQUÍ, no en beta_d,
+    para no doble-contar). M1 lo había dejado en 17,31%. Es indicador de EXHIBICIÓN: las decisiones se
+    descuentan @TIO (15%), no al WACC.
 
     `detalle=True` devuelve todos los eslabones intermedios (para la sección Costo de Capital).
     """
     rf = p["rf"]/100; rm = p["rm"]/100; pm = rm - rf                  # prima de mercado = Rm − Rf
     # --- beta de la deuda del comparable US: βd = (kd_us − rf) / (Rm − Rf) ---
-    kd_us = p.get("kd_us", 9.335)/100
+    kd_us = p.get("kd_us", 5.9)/100
     beta_d = (kd_us - rf)/pm if pm else 0.0
     # --- desapalancar beta US CON beta de deuda (no Hamada simple) ---
     de_us = p["de_us"]/100; t_us = p["tax_us"]/100
