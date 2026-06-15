@@ -37,15 +37,18 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
     <div>
       <StatPanel items={stats} />
 
-      {/* Veredicto de Valor (EVA): ¿genera o destruye valor sobre el WACC? — junto al héroe */}
-      <div className="mt-6">
-        <ValorBanner
-          creaValor={ind.crea_valor}
-          spread={ind.spread_valor}
-          valorCreado={ind.valor_creado}
-          metodo={ind.valor_metodo}
-        />
-      </div>
+      {/* Veredicto de Valor (EVA): ¿genera o destruye valor sobre el WACC? — junto al héroe.
+          Solo si el API ya expone EVA (campo `valor_metodo`): así degrada limpio si el API está atrás. */}
+      {ind.valor_metodo ? (
+        <div className="mt-6">
+          <ValorBanner
+            creaValor={ind.crea_valor}
+            spread={ind.spread_valor}
+            valorCreado={ind.valor_creado}
+            metodo={ind.valor_metodo}
+          />
+        </div>
+      ) : null}
 
       {/* P&G — el lienzo central de la decisión (M7) */}
       <section className="mt-8">
