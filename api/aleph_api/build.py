@@ -193,7 +193,7 @@ def wacc(slug: str, par: dict, R: dict) -> dict:
 
     Expone TODA la cadena que el motor (`finanzas.calcular_wacc(detalle=True)`) ya calcula —
     beta des/reapalancada → Ke USD → +EMBI → paridad de inflación → Ke COP, Kd y escudo fiscal,
-    WACC = E·Ke + D·Kd·(1−t) — SIN recalcular. Tasas como fracción decimal (0.2154 = 21.54%).
+    WACC = E·Ke + D·Kd·(1−t) — SIN recalcular. Tasas como fracción decimal (0.1731 = 17.31%).
     `disponible=False` si el proyecto no trae parámetros de WACC (greenfield).
     """
     base = {"scenario_id": f"{slug}:base", "project_id": slug}

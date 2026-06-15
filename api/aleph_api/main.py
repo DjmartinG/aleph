@@ -142,12 +142,24 @@ def post_run(scenario_id: str, req: dict | None = None):
     return build.run(par, req or {})
 
 
+def _calc_o_422(fn, par: dict, req: dict | None):
+    """Corre un cálculo de build (Monte Carlo / goal-seek / recalc) traduciendo un input MALFORMADO a un
+    422 LEGIBLE en vez de un 500 opaco (el motor puede lanzar ValueError/KeyError ante params raros). Un
+    HTTPException (p.ej. el 404 del escenario) se propaga intacto."""
+    try:
+        return fn(par, req or {})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Parámetros inválidos para el cálculo: {e}") from e
+
+
 @v1.post("/scenarios/{scenario_id}/montecarlo")
 def post_montecarlo(scenario_id: str, req: dict | None = None):
     """Monte Carlo Crystal Ball del escenario: distribuciones, percentiles, certeza y tornado (M5)."""
     slug = _slug_de_escenario(scenario_id)
     par, _R = _par_o_404(slug)
-    return build.montecarlo_cb(par, req or {})
+    return _calc_o_422(build.montecarlo_cb, par, req)
 
 
 @v1.post("/scenarios/{scenario_id}/goal-seek")
@@ -155,7 +167,7 @@ def post_goal_seek(scenario_id: str, req: dict | None = None):
     """Goal-seek (M4): resuelve el driver necesario para una meta sobre un indicador (devolvernos)."""
     slug = _slug_de_escenario(scenario_id)
     par, _R = _par_o_404(slug)
-    return build.goal_seek(par, req or {})
+    return _calc_o_422(build.goal_seek, par, req)
 
 
 @v1.post("/scenarios/{scenario_id}/recalc")
@@ -163,7 +175,7 @@ def post_recalc(scenario_id: str, req: dict | None = None):
     """Recalculo en vivo (M4b): deltas precio/costo/ritmo -> indicadores (sliders de sensibilidad)."""
     slug = _slug_de_escenario(scenario_id)
     par, _R = _par_o_404(slug)
-    return build.recalc(par, req or {})
+    return _calc_o_422(build.recalc, par, req)
 
 
 # ---------- Escritura (Fase 2): crear/editar borradores → aprobar → baseline ----------
