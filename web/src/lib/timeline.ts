@@ -15,6 +15,15 @@ export function yearTicks(baseDate: string | null, horizonte: number): { m: numb
   return out;
 }
 
+/** Offset de mes (FRACCIONAL) de HOY desde `base_date`. null si no hay base; negativo si hoy < base.
+ * Se usa para dibujar la línea "Hoy" en las gráficas del cronograma. */
+export function mesesHastaHoy(baseDate: string | null, hoy: Date = new Date()): number | null {
+  if (!baseDate) return null;
+  const [y, mo] = baseDate.split("-").map(Number);
+  const diasEnMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+  return (hoy.getFullYear() - y) * 12 + (hoy.getMonth() + 1 - mo) + (hoy.getDate() - 1) / diasEnMes;
+}
+
 /** Etiqueta 'mmm aa' de un offset de mes desde base_date (p.ej. 'ago 22'). */
 export function monthLabel(baseDate: string | null, m: number): string {
   if (!baseDate) return `mes ${m + 1}`;
