@@ -10,10 +10,11 @@ import { GridRows } from "@visx/grid";
 import { curveMonotoneX } from "@visx/curve";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
 import { localPoint } from "@visx/event";
-import { yearTicks, monthLabel } from "@/lib/timeline";
+import { yearTicks, monthLabel, mesesHastaHoy } from "@/lib/timeline";
+import { TodayMarker } from "./today-marker";
 import { fmtCop } from "@/lib/format";
 
-const M = { top: 14, right: 16, bottom: 26, left: 40 };
+const M = { top: 20, right: 16, bottom: 26, left: 40 };
 const KEYS = ["separacion", "cuota_inicial", "subrogacion"] as const;
 type Key = (typeof KEYS)[number];
 
@@ -107,6 +108,7 @@ function Inner({
     [maxTotal, ih],
   );
   const ticks = useMemo(() => yearTicks(baseDate, n), [baseDate, n]);
+  const hoy = useMemo(() => mesesHastaHoy(baseDate), [baseDate]);
 
   const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<Row>();
   const onMove = useCallback(
@@ -152,6 +154,10 @@ function Inner({
               ))
             }
           </AreaStack>
+
+          {hoy != null && hoy >= 0 && hoy <= Math.max(1, n - 1) ? (
+            <TodayMarker x={xScale(hoy)} ih={ih} iw={iw} />
+          ) : null}
 
           <AxisLeft
             scale={yScale}

@@ -10,10 +10,11 @@ import { GridRows } from "@visx/grid";
 import { curveMonotoneX } from "@visx/curve";
 import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
 import { localPoint } from "@visx/event";
-import { yearTicks, monthLabel } from "@/lib/timeline";
+import { yearTicks, monthLabel, mesesHastaHoy } from "@/lib/timeline";
+import { TodayMarker } from "./today-marker";
 import { fmtInt } from "@/lib/format";
 
-const M = { top: 14, right: 40, bottom: 26, left: 34 };
+const M = { top: 20, right: 40, bottom: 26, left: 34 };
 
 interface Pt {
   m: number;
@@ -81,6 +82,7 @@ function Inner({
     [total, ih],
   );
   const ticks = useMemo(() => yearTicks(baseDate, n), [baseDate, n]);
+  const hoy = useMemo(() => mesesHastaHoy(baseDate), [baseDate]);
   const bw = Math.max(1, (iw / Math.max(1, n)) * 0.62);
 
   const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<Pt>();
@@ -121,6 +123,10 @@ function Inner({
 
           {/* Acumulado (eje derecho) */}
           <LinePath data={data} x={(d) => xScale(d.m)} y={(d) => yLine(d.acum)} curve={curveMonotoneX} stroke="var(--primary)" strokeWidth={2.25} />
+
+          {hoy != null && hoy >= 0 && hoy <= Math.max(1, n - 1) ? (
+            <TodayMarker x={xScale(hoy)} ih={ih} iw={iw} />
+          ) : null}
 
           <AxisLeft
             scale={yBars}

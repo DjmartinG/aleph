@@ -6,9 +6,10 @@ import { scaleLinear } from "@visx/scale";
 import { Group } from "@visx/group";
 import { AxisBottom } from "@visx/axis";
 import type { ScheduleEtapa } from "@/lib/api";
-import { yearTicks } from "@/lib/timeline";
+import { yearTicks, mesesHastaHoy } from "@/lib/timeline";
+import { TodayMarker } from "./today-marker";
 
-const M = { top: 8, right: 18, bottom: 26, left: 138 };
+const M = { top: 20, right: 18, bottom: 26, left: 138 };
 const ROW = 46;
 
 function truncate(s: string, n: number): string {
@@ -58,6 +59,7 @@ function Inner({
     [horizonte, iw],
   );
   const ticks = useMemo(() => yearTicks(baseDate, horizonte), [baseDate, horizonte]);
+  const hoy = useMemo(() => mesesHastaHoy(baseDate), [baseDate]);
 
   if (width < 10) return null;
 
@@ -97,6 +99,10 @@ function Inner({
             </Group>
           );
         })}
+
+        {hoy != null && hoy >= 0 && hoy <= Math.max(1, horizonte - 1) ? (
+          <TodayMarker x={xScale(hoy)} ih={ih} iw={iw} />
+        ) : null}
 
         <AxisBottom
           top={ih}
