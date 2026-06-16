@@ -4,12 +4,42 @@
  * y el marcador "Hoy" FRACCIONAL como markLine (idéntico look al de la gráfica de Flujo). El eje debe
  * ser `value` (no `category`) para que el "Hoy" fraccional caiga en su posición exacta.
  */
-import type { EChartsOption, LineSeriesOption } from "echarts";
+import type { EChartsOption, LineSeriesOption, DataZoomComponentOption } from "echarts";
 import type { ChartTokens } from "@/lib/chart-tokens";
 import { yearTicks, mesesHastaHoy } from "@/lib/timeline";
 
 type XAxisOption = NonNullable<EChartsOption["xAxis"]>;
 type MarkLineOption = NonNullable<LineSeriesOption["markLine"]>;
+
+/** hex (#RRGGBB) → rgba(...) con alfa. */
+function rgba(hex: string, a: number): string {
+  const h = hex.replace("#", "");
+  return `rgba(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)}, ${a})`;
+}
+
+/**
+ * Slider de ZOOM TEMPORAL para las series mensuales largas (flujo/absorción/recaudo): arrastra los
+ * tiradores para acotar la ventana, o el centro para desplazarla. Estilizado con los tokens del tema.
+ * Reserva ~26px abajo (subir `grid.bottom` y la altura de la gráfica en consecuencia).
+ */
+export function timeDataZoom(t: ChartTokens): DataZoomComponentOption {
+  return {
+    type: "slider",
+    height: 16,
+    bottom: 6,
+    showDetail: false,
+    brushSelect: false,
+    borderColor: "transparent",
+    backgroundColor: "transparent",
+    fillerColor: rgba(t.primary, 0.1),
+    dataBackground: { lineStyle: { color: t.axisLine, width: 0.5 }, areaStyle: { color: "transparent" } },
+    selectedDataBackground: { lineStyle: { color: t.primary, width: 0.8, opacity: 0.5 }, areaStyle: { color: rgba(t.primary, 0.12) } },
+    handleStyle: { color: t.tooltipBg, borderColor: t.primary, borderWidth: 1.2 },
+    moveHandleStyle: { color: t.primary, opacity: 0.5 },
+    handleSize: "70%",
+    textStyle: { color: t.axisLabel },
+  };
+}
 
 /** Eje X temporal: dominio [0, horizonte-1], etiquetas/gridlines de año en su mes de enero. */
 export function timeXAxis(baseDate: string | null, horizonte: number, t: ChartTokens): XAxisOption {

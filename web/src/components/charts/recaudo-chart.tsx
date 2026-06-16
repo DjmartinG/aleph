@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import type { EChartsOption } from "echarts";
 import { EChart } from "@/components/charts/echart";
 import type { ChartTokens } from "@/lib/chart-tokens";
-import { timeXAxis, hoyMarkLine } from "@/lib/echarts-timeline";
+import { timeXAxis, hoyMarkLine, timeDataZoom } from "@/lib/echarts-timeline";
 import { fmtCop } from "@/lib/format";
 import { monthLabel } from "@/lib/timeline";
 
@@ -35,6 +35,7 @@ export function RecaudoChart({
   height?: number;
 }) {
   const n = subrogacion.length;
+  const h = height + 28; // +slider de zoom temporal
 
   const buildOption = useCallback(
     (t: ChartTokens): EChartsOption => {
@@ -51,7 +52,8 @@ export function RecaudoChart({
       return {
         backgroundColor: "transparent",
         animationDuration: 420,
-        grid: { left: 40, right: 16, top: 20, bottom: 28 },
+        grid: { left: 40, right: 16, top: 20, bottom: 50 },
+        dataZoom: [timeDataZoom(t)],
         tooltip: {
           trigger: "axis",
           backgroundColor: t.tooltipBg,
@@ -101,5 +103,5 @@ export function RecaudoChart({
     [separacion, cuotaInicial, subrogacion, baseDate, n],
   );
 
-  return <EChart buildOption={buildOption} height={height} />;
+  return <EChart buildOption={buildOption} height={h} exportName="aleph-recaudo" />;
 }

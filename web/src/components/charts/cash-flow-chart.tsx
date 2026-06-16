@@ -6,6 +6,7 @@ import type { LineSeriesOption } from "echarts/charts";
 import { EChart } from "@/components/charts/echart";
 import type { ChartTokens } from "@/lib/chart-tokens";
 import { mesesHastaHoy } from "@/lib/timeline";
+import { timeDataZoom } from "@/lib/echarts-timeline";
 import { fmtCop } from "@/lib/format";
 
 export interface CashPoint {
@@ -40,6 +41,7 @@ export function CashFlowChart({
   height?: number;
 }) {
   const n = data.length;
+  const h = height + 28; // +slider de zoom temporal
   const hoy = mesesHastaHoy(baseDate);
   const hoyEnRango = hoy != null && hoy >= 0 && hoy <= Math.max(1, n - 1);
 
@@ -80,7 +82,8 @@ export function CashFlowChart({
       return {
         backgroundColor: "transparent",
         animationDuration: 420,
-        grid: { top: 22, right: 16, bottom: 26, left: 8, containLabel: true },
+        grid: { top: 22, right: 16, bottom: 48, left: 8, containLabel: true },
+        dataZoom: [timeDataZoom(t)],
         tooltip: {
           trigger: "axis",
           backgroundColor: t.tooltipBg,
@@ -164,5 +167,5 @@ export function CashFlowChart({
     [data, maxExposure, hoy, hoyEnRango, n],
   );
 
-  return <EChart buildOption={buildOption} height={height} />;
+  return <EChart buildOption={buildOption} height={h} exportName="aleph-flujo-caja" />;
 }
