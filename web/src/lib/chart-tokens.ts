@@ -15,6 +15,9 @@ export interface ChartTokens {
   tooltipBorder: string;
   tooltipText: string;
   areaOpacity: number;
+  // Ámbar de MARCA CG (categoría/dirección, p.ej. "No VIS", "construcción", "deuda"). NO es estado:
+  // espeja la CSS var `--cg-amber` (oklch 0.66/0.76 …). No confundir con `alerta` (ámbar semántico).
+  cgAmber: string;
   // Semánticos (estados): éxito / alerta / peligro.
   exito: string;
   alerta: string;
@@ -33,6 +36,7 @@ const LIGHT: ChartTokens = {
   tooltipBorder: "rgba(120,118,100,0.25)",
   tooltipText: "#2C2C2A",
   areaOpacity: 0.13,
+  cgAmber: "#C8801F", // = oklch(0.66 0.135 68)
   exito: "#639922",
   alerta: "#BA7517",
   peligro: "#CC4B3C",
@@ -50,6 +54,7 @@ const DARK: ChartTokens = {
   tooltipBorder: "rgba(225,223,212,0.16)",
   tooltipText: "#E9E7E0",
   areaOpacity: 0.16,
+  cgAmber: "#E3A340", // = oklch(0.76 0.135 75)
   exito: "#8FB85B",
   alerta: "#E0A23A",
   peligro: "#E0775F",
