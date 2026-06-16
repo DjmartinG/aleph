@@ -346,6 +346,27 @@ export async function getWacc(slug: string): Promise<Wacc | null> {
   return res.json() as Promise<Wacc>;
 }
 
+// ---------- Fuentes en vivo (Fase 2): dato actual de la fuente externa, para contrastar ----------
+
+export interface FuentesLive {
+  disponible: boolean;
+  fuente: string;
+  url: string;
+  nota?: string;
+  /** Calificación soberana actual según la fuente (p.ej. "Baa3"). */
+  rating?: string | null;
+  /** Valor vivo (fracción) por clave de input del WACC: { rp: {...}, pm: {...} }. */
+  datos?: Record<string, { valor: number }>;
+}
+
+/** Valores macro EN VIVO de la fuente (Damodaran), para la pestaña Fuentes. Degrada a `null` si el API
+ *  aún no expone el endpoint (sin redeploy) o la fuente externa no responde → la web muestra solo-modelo. */
+export async function getFuentesLive(): Promise<FuentesLive | null> {
+  const res = await apiFetch(`/v1/fuentes/live`);
+  if (!res.ok) return null;
+  return res.json() as Promise<FuentesLive>;
+}
+
 // ---------- Monte Carlo (POST run) ----------
 
 export interface MCStats {

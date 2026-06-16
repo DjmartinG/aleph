@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from . import __version__, auth, build, macro_store, repo, write
+from . import __version__, auth, build, fuentes_live, macro_store, repo, write
 
 log = logging.getLogger("aleph_api")
 
@@ -268,6 +268,14 @@ class MacroAprobar(BaseModel):
 def get_macro():
     """Supuestos macro VIGENTES (tasas por banco, EMBI/CRP, TRM/IBR...). Lectura."""
     return {"vigentes": macro_store.listar_vigentes()}
+
+
+@v1.get("/fuentes/live")
+def get_fuentes_live():
+    """Valores macro EN VIVO de las fuentes (hoy Damodaran: CRP→rp, ERP madura→pm), cacheado por día.
+    SOLO referencia para contrastar con la calibración del modelo en la pestaña Fuentes; NO alimenta el
+    WACC ni mueve cifras. Degrada a `disponible=False` si la fuente externa no responde."""
+    return fuentes_live.damodaran_colombia()
 
 
 @v1.get("/macro/pendientes")
