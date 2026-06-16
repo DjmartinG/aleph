@@ -1,37 +1,12 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
-import { ParentSize } from "@visx/responsive";
-import { scaleLinear } from "@visx/scale";
-import { AreaStack, Bar, Line } from "@visx/shape";
-import { Group } from "@visx/group";
-import { AxisLeft, AxisBottom } from "@visx/axis";
-import { GridRows } from "@visx/grid";
-import { curveMonotoneX } from "@visx/curve";
-import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
-import { localPoint } from "@visx/event";
-import { yearTicks, monthLabel, mesesHastaHoy } from "@/lib/timeline";
-import { TodayMarker } from "./today-marker";
+import { useCallback } from "react";
+import type { EChartsOption } from "echarts";
+import { EChart } from "@/components/charts/echart";
+import type { ChartTokens } from "@/lib/chart-tokens";
+import { timeXAxis, hoyMarkLine } from "@/lib/echarts-timeline";
 import { fmtCop } from "@/lib/format";
-
-const M = { top: 20, right: 16, bottom: 26, left: 40 };
-const KEYS = ["separacion", "cuota_inicial", "subrogacion"] as const;
-type Key = (typeof KEYS)[number];
-
-const COLOR: Record<Key, string> = {
-  separacion: "var(--cg-amber)",
-  cuota_inicial: "var(--chart-3, var(--muted-foreground))",
-  subrogacion: "var(--primary)",
-};
-const OPACITY: Record<Key, number> = { separacion: 0.55, cuota_inicial: 0.4, subrogacion: 0.28 };
-
-interface Row {
-  m: number;
-  separacion: number;
-  cuota_inicial: number;
-  subrogacion: number;
-  total: number;
-}
+import { monthLabel } from "@/lib/timeline";
 
 /** Eje Y en "mil M" sin sufijo (lo dice el título): valores en miles COP → /1e6. */
 function tickY(v: number): string {
@@ -39,7 +14,13 @@ function tickY(v: number): string {
   return `${(v / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 0 }).replace(/,/g, ".")}`;
 }
 
-/** Recaudo mensual apilado: separación + cuota inicial + subrogación (crédito hipotecario). */
+type AxisParam = { axisValue: number };
+
+/**
+ * Recaudo mensual apilado (ECharts): separación + cuota inicial + subrogación (crédito hipotecario).
+ * Orden de apilado FIJO (separación abajo) con opacidades distintas por capa; eje temporal por años +
+ * "Hoy"; eje Y en mil M. Colores de marca (separación=ámbar, subrogación=teal, cuota inicial=neutro).
+ */
 export function RecaudoChart({
   separacion,
   cuotaInicial,
@@ -53,165 +34,72 @@ export function RecaudoChart({
   baseDate: string | null;
   height?: number;
 }) {
-  return (
-    <div style={{ width: "100%", height }}>
-      <ParentSize>
-        {({ width }) => (
-          <Inner
-            width={width}
-            height={height}
-            separacion={separacion}
-            cuotaInicial={cuotaInicial}
-            subrogacion={subrogacion}
-            baseDate={baseDate}
-          />
-        )}
-      </ParentSize>
-    </div>
-  );
-}
-
-function Inner({
-  width,
-  height,
-  separacion,
-  cuotaInicial,
-  subrogacion,
-  baseDate,
-}: {
-  width: number;
-  height: number;
-  separacion: number[];
-  cuotaInicial: number[];
-  subrogacion: number[];
-  baseDate: string | null;
-}) {
-  const iw = Math.max(0, width - M.left - M.right);
-  const ih = Math.max(0, height - M.top - M.bottom);
   const n = subrogacion.length;
 
-  const data: Row[] = useMemo(
-    () =>
-      subrogacion.map((_, m) => {
-        const s = separacion[m] ?? 0;
-        const c = cuotaInicial[m] ?? 0;
-        const sub = subrogacion[m] ?? 0;
-        return { m, separacion: s, cuota_inicial: c, subrogacion: sub, total: s + c + sub };
-      }),
-    [separacion, cuotaInicial, subrogacion],
-  );
-  const maxTotal = useMemo(() => Math.max(1, ...data.map((d) => d.total)), [data]);
+  const buildOption = useCallback(
+    (t: ChartTokens): EChartsOption => {
+      const totales = subrogacion.map((_, m) => (separacion[m] ?? 0) + (cuotaInicial[m] ?? 0) + (subrogacion[m] ?? 0));
+      const maxTotal = Math.max(1, ...totales);
 
-  const xScale = useMemo(() => scaleLinear({ domain: [0, Math.max(1, n - 1)], range: [0, iw] }), [n, iw]);
-  const yScale = useMemo(
-    () => scaleLinear({ domain: [0, maxTotal * 1.08], range: [ih, 0], nice: true }),
-    [maxTotal, ih],
-  );
-  const ticks = useMemo(() => yearTicks(baseDate, n), [baseDate, n]);
-  const hoy = useMemo(() => mesesHastaHoy(baseDate), [baseDate]);
+      // Orden de apilado: separación (abajo) → cuota inicial → subrogación. Colores y opacidades por capa.
+      const capas = [
+        { name: "Separación", serie: separacion, color: t.cgAmber, opacity: 0.55 },
+        { name: "Cuota inicial", serie: cuotaInicial, color: t.axisLabel, opacity: 0.4 },
+        { name: "Subrogación", serie: subrogacion, color: t.primary, opacity: 0.28 },
+      ];
 
-  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<Row>();
-  const onMove = useCallback(
-    (e: React.MouseEvent<SVGRectElement>) => {
-      const p = localPoint(e);
-      if (!p) return;
-      const mi = Math.round(xScale.invert(p.x - M.left));
-      const d = data[Math.max(0, Math.min(n - 1, mi))];
-      if (!d) return;
-      showTooltip({ tooltipData: d, tooltipLeft: M.left + xScale(d.m), tooltipTop: M.top + yScale(d.total) });
+      return {
+        backgroundColor: "transparent",
+        animationDuration: 420,
+        grid: { left: 40, right: 16, top: 20, bottom: 28 },
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: t.tooltipBg,
+          borderColor: t.tooltipBorder,
+          borderWidth: 1,
+          textStyle: { color: t.tooltipText, fontSize: 12 },
+          padding: [6, 10],
+          axisPointer: { type: "line", lineStyle: { color: t.axisLabel, opacity: 0.3 } },
+          formatter: (raw) => {
+            const m = (raw as unknown as AxisParam[])[0]?.axisValue ?? 0;
+            const s = separacion[m] ?? 0;
+            const c = cuotaInicial[m] ?? 0;
+            const sub = subrogacion[m] ?? 0;
+            return (
+              `<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:.04em;color:${t.axisLabel}">${monthLabel(baseDate, m)}</div>` +
+              `<div style="margin-top:2px;font-weight:600" class="num">${fmtCop(s + c + sub)}</div>` +
+              `<div style="margin-top:2px;color:${t.axisLabel}" class="num">Subrogación ${fmtCop(sub)}</div>` +
+              `<div style="color:${t.axisLabel}" class="num">Cuota inicial ${fmtCop(c)}</div>` +
+              `<div style="color:${t.axisLabel}" class="num">Separación ${fmtCop(s)}</div>`
+            );
+          },
+        },
+        xAxis: timeXAxis(baseDate, n, t),
+        yAxis: {
+          type: "value",
+          min: 0,
+          max: maxTotal * 1.08,
+          splitNumber: 4,
+          axisLabel: { color: t.axisLabel, fontSize: 10.5, formatter: (v: number) => tickY(v) },
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitLine: { lineStyle: { color: t.grid, opacity: 0.7 } },
+        },
+        series: capas.map((cap, idx) => ({
+          name: cap.name,
+          type: "line",
+          stack: "recaudo",
+          smooth: true,
+          showSymbol: false,
+          data: cap.serie.map((v, m) => [m, v ?? 0]),
+          lineStyle: { color: cap.color, width: 0.75, opacity: 0.5 },
+          areaStyle: { color: cap.color, opacity: cap.opacity },
+          ...(idx === capas.length - 1 ? { markLine: hoyMarkLine(baseDate, n, t) } : {}),
+        })),
+      };
     },
-    [data, n, xScale, yScale, showTooltip],
+    [separacion, cuotaInicial, subrogacion, baseDate, n],
   );
 
-  if (width < 10) return null;
-
-  return (
-    <div className="relative">
-      <svg width={width} height={height}>
-        <Group left={M.left} top={M.top}>
-          <GridRows scale={yScale} width={iw} numTicks={4} stroke="var(--rule)" strokeOpacity={0.55} />
-
-          <AreaStack<Row>
-            data={data}
-            keys={KEYS as unknown as Key[]}
-            value={(d, k) => d[k as Key]}
-            x={(d) => xScale(d.data.m)}
-            y0={(d) => yScale(d[0])}
-            y1={(d) => yScale(d[1])}
-            curve={curveMonotoneX}
-          >
-            {({ stacks, path }) =>
-              stacks.map((stack) => (
-                <path
-                  key={stack.key}
-                  d={path(stack) || ""}
-                  fill={COLOR[stack.key as Key]}
-                  fillOpacity={OPACITY[stack.key as Key]}
-                  stroke={COLOR[stack.key as Key]}
-                  strokeOpacity={0.5}
-                  strokeWidth={0.75}
-                />
-              ))
-            }
-          </AreaStack>
-
-          {hoy != null && hoy >= 0 && hoy <= Math.max(1, n - 1) ? (
-            <TodayMarker x={xScale(hoy)} ih={ih} iw={iw} />
-          ) : null}
-
-          <AxisLeft
-            scale={yScale}
-            numTicks={4}
-            tickFormat={(v) => tickY(v as number)}
-            stroke="transparent"
-            tickStroke="transparent"
-            tickLabelProps={() => ({ fill: "var(--muted-foreground)", fontSize: 10.5, textAnchor: "end", dx: -3, dy: 3 })}
-          />
-          <AxisBottom
-            top={ih}
-            scale={xScale}
-            tickValues={ticks.map((t) => t.m)}
-            tickFormat={(v) => ticks.find((t) => t.m === (v as number))?.label ?? ""}
-            stroke="var(--rule)"
-            tickStroke="transparent"
-            tickLabelProps={() => ({ fill: "var(--muted-foreground)", fontSize: 11, textAnchor: "middle", dy: 2 })}
-          />
-        </Group>
-
-        {tooltipData ? (
-          <Group left={M.left} top={M.top}>
-            <Line from={{ x: xScale(tooltipData.m), y: 0 }} to={{ x: xScale(tooltipData.m), y: ih }} stroke="var(--foreground)" strokeOpacity={0.18} />
-          </Group>
-        ) : null}
-        <Bar x={M.left} y={M.top} width={iw} height={ih} fill="transparent" onMouseMove={onMove} onMouseLeave={hideTooltip} />
-      </svg>
-
-      {tooltipData ? (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            position: "absolute",
-            background: "var(--popover)",
-            color: "var(--popover-foreground)",
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            padding: "6px 10px",
-            boxShadow: "var(--shadow-card)",
-            pointerEvents: "none",
-          }}
-        >
-          <div className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-            {monthLabel(baseDate, tooltipData.m)}
-          </div>
-          <div className="num mt-0.5 text-sm font-semibold">{fmtCop(tooltipData.total)}</div>
-          <div className="num mt-0.5 space-y-px text-[0.7rem] text-muted-foreground">
-            <div>Subrogación {fmtCop(tooltipData.subrogacion)}</div>
-            <div>Cuota inicial {fmtCop(tooltipData.cuota_inicial)}</div>
-            <div>Separación {fmtCop(tooltipData.separacion)}</div>
-          </div>
-        </TooltipWithBounds>
-      ) : null}
-    </div>
-  );
+  return <EChart buildOption={buildOption} height={height} />;
 }
