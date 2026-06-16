@@ -6,6 +6,7 @@ import { ValorBanner } from "@/components/valor-banner";
 import { ChecksBadge } from "@/components/checks-badge";
 import { SectionTitle } from "@/components/section-title";
 import { MiniStat } from "@/components/mini-stat";
+import { PygWaterfall } from "@/components/charts/pyg-waterfall";
 
 /** "TIR proyecto · proyecto (desapalancada)" → ["TIR proyecto", "proyecto (desapalancada)"]. */
 function splitLabel(s: string): [string, string] {
@@ -58,6 +59,12 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
         >
           Estado de resultados (P&amp;G)
         </SectionTitle>
+        <div className="mb-4 rounded-[var(--radius-data)] border bg-card p-4">
+          <div className="mb-1 text-xs text-muted-foreground">
+            De ingresos a utilidad neta · valores en mil M COP
+          </div>
+          <PygWaterfall pyg={pyg} />
+        </div>
         <Ledger pyg={pyg} margen={ind.margen_oper} />
       </section>
 
