@@ -1,10 +1,9 @@
 "use client";
 
-import { ParentSize } from "@visx/responsive";
-import { scaleLinear, scaleBand } from "@visx/scale";
-import { Group } from "@visx/group";
-import { Line } from "@visx/shape";
-import { AxisBottom } from "@visx/axis";
+import { useCallback } from "react";
+import type { EChartsOption } from "echarts";
+import { EChart } from "@/components/charts/echart";
+import type { ChartTokens } from "@/lib/chart-tokens";
 
 interface VarBar {
   name: string;
@@ -30,59 +29,82 @@ function toBars(t: Record<string, number>): VarBar[] {
     .sort((a, b) => b.span - a.span);
 }
 
-const M = { top: 6, right: 18, bottom: 26, left: 124 };
-
+/** Eje en mil M: valor/1e6 con separador de miles por punto, 0 decimales, "0" literal para el cero. */
 function tickY(v: number): string {
   if (v === 0) return "0";
   return `${(v / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 0 }).replace(/,/g, ".")}`;
 }
 
-export function TornadoChart({ tornado, height }: { tornado: Record<string, number>; height?: number }) {
-  const bars = toBars(tornado);
-  const h = height ?? bars.length * 48 + M.top + M.bottom;
-  return (
-    <div style={{ width: "100%", height: h }}>
-      <ParentSize>{({ width }) => <Inner width={width} height={h} bars={bars} />}</ParentSize>
-    </div>
-  );
+/** Redondea hacia arriba a un número "lindo" (1/2/5 ×10^k) para un dominio simétrico = nice:true de visx. */
+function niceCeil(v: number): number {
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / mag;
+  const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return nice * mag;
 }
 
-function Inner({ width, height, bars }: { width: number; height: number; bars: VarBar[] }) {
-  const iw = Math.max(0, width - M.left - M.right);
-  const ih = Math.max(0, height - M.top - M.bottom);
-  const maxAbs = Math.max(1, ...bars.flatMap((b) => [Math.abs(b.low), Math.abs(b.high)]));
-  const x = scaleLinear({ domain: [-maxAbs, maxAbs], range: [0, iw], nice: true });
-  const y = scaleBand({ domain: bars.map((b) => b.name), range: [0, ih], padding: 0.42 });
-  if (width < 10) return null;
-  const zero = x(0);
+/**
+ * Tornado de sensibilidad (ECharts): impacto en la utilidad operativa de variar cada variable ±10%.
+ * Barras horizontales divergentes centradas en cero; ámbar = a la baja, teal = al alza. Las cifras
+ * (deltas de util_oper en miles COP) salen del API; este componente solo agrupa y escala.
+ */
+export function TornadoChart({ tornado, height }: { tornado: Record<string, number>; height?: number }) {
+  const bars = toBars(tornado);
+  const h = height ?? bars.length * 48 + 32;
 
-  return (
-    <svg width={width} height={height}>
-      <Group left={M.left} top={M.top}>
-        {bars.map((b) => {
-          const by = y(b.name) ?? 0;
-          const bh = y.bandwidth();
-          return (
-            <Group key={b.name}>
-              <text x={-12} y={by + bh / 2} textAnchor="end" dominantBaseline="middle" fontSize={12} fill="var(--foreground)">
-                {b.name}
-              </text>
-              <rect x={x(b.low)} y={by} width={Math.max(0, zero - x(b.low))} height={bh} rx={2} fill="var(--cg-amber)" opacity={0.85} />
-              <rect x={zero} y={by} width={Math.max(0, x(b.high) - zero)} height={bh} rx={2} fill="var(--primary)" opacity={0.9} />
-            </Group>
-          );
-        })}
-        <Line from={{ x: zero, y: 0 }} to={{ x: zero, y: ih }} stroke="var(--foreground)" strokeOpacity={0.3} />
-        <AxisBottom
-          top={ih}
-          scale={x}
-          numTicks={5}
-          tickFormat={(v) => tickY(v as number)}
-          stroke="var(--rule)"
-          tickStroke="transparent"
-          tickLabelProps={() => ({ fill: "var(--muted-foreground)", fontSize: 10, textAnchor: "middle", dy: 2 })}
-        />
-      </Group>
-    </svg>
+  const buildOption = useCallback(
+    (t: ChartTokens): EChartsOption => {
+      const maxAbs = niceCeil(Math.max(1, ...bars.flatMap((b) => [Math.abs(b.low), Math.abs(b.high)])));
+      return {
+        backgroundColor: "transparent",
+        animationDuration: 420,
+        grid: { left: 8, right: 18, top: 6, bottom: 26, containLabel: true },
+        xAxis: {
+          type: "value",
+          min: -maxAbs,
+          max: maxAbs,
+          axisLabel: { color: t.axisLabel, fontSize: 10, formatter: (v: number) => tickY(v) },
+          axisLine: { lineStyle: { color: t.axisLine } },
+          axisTick: { show: false },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "category",
+          data: bars.map((b) => b.name),
+          inverse: true,
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: { color: t.tooltipText, fontSize: 12 },
+        },
+        series: [
+          {
+            name: "A la baja",
+            type: "bar",
+            barWidth: 18,
+            data: bars.map((b) => b.low),
+            itemStyle: { color: t.cgAmber, opacity: 0.85, borderRadius: 2 },
+            markLine: {
+              symbol: "none",
+              silent: true,
+              label: { show: false },
+              lineStyle: { color: t.tooltipText, width: 1, opacity: 0.3 },
+              data: [{ xAxis: 0 }],
+            },
+          },
+          {
+            name: "Al alza",
+            type: "bar",
+            barWidth: 18,
+            barGap: "-100%",
+            data: bars.map((b) => b.high),
+            itemStyle: { color: t.primary, opacity: 0.9, borderRadius: 2 },
+          },
+        ],
+      };
+    },
+    [bars],
   );
+
+  return <EChart buildOption={buildOption} height={h} />;
 }
