@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, GitBranch, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, GitBranch, Library, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AlephMark } from "@/components/aleph-mark";
 
@@ -15,6 +15,7 @@ const NAV: NavGroup[] = [
     items: [
       { href: "/", label: "Tablero", icon: LayoutDashboard },
       { href: "/pipeline", label: "Pipeline", icon: GitBranch },
+      { href: "/fuentes", label: "Fuentes", icon: Library },
     ],
   },
 ];
