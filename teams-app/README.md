@@ -6,7 +6,7 @@ Paquete de app personalizada de Teams para fijar un ícono de **ALEPH** en la ba
 
 El login de Microsoft (Entra) **no se puede incrustar** en un iframe de Teams por seguridad. Por eso
 la pestaña de Teams **no embebe ALEPH**: muestra un **lanzador** (`web/public/teams.html`, servido en
-`https://aleph-4iiv.vercel.app/teams.html`, público) con un botón **"Abrir ALEPH"** que abre la app en
+`https://aleph.cgconstructora.com/teams.html`, público) con un botón **"Abrir ALEPH"** que abre la app en
 el **navegador** con el SSO intacto. Limpio y sin pantallas de login rotas.
 
 ## Archivos
@@ -26,13 +26,15 @@ el **navegador** con el SSO intacto. Limpio y sin pantallas de login rotas.
    Add apps → ALEPH → Add → Save**. Aparece en el riel izquierdo de Teams de todos.
    *(Permitir custom apps: Setup policies → "Upload custom apps" = On, si no lo está.)*
 
-## Cuando cambie el dominio (a `aleph.cgconstructora.com`)
+## Actualizar la app (subir una versión nueva)
 
-Editar en `manifest.json`: `staticTabs[0].contentUrl` → `https://aleph.cgconstructora.com/teams.html`,
-`validDomains` → `["aleph.cgconstructora.com"]`, y los 3 `developer.*Url`. Regenerar el zip:
+El manifiesto ya apunta al dominio propio `aleph.cgconstructora.com` (v1.0.1 · 2026-06-15).
+
+Para cualquier cambio futuro (dominio, ícono, nombre): editar `manifest.json`, **subir `version`**
+(Teams exige una versión mayor para aceptar la actualización, mismo `id`) y regenerar el zip:
 
 ```bash
 python -c "import zipfile; z=zipfile.ZipFile('teams-app/aleph-teams.zip','w',zipfile.ZIP_DEFLATED); [z.write('teams-app/'+f,f) for f in ['manifest.json','color.png','outline.png']]; z.close()"
 ```
 
-Subí la nueva versión (mismo `id`) por **Manage apps → ALEPH → Update**.
+Subir la nueva versión (mismo `id`) por **Teams admin center → Manage apps → ALEPH → Update**.

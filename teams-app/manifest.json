@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "id": "9bc7ae35-76f1-4a26-8270-ca94a92d23f9",
   "developer": {
     "name": "CG Constructora S.A.S.",
-    "websiteUrl": "https://aleph-4iiv.vercel.app",
-    "privacyUrl": "https://aleph-4iiv.vercel.app",
-    "termsOfUseUrl": "https://aleph-4iiv.vercel.app"
+    "websiteUrl": "https://aleph.cgconstructora.com",
+    "privacyUrl": "https://aleph.cgconstructora.com",
+    "termsOfUseUrl": "https://aleph.cgconstructora.com"
   },
   "name": {
     "short": "ALEPH",
@@ -26,10 +26,10 @@
     {
       "entityId": "aleph-launch",
       "name": "ALEPH",
-      "contentUrl": "https://aleph-4iiv.vercel.app/teams.html",
+      "contentUrl": "https://aleph.cgconstructora.com/teams.html",
       "scopes": ["personal"]
     }
   ],
   "permissions": ["identity"],
-  "validDomains": ["aleph-4iiv.vercel.app"]
+  "validDomains": ["aleph.cgconstructora.com"]
 }
