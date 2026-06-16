@@ -9,6 +9,7 @@ import { ValorBanner } from "@/components/valor-banner";
 import { FunnelBar } from "@/components/funnel-bar";
 import { PortfolioTable } from "@/components/portfolio-table";
 import { ValueMap } from "@/components/charts/value-map";
+import { ProjectCompare } from "@/components/charts/project-compare";
 import { SectionTitle } from "@/components/section-title";
 
 export default async function Page() {
@@ -104,6 +105,15 @@ function Dashboard({ data }: { data: Portfolio }) {
           <ValueMap items={data.items} />
         </div>
       </section>
+
+      {data.items.length >= 2 ? (
+        <section className="mt-9">
+          <SectionTitle right="elige proyectos y métrica">Comparador</SectionTitle>
+          <div className="rounded-[var(--radius-data)] border bg-card p-4">
+            <ProjectCompare items={data.items} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-7">
         <div className="mb-3 flex items-center justify-between">
