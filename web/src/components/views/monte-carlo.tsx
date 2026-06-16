@@ -60,11 +60,11 @@ export function MonteCarlo({ slug }: { slug: string }) {
 
   const markers: HistMarker[] = view
     ? [
-        { label: "P10", value: view.f.stats.p10, color: "var(--muted-foreground)", dash: true },
-        { label: "P50", value: view.f.stats.p50, color: "var(--foreground)" },
-        { label: "P90", value: view.f.stats.p90, color: "var(--muted-foreground)", dash: true },
+        { label: "P10", value: view.f.stats.p10, tone: "muted", dash: true },
+        { label: "P50", value: view.f.stats.p50, tone: "strong" },
+        { label: "P90", value: view.f.stats.p90, tone: "muted", dash: true },
         ...(view.f.certeza
-          ? [{ label: "meta", value: view.f.certeza.umbral, color: "var(--danger)" }]
+          ? [{ label: "meta", value: view.f.certeza.umbral, tone: "danger" as const }]
           : []),
       ]
     : [];
