@@ -15,6 +15,8 @@ export interface FuenteDato {
   get: (w: Wacc) => number | null;
   /** "pct" = fracción → %, "num" = número crudo (betas). */
   fmt: "pct" | "num";
+  /** Clave del input del WACC con fuente VIVA (Fase 2): hace match con FuentesLive.datos[clave]. */
+  clave?: "rp" | "pm";
 }
 
 export interface FuenteGrupo {
@@ -33,8 +35,8 @@ export const FUENTES: FuenteGrupo[] = [
     nota: "Datos de mercado y de sector (homebuilding) del profesor Aswath Damodaran, base del build-up CAPM para mercados emergentes.",
     datos: [
       { nombre: "Tasa libre de riesgo (rf)", descripcion: "Bono del Tesoro de EE.UU. a 10 años; ancla del CAPM en USD.", get: (w) => w.inputs?.rf ?? null, fmt: "pct" },
-      { nombre: "Prima de mercado (ERP)", descripcion: "Equity Risk Premium del mercado maduro (EE.UU.): rm − rf.", get: (w) => w.inputs?.pm ?? null, fmt: "pct" },
-      { nombre: "Riesgo país · Colombia (CRP)", descripcion: "Country Risk Premium de Colombia (BB−); se suma al Ke en USD.", get: (w) => w.rp ?? null, fmt: "pct" },
+      { nombre: "Prima de mercado (ERP)", descripcion: "Equity Risk Premium del mercado maduro (EE.UU.): rm − rf.", get: (w) => w.inputs?.pm ?? null, fmt: "pct", clave: "pm" },
+      { nombre: "Riesgo país · Colombia (CRP)", descripcion: "Country Risk Premium de Colombia; se suma al Ke en USD.", get: (w) => w.rp ?? null, fmt: "pct", clave: "rp" },
       { nombre: "Beta del sector (apalancada, US)", descripcion: "Beta del sector construcción/homebuilding; se desapalanca y se reapalanca a la estructura CG.", get: (w) => w.beta_us ?? null, fmt: "num" },
       { nombre: "D/E del sector (US)", descripcion: "Relación deuda/equity del sector comparable; usada para desapalancar la beta.", get: (w) => w.inputs?.de_us ?? null, fmt: "pct" },
       { nombre: "Costo de deuda comparable (kd US)", descripcion: "Costo de deuda de un comparable grado de inversión (BBB); de aquí se deriva la beta de la deuda.", get: (w) => w.inputs?.kd_us ?? null, fmt: "pct" },

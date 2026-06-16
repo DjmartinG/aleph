@@ -1,6 +1,6 @@
 import { unstable_rethrow } from "next/navigation";
 import { ExternalLink } from "lucide-react";
-import { getPortfolio, getWacc, type Wacc } from "@/lib/api";
+import { getPortfolio, getWacc, getFuentesLive, type Wacc, type FuentesLive } from "@/lib/api";
 import { fmtPct } from "@/lib/format";
 import { FUENTES } from "@/lib/fuentes";
 import { SourceNote } from "@/components/source-note";
@@ -13,6 +13,7 @@ function fmtNum(x: number | null): string {
 export default async function FuentesPage() {
   // La calibración macro es común a todos los proyectos; tomamos el WACC del primero que la tenga.
   let wacc: Wacc | null = null;
+  let live: FuentesLive | null = null;
   let errMsg: string | null = null;
   try {
     const data = await getPortfolio();
@@ -26,6 +27,14 @@ export default async function FuentesPage() {
   } catch (e) {
     unstable_rethrow(e); // re-lanza el redirect a /login; deja pasar errores reales
     errMsg = e instanceof Error ? e.message : "Error desconocido";
+  }
+  // Dato VIVO de la fuente (opcional): si el API aún no lo expone (sin redeploy) o la fuente externa
+  // no responde, queda en null → la página muestra solo-modelo (degrada limpio).
+  try {
+    live = await getFuentesLive();
+  } catch (e) {
+    unstable_rethrow(e);
+    live = null;
   }
 
   return (
@@ -50,6 +59,15 @@ export default async function FuentesPage() {
           Los valores de abajo son la <strong className="text-foreground">calibración que usa el modelo</strong>,
           común a todos los proyectos, con corte <strong className="text-foreground">junio 2026</strong>.
         </p>
+        {live?.disponible ? (
+          <p className="mt-3 rounded-[var(--radius-data)] border border-rule bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Contraste con el <strong className="text-foreground">dato vivo</strong> de la fuente activado (riesgo
+            país y prima de mercado).
+            {live.rating ? (
+              <> Damodaran tiene hoy a Colombia en <strong className="text-foreground">{live.rating}</strong>.</>
+            ) : null}
+          </p>
+        ) : null}
       </section>
 
       {errMsg ? <ErrorPanel message={errMsg} /> : null}
@@ -77,13 +95,32 @@ export default async function FuentesPage() {
               {g.datos.map((d) => {
                 const v = wacc ? d.get(wacc) : null;
                 const txt = v === null || v === undefined ? "—" : d.fmt === "pct" ? fmtPct(v) : fmtNum(v);
+                const liveV = d.clave && live?.disponible ? live.datos?.[d.clave]?.valor ?? null : null;
+                const driftPp = v != null && liveV != null ? (v - liveV) * 100 : null;
                 return (
                   <div key={d.nombre} className="flex items-baseline justify-between gap-4 py-2.5">
                     <div className="min-w-0">
                       <dt className="text-sm font-medium text-foreground">{d.nombre}</dt>
                       <dd className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{d.descripcion}</dd>
                     </div>
-                    <span className="num shrink-0 text-sm font-semibold tabular-nums text-foreground">{txt}</span>
+                    <div className="shrink-0 text-right">
+                      <div className="num text-sm font-semibold tabular-nums text-foreground">{txt}</div>
+                      {liveV != null ? (
+                        <div className="num mt-0.5 text-[0.7rem] tabular-nums text-muted-foreground">
+                          fuente hoy {fmtPct(liveV)}
+                          {driftPp != null ? (
+                            Math.abs(driftPp) < 0.05 ? (
+                              <span className="ml-1 text-success">· al día</span>
+                            ) : (
+                              <span className="ml-1 text-cg-amber">
+                                · Δ {driftPp >= 0 ? "+" : ""}
+                                {driftPp.toFixed(2)} pp
+                              </span>
+                            )
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
