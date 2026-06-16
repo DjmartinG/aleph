@@ -1,28 +1,26 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
-import { ParentSize } from "@visx/responsive";
-import { scaleLinear } from "@visx/scale";
-import { Bar, LinePath, Line } from "@visx/shape";
-import { Group } from "@visx/group";
-import { AxisLeft, AxisRight, AxisBottom } from "@visx/axis";
-import { GridRows } from "@visx/grid";
-import { curveMonotoneX } from "@visx/curve";
-import { useTooltip, TooltipWithBounds } from "@visx/tooltip";
-import { localPoint } from "@visx/event";
-import { yearTicks, monthLabel, mesesHastaHoy } from "@/lib/timeline";
-import { TodayMarker } from "./today-marker";
+import { useCallback } from "react";
+import type { EChartsOption } from "echarts";
+import { EChart } from "@/components/charts/echart";
+import type { ChartTokens } from "@/lib/chart-tokens";
+import { timeXAxis, hoyMarkLine } from "@/lib/echarts-timeline";
 import { fmtInt } from "@/lib/format";
+import { monthLabel } from "@/lib/timeline";
 
-const M = { top: 20, right: 40, bottom: 26, left: 34 };
-
-interface Pt {
-  m: number;
-  ventas: number;
-  acum: number;
+/** hex (#RRGGBB) → rgba(...) con alfa. */
+function rgba(hex: string, a: number): string {
+  const h = hex.replace("#", "");
+  return `rgba(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)}, ${a})`;
 }
 
-/** Curva de absorción: barras de unidades vendidas por mes (teal) + línea de acumulado (eje derecho). */
+type AxisParam = { axisValue: number; seriesName?: string; value: [number, number] };
+
+/**
+ * Curva de absorción (ECharts): barras de unidades vendidas por mes (teal tenue, eje izq.) + línea de
+ * acumulado (eje der., escala distinta hasta el total). Eje temporal por años + "Hoy". Unidades con
+ * fmtInt (nunca fmtCop). Las series vienen del API; este componente solo las pinta.
+ */
 export function AbsorptionChart({
   ventas,
   acum,
@@ -36,155 +34,87 @@ export function AbsorptionChart({
   total: number;
   height?: number;
 }) {
-  return (
-    <div style={{ width: "100%", height }}>
-      <ParentSize>
-        {({ width }) => (
-          <Inner width={width} height={height} ventas={ventas} acum={acum} baseDate={baseDate} total={total} />
-        )}
-      </ParentSize>
-    </div>
-  );
-}
-
-function Inner({
-  width,
-  height,
-  ventas,
-  acum,
-  baseDate,
-  total,
-}: {
-  width: number;
-  height: number;
-  ventas: number[];
-  acum: number[];
-  baseDate: string | null;
-  total: number;
-}) {
-  const iw = Math.max(0, width - M.left - M.right);
-  const ih = Math.max(0, height - M.top - M.bottom);
   const n = ventas.length;
 
-  const data: Pt[] = useMemo(
-    () => ventas.map((v, m) => ({ m, ventas: v, acum: acum[m] ?? 0 })),
-    [ventas, acum],
-  );
-  const maxVentas = useMemo(() => Math.max(1, ...ventas), [ventas]);
+  const buildOption = useCallback(
+    (t: ChartTokens): EChartsOption => {
+      const maxVentas = Math.max(1, ...ventas);
+      const barData = ventas.map((v, m) => [m, v]);
+      const lineData = acum.map((v, m) => [m, v ?? 0]);
 
-  const xScale = useMemo(() => scaleLinear({ domain: [0, Math.max(1, n - 1)], range: [0, iw] }), [n, iw]);
-  const yBars = useMemo(
-    () => scaleLinear({ domain: [0, maxVentas * 1.1], range: [ih, 0], nice: true }),
-    [maxVentas, ih],
-  );
-  const yLine = useMemo(
-    () => scaleLinear({ domain: [0, Math.max(1, total)], range: [ih, 0] }),
-    [total, ih],
-  );
-  const ticks = useMemo(() => yearTicks(baseDate, n), [baseDate, n]);
-  const hoy = useMemo(() => mesesHastaHoy(baseDate), [baseDate]);
-  const bw = Math.max(1, (iw / Math.max(1, n)) * 0.62);
-
-  const { tooltipData, tooltipLeft, tooltipTop, showTooltip, hideTooltip } = useTooltip<Pt>();
-  const onMove = useCallback(
-    (e: React.MouseEvent<SVGRectElement>) => {
-      const p = localPoint(e);
-      if (!p) return;
-      const mi = Math.round(xScale.invert(p.x - M.left));
-      const d = data[Math.max(0, Math.min(n - 1, mi))];
-      if (!d) return;
-      showTooltip({ tooltipData: d, tooltipLeft: M.left + xScale(d.m), tooltipTop: M.top + yLine(d.acum) });
+      return {
+        backgroundColor: "transparent",
+        animationDuration: 420,
+        grid: { left: 36, right: 40, top: 20, bottom: 28 },
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: t.tooltipBg,
+          borderColor: t.tooltipBorder,
+          borderWidth: 1,
+          textStyle: { color: t.tooltipText, fontSize: 12 },
+          padding: [6, 10],
+          axisPointer: { type: "line", lineStyle: { color: t.axisLabel, opacity: 0.3 } },
+          formatter: (raw) => {
+            const arr = raw as unknown as AxisParam[];
+            const m = arr[0]?.axisValue ?? 0;
+            const vt = arr.find((p) => p.seriesName === "Unidades/mes")?.value?.[1];
+            const ac = arr.find((p) => p.seriesName === "Acumulado")?.value?.[1];
+            return (
+              `<div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:.04em;color:${t.axisLabel}">${monthLabel(baseDate, m)}</div>` +
+              `<div style="margin-top:2px;font-weight:600" class="num">${fmtInt(vt ?? 0)} und/mes</div>` +
+              `<div style="color:${t.axisLabel}" class="num">${fmtInt(ac ?? 0)} acum.</div>`
+            );
+          },
+        },
+        xAxis: timeXAxis(baseDate, n, t),
+        yAxis: [
+          {
+            type: "value",
+            min: 0,
+            max: maxVentas * 1.1,
+            splitNumber: 4,
+            axisLabel: { color: t.axisLabel, fontSize: 10.5 },
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { lineStyle: { color: t.grid, opacity: 0.7 } },
+          },
+          {
+            type: "value",
+            min: 0,
+            max: Math.max(1, total),
+            splitNumber: 4,
+            axisLabel: { color: t.axisLabel, fontSize: 10.5 },
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+          },
+        ],
+        series: [
+          {
+            name: "Unidades/mes",
+            type: "bar",
+            yAxisIndex: 0,
+            data: barData,
+            barWidth: "62%",
+            itemStyle: { color: rgba(t.primary, 0.32), borderRadius: 1.5 },
+            z: 1,
+          },
+          {
+            name: "Acumulado",
+            type: "line",
+            yAxisIndex: 1,
+            data: lineData,
+            smooth: true,
+            showSymbol: false,
+            lineStyle: { color: t.primary, width: 2.25 },
+            z: 2,
+            markLine: hoyMarkLine(baseDate, n, t),
+          },
+        ],
+      };
     },
-    [data, n, xScale, yLine, showTooltip],
+    [ventas, acum, total, baseDate, n],
   );
 
-  if (width < 10) return null;
-
-  return (
-    <div className="relative">
-      <svg width={width} height={height}>
-        <Group left={M.left} top={M.top}>
-          <GridRows scale={yBars} width={iw} numTicks={4} stroke="var(--rule)" strokeOpacity={0.55} />
-
-          {data.map((d) =>
-            d.ventas > 0 ? (
-              <Bar
-                key={d.m}
-                x={xScale(d.m) - bw / 2}
-                y={yBars(d.ventas)}
-                width={bw}
-                height={Math.max(0, ih - yBars(d.ventas))}
-                rx={1.5}
-                fill="var(--primary)"
-                fillOpacity={0.32}
-              />
-            ) : null,
-          )}
-
-          {/* Acumulado (eje derecho) */}
-          <LinePath data={data} x={(d) => xScale(d.m)} y={(d) => yLine(d.acum)} curve={curveMonotoneX} stroke="var(--primary)" strokeWidth={2.25} />
-
-          {hoy != null && hoy >= 0 && hoy <= Math.max(1, n - 1) ? (
-            <TodayMarker x={xScale(hoy)} ih={ih} iw={iw} />
-          ) : null}
-
-          <AxisLeft
-            scale={yBars}
-            numTicks={4}
-            stroke="transparent"
-            tickStroke="transparent"
-            tickLabelProps={() => ({ fill: "var(--muted-foreground)", fontSize: 10.5, textAnchor: "end", dx: -3, dy: 3 })}
-          />
-          <AxisRight
-            left={iw}
-            scale={yLine}
-            numTicks={4}
-            stroke="transparent"
-            tickStroke="transparent"
-            tickLabelProps={() => ({ fill: "var(--muted-foreground)", fontSize: 10.5, textAnchor: "start", dx: 3, dy: 3 })}
-          />
-          <AxisBottom
-            top={ih}
-            scale={xScale}
-            tickValues={ticks.map((t) => t.m)}
-            tickFormat={(v) => ticks.find((t) => t.m === (v as number))?.label ?? ""}
-            stroke="var(--rule)"
-            tickStroke="transparent"
-            tickLabelProps={() => ({ fill: "var(--muted-foreground)", fontSize: 11, textAnchor: "middle", dy: 2 })}
-          />
-        </Group>
-
-        {tooltipData ? (
-          <Group left={M.left} top={M.top}>
-            <Line from={{ x: xScale(tooltipData.m), y: 0 }} to={{ x: xScale(tooltipData.m), y: ih }} stroke="var(--foreground)" strokeOpacity={0.18} />
-            <circle cx={xScale(tooltipData.m)} cy={yLine(tooltipData.acum)} r={4} fill="var(--primary)" stroke="var(--card)" strokeWidth={2} />
-          </Group>
-        ) : null}
-        <Bar x={M.left} y={M.top} width={iw} height={ih} fill="transparent" onMouseMove={onMove} onMouseLeave={hideTooltip} />
-      </svg>
-
-      {tooltipData ? (
-        <TooltipWithBounds
-          left={tooltipLeft}
-          top={tooltipTop}
-          style={{
-            position: "absolute",
-            background: "var(--popover)",
-            color: "var(--popover-foreground)",
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            padding: "6px 10px",
-            boxShadow: "var(--shadow-card)",
-            pointerEvents: "none",
-          }}
-        >
-          <div className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-            {monthLabel(baseDate, tooltipData.m)}
-          </div>
-          <div className="num mt-0.5 text-sm font-semibold">{fmtInt(tooltipData.ventas)} und/mes</div>
-          <div className="num text-xs text-muted-foreground">{fmtInt(tooltipData.acum)} acum.</div>
-        </TooltipWithBounds>
-      ) : null}
-    </div>
-  );
+  return <EChart buildOption={buildOption} height={height} />;
 }
