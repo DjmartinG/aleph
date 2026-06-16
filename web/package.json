@@ -9,17 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@visx/axis": "^4.0.0",
-    "@visx/curve": "^4.0.0",
-    "@visx/event": "^4.0.0",
-    "@visx/gradient": "^4.0.0",
-    "@visx/grid": "^4.0.0",
-    "@visx/group": "^4.0.0",
-    "@visx/responsive": "^4.0.0",
-    "@visx/scale": "^4.0.0",
-    "@visx/shape": "^4.0.0",
-    "@visx/text": "^4.0.0",
-    "@visx/tooltip": "^4.0.0",
     "clsx": "^2.1.1",
     "echarts": "^6.1.0",
     "lucide-react": "^1.18.0",
