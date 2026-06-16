@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import type { EChartsOption } from "echarts";
 import { EChart } from "@/components/charts/echart";
 import type { ChartTokens } from "@/lib/chart-tokens";
-import { timeXAxis, hoyMarkLine } from "@/lib/echarts-timeline";
+import { timeXAxis, hoyMarkLine, timeDataZoom } from "@/lib/echarts-timeline";
 import { fmtInt } from "@/lib/format";
 import { monthLabel } from "@/lib/timeline";
 
@@ -35,6 +35,7 @@ export function AbsorptionChart({
   height?: number;
 }) {
   const n = ventas.length;
+  const h = height + 28; // +slider de zoom temporal
 
   const buildOption = useCallback(
     (t: ChartTokens): EChartsOption => {
@@ -45,7 +46,8 @@ export function AbsorptionChart({
       return {
         backgroundColor: "transparent",
         animationDuration: 420,
-        grid: { left: 36, right: 40, top: 20, bottom: 28 },
+        grid: { left: 36, right: 40, top: 20, bottom: 50 },
+        dataZoom: [timeDataZoom(t)],
         tooltip: {
           trigger: "axis",
           backgroundColor: t.tooltipBg,
@@ -116,5 +118,5 @@ export function AbsorptionChart({
     [ventas, acum, total, baseDate, n],
   );
 
-  return <EChart buildOption={buildOption} height={height} />;
+  return <EChart buildOption={buildOption} height={h} exportName="aleph-absorcion" />;
 }
