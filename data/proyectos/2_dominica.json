@@ -105,9 +105,9 @@
     "monto_cc_pct": 0.8,
     "tir_apalancada_ref": 0.2183,
     "wacc": {
-      "beta_us": 1.29,
-      "tax_us": 13.3,
-      "de_us": 21.56,
+      "beta_us": 0.91,
+      "tax_us": 16.99,
+      "de_us": 21.34,
       "tax_col": 33.0,
       "de_col": 233.3,
       "rf": 4.3,

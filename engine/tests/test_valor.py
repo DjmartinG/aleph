@@ -44,7 +44,7 @@ def test_vpn_al_wacc_periodicidad():
 # ----------------------------- motor: ilustrativos (corren en CI) -----------------------------
 
 def test_dominica_ilustrativo_genera_valor():
-    """Dominica ilustrativa: TIR proyecto ≈ 22,7% > WACC 18,71% → GENERA valor (crea_valor=True)."""
+    """Dominica ilustrativa: TIR proyecto ≈ 22,7% > WACC 17,66% → GENERA valor (crea_valor=True)."""
     par = json.load(open(os.path.join(DATA, "proyectos", "2_dominica.json"), encoding="utf-8"))
     ap = calcular(par)["apalancamiento"]
     assert ap["crea_valor"] is True
@@ -72,12 +72,13 @@ def test_navarra_real_genera_valor_y_dorado_intacto():
     # DORADO INTACTO (el veredicto es aditivo, no mueve estas cifras):
     assert ap["tir_proyecto"] == pytest.approx(0.375975, abs=1e-4)   # 37,60%
     assert ap["vpn_proyecto"] == pytest.approx(18280687.67, rel=1e-5)  # VPN@TIO 18,28 mil M
-    # VEREDICTO: TIR 37,60% > WACC 18,71% → GENERA; spread ≈ +18,9 pp; valor creado positivo.
+    # VEREDICTO: TIR 37,60% > WACC 17,66% → GENERA; spread ≈ +19,9 pp; valor creado positivo.
+    # (re-baseline beta→Homebuilding 2026-06-16: WACC 18,71%→17,66%; el spread del EVA sube en consecuencia.)
     assert ap["crea_valor"] is True
     assert ap["spread_valor"] == pytest.approx(0.375975 - ap["wacc"], abs=1e-4)
-    assert ap["spread_valor"] == pytest.approx(0.1888, abs=2e-3)
+    assert ap["spread_valor"] == pytest.approx(0.1994, abs=2e-3)
     assert ap["valor_creado"] > 0
-    # El valor_creado @WACC es MENOR que el VPN@TIO (WACC 18,71% > TIO 15%) pero positivo.
+    # El valor_creado @WACC es MENOR que el VPN@TIO (WACC 17,66% > TIO 15%) pero positivo.
     assert ap["valor_creado"] < ap["vpn_proyecto"]
 
 

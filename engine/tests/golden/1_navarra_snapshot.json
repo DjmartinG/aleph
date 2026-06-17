@@ -107,9 +107,9 @@
       "monto_cc_pct": 0.8,
       "tir_apalancada_ref": 0.2,
       "wacc": {
-        "beta_us": 1.29,
-        "tax_us": 13.3,
-        "de_us": 21.56,
+        "beta_us": 0.91,
+        "tax_us": 16.99,
+        "de_us": 21.34,
         "tax_col": 33.0,
         "de_col": 233.3,
         "rf": 4.3,
@@ -782,8 +782,8 @@
       "intereses_total": 18283359.879940007,
       "max_caja": -127760944.05392078,
       "tir_proyecto": 0.07303158679509392,
-      "vpn_proyecto": -12124172.890992224,
-      "wacc": 0.18712590078337396,
+      "vpn_proyecto": -11189408.811155938,
+      "wacc": 0.17661362454523755,
       "tir_apalancada_ref": 0.2
     },
     "escenarios": {
@@ -6169,7 +6169,7 @@
       "tir_apalancada_ref": 0.2,
       "vpn_proyecto": 7882913.890744609,
       "tio": 0.15,
-      "wacc": 0.18712590078337396,
+      "wacc": 0.17661362454523755,
       "anual": {
         "2026": -23730401.72890707,
         "2027": -8812518.795171829,
@@ -6181,7 +6181,7 @@
       "anio0": 2026,
       "payback_mes": 58,
       "fiducia_real": false,
-      "valor_creado": 3563029.592781683,
+      "valor_creado": 4713382.727156099,
       "crea_valor": null,
       "spread_valor": null
     }
