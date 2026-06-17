@@ -57,3 +57,17 @@ def test_wacc_estructura_y_estabilidad():
     assert isinstance(wacc, float)
     assert det["wacc"] == pytest.approx(wacc)
     assert 0.0 < wacc < 1.0      # un WACC sensato (entre 0% y 100%)
+
+
+def test_wacc_ancla_rebaseline_beta_homebuilding():
+    """Ancla del re-baseline (2026-06-16, ver docs/acta_rebaseline_beta_homebuilding_20260616.md):
+    beta_us recalibrada al sector Homebuilding de Damodaran (1,29→0,91; de_us 21,56→21,34; tax_us
+    13,30→16,99) → WACC 18,71% → **17,66%**. rp se mantiene en 3,43% (BB−, decisión del 14-jun). El
+    WACC es de exhibición; las decisiones se descuentan @TIO (este ancla NO toca TIR/VPN@TIO)."""
+    import json
+    import os
+    raiz = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
+    w = json.load(open(os.path.join(raiz, "proyectos", "2_dominica.json"), encoding="utf-8"))["financiero"]["wacc"]
+    assert w["beta_us"] == 0.91 and w["de_us"] == 21.34 and w["tax_us"] == 16.99
+    assert w["rp"] == 3.43        # riesgo país sin cambio (BB−, conservador)
+    assert finanzas.calcular_wacc(w) == pytest.approx(0.17661, abs=1e-4)   # 17,66%

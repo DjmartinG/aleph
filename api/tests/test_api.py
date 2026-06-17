@@ -109,11 +109,11 @@ def test_schedule_fiel_al_motor():
 
 @pytest.mark.skipif(NAV not in SLUGS, reason="Navarra no disponible")
 def test_wacc_fiel_al_motor():
-    """El build-up CAPM expone lo que el motor calcula; WACC Navarra ~18.71% (beta_d BBB + rp BB-, jun-2026)."""
+    """El build-up CAPM expone lo que el motor calcula; WACC Navarra ~17.66% (beta Homebuilding 0.91 + rp BB-)."""
     w = client.get(f"/v1/scenarios/{NAV}:base/wacc").json()
     assert w["disponible"] is True
-    # WACC Navarra ~18.71% (beta_d 0.38 grado-inversión + rp 3.43% Colombia BB-; acta wacc2_betad_rp 20260614).
-    assert 0.18 <= w["wacc"] <= 0.19
+    # WACC Navarra ~17.66% (re-baseline beta→Homebuilding, acta beta_homebuilding 20260616; rp 3.43% sin cambio).
+    assert 0.17 <= w["wacc"] <= 0.18
     # Cadena coherente: reapalancada > desapalancada > 0; Ke COP > Ke USD (riesgo país + inflación).
     assert w["beta_l"] > w["beta_u"] > 0
     assert w["ke_cop"] > w["ke_usd"]

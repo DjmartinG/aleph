@@ -10,7 +10,7 @@ Qué hace por cada proyecto real (navarra/dominica/torres = los 3 que están en 
   1. Lee el `par` ACTUAL del JSON REAL local (`data/proyectos_privados/{slug}_REAL.json`).
   2. Valida con `schema.parse` (la MISMA compuerta del motor que el ETL y la API).
   3. GATE DORADO: recalcula `calcular(par)` y lo COMPARA contra el golden REAL local (tol 0.1%) +
-     ancla dura (WACC 18.71% en los 3; Navarra TIR proyecto 37.60%). Si algo no cuadra → ABORTA TODO
+     ancla dura (WACC 17.66% en los 3; Navarra TIR proyecto 37.60%). Si algo no cuadra → ABORTA TODO
      (no escribe nada): nunca empuja un `par` corrupto a prod.
   4. IDEMPOTENTE: si el snapshot vigente ya tiene este `par` (mismo hash) → SKIP.
   5. Inserta `scenarios` v(max+1) status='approved' snapshot=par (respeta inmutabilidad: INSERT, no UPDATE).
@@ -54,7 +54,7 @@ PRIV = ROOT / "data" / "proyectos_privados"
 GOLDEN = ROOT / "engine" / "tests" / "golden"
 
 # Anclas DURAS del re-baseline (belt-and-suspenders sobre la comparación contra el golden).
-WACC_OBJETIVO = 0.187126          # 18.71% en los 3 (mismo bloque WACC)
+WACC_OBJETIVO = 0.176614          # 17.66% en los 3 (re-baseline beta→Homebuilding 2026-06-16)
 NAVARRA_TIR_PROYECTO = 0.375975   # 37.60% — el ancla headline del dorado
 
 # Campos del dorado que se comparan calcular(par) vs golden (apalancamiento).
@@ -137,8 +137,8 @@ def gate_dorado(exigir_golden: bool = False) -> dict[str, dict]:
 
         # (b) anclas duras del re-baseline
         if not _aprox(ap.get("wacc"), WACC_OBJETIVO, tol_rel=3e-3):
-            sys.exit(f"ABORT {slug}: WACC {ap.get('wacc')} != objetivo {WACC_OBJETIVO} (18.71%). "
-                     f"¿Los JSON locales tienen kd_us=5.9 y rp=3.43? NO se escribe nada.")
+            sys.exit(f"ABORT {slug}: WACC {ap.get('wacc')} != objetivo {WACC_OBJETIVO} (17.66%). "
+                     f"¿Los JSON locales tienen beta_us=0.91 (Homebuilding), kd_us=5.9 y rp=3.43? NO se escribe nada.")
         if slug == "1_navarra_REAL" and not _aprox(ap.get("tir_proyecto"), NAVARRA_TIR_PROYECTO):
             sys.exit(f"ABORT navarra: TIR proyecto {ap.get('tir_proyecto')} != dorado {NAVARRA_TIR_PROYECTO}.")
 
@@ -234,10 +234,10 @@ def main() -> None:
         print("\n*** LISTO el refresco del DATO (nueva versión approved de scenarios). ***")
         print("!! IMPORTANTE — el API RECALCULA EN VIVO con el motor desplegado (NO usa caché). Si el")
         print("   REDEPLOY del API (motor M1-M8, SHA de main) NO está hecho, prod queda en estado")
-        print("   FRANKENSTEIN: el WACC 18.71% sale bien (va explícito en el dato) PERO tir_equity y la")
+        print("   FRANKENSTEIN: el WACC 17.66% sale bien (va explícito en el dato) PERO tir_equity y la")
         print("   exención VIS se recalculan con código VIEJO. ORDEN CORRECTO: redeploy PRIMERO, refresco")
         print("   después (así nunca hay cifras de decisión viejas). Si ya redeployaste, estás OK.")
-        print("   Verifica el WACC 18.71% en /web → Costo de capital (logueado; /v1 no es público).")
+        print("   Verifica el WACC 17.66% en /web → Costo de capital (logueado; /v1 no es público).")
 
 
 if __name__ == "__main__":
