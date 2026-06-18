@@ -264,6 +264,12 @@ def portafolio(items) -> dict:
     return {"consolidado": consolidado, "embudo": embudo, "items": pipe}
 
 
+def tesoreria(items) -> dict:
+    """Tesorería consolidada del portafolio (§5 GET /portfolio/tesoreria): caja y financiación de TODOS
+    los proyectos alineadas en el tiempo. Expone lo que `portfolio.tesoreria` agrega; no recalcula."""
+    return portfolio.tesoreria(items)
+
+
 def run(par: dict, req: dict) -> dict:
     """Monte Carlo (§5 POST /scenarios/{id}/run): el único cálculo intensivo. No muta `par`."""
     tipo = (req or {}).get("tipo", "tir")

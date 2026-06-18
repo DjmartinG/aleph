@@ -125,6 +125,22 @@ def test_wacc_fiel_al_motor():
     assert abs(w["wacc"] - R["apalancamiento"]["wacc"]) < 1e-9
 
 
+def test_tesoreria_consolidada():
+    """Tesorería consolidada del portafolio: caja + financiación de todos los proyectos en el tiempo."""
+    from aleph_api import build
+    j = client.get("/v1/portfolio/tesoreria").json()
+    if not j.get("disponible"):
+        pytest.skip("ningún proyecto con cronograma datado")
+    assert len(j["caja"]) == j["horizonte"] and len(j["credito"]) == j["horizonte"]
+    assert j["base_date"] and j["n"] >= 1
+    assert j["exposicion_maxima"]["valor"] <= 0      # valle de caja = financiación (negativo)
+    assert j["credito_maximo"]["valor"] >= 0
+    # Fidelidad: la API expone EXACTAMENTE lo que el motor agrega (no recalcula).
+    t = build.tesoreria(build.items_portafolio())
+    assert j["exposicion_maxima"]["valor"] == pytest.approx(t["exposicion_maxima"]["valor"])
+    assert j["credito_maximo"]["valor"] == pytest.approx(t["credito_maximo"]["valor"])
+
+
 def test_404_proyecto_inexistente():
     assert client.get("/v1/projects/no_existe").status_code == 404
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404

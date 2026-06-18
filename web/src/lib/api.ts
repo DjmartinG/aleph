@@ -106,6 +106,30 @@ export async function getPortfolio(): Promise<Portfolio> {
   return res.json() as Promise<Portfolio>;
 }
 
+// ---------- Tesorería consolidada del portafolio (Pilar 2) ----------
+
+export interface Tesoreria {
+  disponible: boolean;
+  base_date: string;
+  horizonte: number;
+  n: number;
+  /** Posición de caja consolidada (miles COP) por mes desde base_date. */
+  caja: number[];
+  /** Saldo de crédito consolidado (miles COP) por mes. */
+  credito: number[];
+  /** Valle de caja = máxima necesidad de caja combinada (valor negativo) + su mes. */
+  exposicion_maxima: { mes: number; valor: number };
+  credito_maximo: { mes: number; valor: number };
+  por_proyecto: { nombre: string; caja: number[] }[];
+}
+
+/** GET /v1/portfolio/tesoreria. Degrada a `null` si el API aún no lo expone (sin redeploy). */
+export async function getTesoreria(): Promise<Tesoreria | null> {
+  const res = await apiFetch(`/v1/portfolio/tesoreria`);
+  if (!res.ok) return null;
+  return res.json() as Promise<Tesoreria>;
+}
+
 // ---------- Ficha de proyecto + resultados ----------
 
 export interface Meta {

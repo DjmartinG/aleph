@@ -88,6 +88,14 @@ def get_portfolio(estado: str | None = Query(default=None)):
     return payload
 
 
+@v1.get("/portfolio/tesoreria")
+def get_portfolio_tesoreria():
+    """Tesorería CONSOLIDADA del portafolio: la posición de caja y la financiación (crédito) de TODOS
+    los proyectos, alineadas en un calendario común y sumadas mes a mes. Responde la pregunta del CEO:
+    ¿cuánta caja necesita la empresa a la vez y cuándo, y cuánto crédito carga? Aditivo (no recalcula)."""
+    return build.tesoreria(build.items_portafolio())
+
+
 @v1.get("/projects/{slug}")
 def get_project(slug: str):
     par, R = _par_o_404(slug)

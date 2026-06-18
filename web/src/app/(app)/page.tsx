@@ -1,25 +1,36 @@
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { Plus } from "lucide-react";
-import { getPortfolio, type Portfolio } from "@/lib/api";
+import { getPortfolio, getTesoreria, type Portfolio, type Tesoreria } from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
-import { fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
+import { fmtCop, fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
+import { monthLabel } from "@/lib/timeline";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { ValorBanner } from "@/components/valor-banner";
 import { FunnelBar } from "@/components/funnel-bar";
 import { PortfolioTable } from "@/components/portfolio-table";
 import { ValueMap } from "@/components/charts/value-map";
 import { ProjectCompare } from "@/components/charts/project-compare";
+import { CashFlowChart, type CashPoint } from "@/components/charts/cash-flow-chart";
+import { MiniStat } from "@/components/mini-stat";
 import { SectionTitle } from "@/components/section-title";
 
 export default async function Page() {
   let data: Portfolio | null = null;
+  let tesoreria: Tesoreria | null = null;
   let errMsg: string | null = null;
   try {
     data = await getPortfolio();
   } catch (e) {
     unstable_rethrow(e); // re-lanza el redirect a /login (401 = sesión expirada) y notFound; deja pasar errores reales
     errMsg = e instanceof Error ? e.message : "Error desconocido";
+  }
+  // Tesorería consolidada (opcional): degrada limpio si el API aún no la expone (sin redeploy).
+  try {
+    tesoreria = await getTesoreria();
+  } catch (e) {
+    unstable_rethrow(e);
+    tesoreria = null;
   }
   const admin = await isAdminUser();
 
@@ -49,12 +60,12 @@ export default async function Page() {
         </div>
       </header>
 
-      {errMsg ? <ErrorPanel message={errMsg} /> : data ? <Dashboard data={data} /> : null}
+      {errMsg ? <ErrorPanel message={errMsg} /> : data ? <Dashboard data={data} tesoreria={tesoreria} /> : null}
     </div>
   );
 }
 
-function Dashboard({ data }: { data: Portfolio }) {
+function Dashboard({ data, tesoreria }: { data: Portfolio; tesoreria: Tesoreria | null }) {
   const c = data.consolidado;
   const stats: StatItem[] = [
     {
@@ -92,6 +103,39 @@ function Dashboard({ data }: { data: Portfolio }) {
             extra={`${c.n_genera}/${c.n_evaluados}`}
           />
         </div>
+      ) : null}
+
+      {/* Tesorería consolidada (Pilar 2): la caja y la financiación de TODOS los proyectos en el
+          tiempo. Degrada limpio si el API aún no expone el endpoint. */}
+      {tesoreria?.disponible ? (
+        <section className="mt-10">
+          <SectionTitle right="todos los proyectos en el tiempo">Tesorería consolidada</SectionTitle>
+          <div className="rounded-[var(--radius-data)] border bg-card p-4">
+            <div className="mb-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+              <MiniStat
+                label="Necesidad máx. de caja"
+                value={fmtCop(Math.abs(tesoreria.exposicion_maxima.valor))}
+                note={`combinada · pico ${monthLabel(tesoreria.base_date, tesoreria.exposicion_maxima.mes)}`}
+              />
+              <MiniStat
+                label="Crédito máx. combinado"
+                value={fmtCop(tesoreria.credito_maximo.valor)}
+                note={`pico ${monthLabel(tesoreria.base_date, tesoreria.credito_maximo.mes)}`}
+              />
+              <MiniStat label="Proyectos" value={fmtInt(tesoreria.n)} note="con cronograma datado" />
+            </div>
+            <CashFlowChart
+              data={tesoreria.caja.map<CashPoint>((v, m) => ({ m, acum: v, credito: tesoreria.credito[m] ?? 0 }))}
+              maxExposure={{ m: tesoreria.exposicion_maxima.mes, value: tesoreria.exposicion_maxima.valor }}
+              baseDate={tesoreria.base_date}
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              Caja y crédito de todos los proyectos sumados mes a mes. La necesidad combinada es{" "}
+              <strong className="text-foreground">menor</strong> que sumar los picos individuales: no
+              coinciden en el tiempo.
+            </p>
+          </div>
+        </section>
       ) : null}
 
       <section className="mt-10">

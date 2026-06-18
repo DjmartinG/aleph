@@ -88,6 +88,74 @@ def puntos_burbujas(items):
     return pts
 
 
+def tesoreria(items):
+    """Tesorería CONSOLIDADA del portafolio: la posición de CAJA y la FINANCIACIÓN (crédito) de TODOS
+    los proyectos, alineados en el eje GLOBAL (epoch ene-2022, igual que `consolidar`) y sumadas mes a
+    mes. Responde la pregunta de tesorería del CEO: ¿cuánta caja necesita la EMPRESA a la vez (sumando
+    proyectos) y cuándo, y cuánto crédito carga en el tiempo?
+
+    ADITIVO: agrega las series mensuales que cada `calcular()` ya produjo (`operativo`, `saldo_credito`);
+    NO recalcula nada. La caja por proyecto en el eje global es la suma acumulada del `operativo`
+    desplazado por el offset de su `base` (IV más temprano): 0 antes de arrancar, su valor final tras
+    terminar. `items` = [(slug, par, R)]. Solo proyectos con cronograma datado (hitos)."""
+    EPOCH, N = 2022, 240
+    saldo = [0.0] * N
+    por = []
+    for slug, _par, R in items:
+        ap = R.get("apalancamiento") or {}
+        h = R.get("hitos") or {}
+        o = ap.get("operativo") or []
+        s = ap.get("saldo_credito") or []
+        if not h or not o:
+            continue
+        base = min(h[c]["IV"] for c in h)
+        off = (base.year - EPOCH) * 12 + (base.month - 1)
+        caja_p = [0.0] * N
+        acc = 0.0
+        for g in range(N):
+            if g < off:
+                caja_p[g] = 0.0
+            elif g - off < len(o):
+                acc += o[g - off]
+                caja_p[g] = acc
+            else:
+                caja_p[g] = acc                                   # terminado → queda en el valor final
+        for m in range(len(s)):
+            if 0 <= off + m < N:
+                saldo[off + m] += s[m]
+        nombre = (R.get("meta") or {}).get("nombre", slug)
+        por.append({"nombre": nombre, "caja": caja_p})
+    if not por:
+        return {"disponible": False}
+
+    caja = [sum(p["caja"][g] for p in por) for g in range(N)]
+    # Ventana de tesorería = la fase de DÉFICIT/FINANCIACIÓN (la pregunta del CEO), no la cola de
+    # escrituración tardía de un proyecto. Inicio: primer mes con déficit de caja o financiación
+    # material; fin: hasta que la caja SALE del déficit (se recupera) + buffer. Series en miles COP.
+    UMB = 1e6  # 1 mil M COP
+    arranque = [g for g in range(N) if caja[g] < -UMB or saldo[g] > UMB]
+    deficit = [g for g in range(N) if caja[g] < -UMB]
+    ini = min(arranque) if arranque else 0
+    fin = max(ini + 1, min(N, (max(deficit) + 8) if deficit else ini + 12))
+
+    def _fecha(g):
+        return f"{EPOCH + g // 12:04d}-{g % 12 + 1:02d}-01"
+
+    caja_w, cred_w = caja[ini:fin], saldo[ini:fin]
+    trough = min(range(len(caja_w)), key=lambda t: caja_w[t]) if caja_w else 0
+    peak = max(range(len(cred_w)), key=lambda t: cred_w[t]) if cred_w else 0
+    return {
+        "disponible": True,
+        "base_date": _fecha(ini),               # mes 0 de las series recortadas (calendario)
+        "horizonte": fin - ini,
+        "n": len(por),
+        "caja": caja_w, "credito": cred_w,
+        "exposicion_maxima": {"mes": trough, "valor": caja_w[trough] if caja_w else 0.0},
+        "credito_maximo": {"mes": peak, "valor": cred_w[peak] if cred_w else 0.0},
+        "por_proyecto": [{"nombre": p["nombre"], "caja": p["caja"][ini:fin]} for p in por],
+    }
+
+
 def pipeline(items):
     """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline y las
     tarjetas del Portafolio. Lógica idéntica a `app.pipeline_datos`."""

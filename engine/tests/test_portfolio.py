@@ -41,6 +41,27 @@ def test_consolidar_cuadra_con_la_suma():
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
+def test_tesoreria_consolidada_cuadra_y_es_coherente():
+    items = _items()
+    t = portfolio.tesoreria(items)
+    if not t.get("disponible"):
+        pytest.skip("ningún proyecto del set tiene cronograma datado")
+    H = t["horizonte"]
+    assert len(t["caja"]) == H and len(t["credito"]) == H
+    # Reconciliación: la suma de la caja por proyecto == la caja consolidada (en cada mes).
+    for g in range(0, H, max(1, H // 10)):
+        assert sum(p["caja"][g] for p in t["por_proyecto"]) == pytest.approx(t["caja"][g], abs=1.0)
+    # Exposición = valle de caja (≤ 0, financiación); crédito ≥ 0.
+    assert t["exposicion_maxima"]["valor"] == pytest.approx(min(t["caja"]))
+    assert t["exposicion_maxima"]["valor"] <= 0
+    assert t["credito_maximo"]["valor"] == pytest.approx(max(t["credito"]))
+    assert t["credito_maximo"]["valor"] >= 0
+    # El crédito CONSOLIDADO ≤ suma de los picos individuales (los picos no coinciden en el tiempo).
+    suma_picos = sum((R.get("apalancamiento") or {}).get("credito_max", 0) or 0 for _, _, R in items)
+    assert t["credito_maximo"]["valor"] <= suma_picos + 1.0
+
+
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
 def test_burbujas_y_pipeline_estructura():
     items = _items()
     pts = portfolio.puntos_burbujas(items)
