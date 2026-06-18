@@ -227,6 +227,32 @@ export async function getConcentracion(): Promise<Concentracion | null> {
   return res.json() as Promise<Concentracion>;
 }
 
+// ---------- Cabina del CEO: salud + alertas (Pilar 2) ----------
+
+export interface Alerta {
+  nivel: "critico" | "alerta" | "info";
+  /** Enum estable; la web mapea tipo → mensaje en español. */
+  tipo: string;
+  datos: Record<string, unknown>;
+}
+
+export interface Salud {
+  n_proyectos: number;
+  valor_creado: number;
+  crea_valor: boolean | null;
+  n_genera: number;
+  n_evaluados: number;
+  alertas: Alerta[];
+  resumen: { critico: number; alerta: number; info: number };
+}
+
+/** GET /v1/portfolio/salud. Degrada a `null` si el API aún no lo expone (sin redeploy). */
+export async function getSalud(): Promise<Salud | null> {
+  const res = await apiFetch(`/v1/portfolio/salud`);
+  if (!res.ok) return null;
+  return res.json() as Promise<Salud>;
+}
+
 // ---------- Ficha de proyecto + resultados ----------
 
 export interface Meta {

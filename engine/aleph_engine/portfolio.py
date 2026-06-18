@@ -313,6 +313,69 @@ def concentracion(items):
     return {"total_ventas": total, "n": len(filas), "dimensiones": dims}
 
 
+def salud(items):
+    """Cabina del CEO: la SALUD del portafolio + ALERTAS accionables, sintetizando las otras vistas
+    (valor/EVA, concentración, resiliencia ante estrés, eficiencia de capital) en señales priorizadas.
+    Devuelve las alertas ESTRUCTURADAS (`nivel` + `tipo` enum estable + `datos`) — el TEXTO en español
+    lo pone la web (el motor queda UI-agnóstico). ADITIVO: no toca `calcular()`. `items` = [(slug,par,R)].
+
+    Niveles: 'critico' (rojo) > 'alerta' (ámbar) > 'info' (neutro/positivo)."""
+    cap = capital(items)
+    conc = concentracion(items)
+    vc_total = cap["valor_creado_total"]
+    n_eval = sum(1 for f in cap["filas"] if f["crea_valor"] is not None)
+    crea = (vc_total > 0) if n_eval else None
+    destruyen = [f["nombre"] for f in cap["filas"] if f["crea_valor"] is False]
+    greenfield = [f["nombre"] for f in cap["filas"] if f["crea_valor"] is None]
+
+    alertas = []
+    # 1. CRÍTICO — proyectos que DESTRUYEN valor sobre el WACC.
+    if destruyen:
+        alertas.append({"nivel": "critico", "tipo": "destruye_valor",
+                        "datos": {"proyectos": destruyen, "n": len(destruyen)}})
+    # 2. ALERTA — concentración: la dimensión con el líder más dominante, si pesa > 50%.
+    peor = None
+    for d in conc["dimensiones"]:
+        if d["categorias"]:
+            lid = d["categorias"][0]
+            if peor is None or lid["share"] > peor[1]["share"]:
+                peor = (d, lid)
+    if peor and peor[1]["share"] > 0.5:
+        d, lid = peor
+        alertas.append({"nivel": "alerta", "tipo": "concentracion",
+                        "datos": {"dimension": d["nombre"], "clave": d["clave"],
+                                  "categoria": lid["categoria"], "share": lid["share"],
+                                  "n_efectivo": d["n_efectivo"], "n_categorias": d["n_categorias"]}})
+    # 3. ALERTA — resiliencia: bajo recesión severa, ¿la caja queda en déficit al cierre?
+    try:
+        est = estres_tesoreria(items, [{"nombre": "Recesión severa", "precio": -0.15,
+                                        "costo": 0.05, "ritmo": -0.30}])
+        if est.get("disponible") and est["escenarios"]:
+            sev = est["escenarios"][0]
+            cierre = sev["caja"][-1] if sev["caja"] else 0.0
+            if cierre < -1e6:
+                alertas.append({"nivel": "alerta", "tipo": "resiliencia",
+                                "datos": {"caja_cierre": cierre,
+                                          "valle": sev["exposicion_maxima"]["valor"],
+                                          "delta_valle": sev["delta_exposicion"]}})
+    except Exception:                                    # noqa: BLE001 — la alerta es best-effort
+        pass
+    # 4. INFO — proyectos greenfield (sin veredicto de valor aún).
+    if greenfield:
+        alertas.append({"nivel": "info", "tipo": "greenfield",
+                        "datos": {"proyectos": greenfield, "n": len(greenfield)}})
+    # 5. INFO (guía) — dónde rinde más el capital escaso.
+    mejor = next((f for f in cap["filas"] if f["eficiencia"] is not None), None)
+    if mejor:
+        alertas.append({"nivel": "info", "tipo": "mejor_capital",
+                        "datos": {"proyecto": mejor["nombre"], "eficiencia": mejor["eficiencia"]}})
+
+    resumen = {n: sum(1 for a in alertas if a["nivel"] == n) for n in ("critico", "alerta", "info")}
+    return {"n_proyectos": cap["n"], "valor_creado": vc_total, "crea_valor": crea,
+            "n_genera": sum(1 for f in cap["filas"] if f["crea_valor"] is True), "n_evaluados": n_eval,
+            "alertas": alertas, "resumen": resumen}
+
+
 def pipeline(items):
     """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline y las
     tarjetas del Portafolio. Lógica idéntica a `app.pipeline_datos`."""

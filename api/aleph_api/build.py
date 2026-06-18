@@ -298,6 +298,13 @@ def concentracion(items) -> dict:
     return portfolio.concentracion(items)
 
 
+def salud(items) -> dict:
+    """Cabina del CEO (§5 GET /portfolio/salud): salud del portafolio + ALERTAS estructuradas (valor,
+    concentración, resiliencia, capital). Expone lo que `portfolio.salud` sintetiza; no recalcula
+    cifras de decisión (las alertas derivan de las otras vistas + un escenario de estrés severo)."""
+    return portfolio.salud(items)
+
+
 def run(par: dict, req: dict) -> dict:
     """Monte Carlo (§5 POST /scenarios/{id}/run): el único cálculo intensivo. No muta `par`."""
     tipo = (req or {}).get("tipo", "tir")
