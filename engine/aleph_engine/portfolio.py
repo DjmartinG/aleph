@@ -156,6 +156,44 @@ def tesoreria(items):
     }
 
 
+def capital(items):
+    """Asignación de CAPITAL del portafolio: por proyecto, el equity PICO requerido (necesidad máxima
+    de caja propia tras el crédito = `min(acum)`), el crédito máximo, el valor creado (EVA @WACC) y la
+    EFICIENCIA de capital (valor creado / equity pico). Responde la pregunta del CEO con capital escaso:
+    ¿dónde rinde más cada peso? Rankea los proyectos por eficiencia (los que más valor crean por peso
+    de equity primero; greenfield sin veredicto al final).
+
+    ADITIVO: reusa lo que `calcular()` ya produjo (`apalancamiento`), no recalcula. `items` = [(slug,
+    par, R)]. Los totales son SUMAS de picos individuales (que NO coinciden en el tiempo → la necesidad
+    SIMULTÁNEA real es la del consolidado de `tesoreria`, menor; se muestra el beneficio de cartera)."""
+    filas = []
+    eq_total = cr_total = vc_total = eq_eval = 0.0
+    for slug, _par, R in items:
+        ap = R.get("apalancamiento") or {}
+        mt = R.get("meta") or {}
+        equity = abs(ap.get("max_necesidad_caja") or 0.0)       # equity pico (caja propia, tras crédito)
+        credito = ap.get("credito_max") or 0.0
+        crea = ap.get("crea_valor")
+        # El equity/crédito SÍ son válidos para greenfield; pero el VALOR (EVA) NO se juzga sin veredicto
+        # (crea_valor None) → "— greenfield", consistente con la consolidación EVA del portafolio.
+        vc = ap.get("valor_creado") if crea is not None else None
+        eff = (vc / equity) if (vc is not None and equity > 0) else None
+        filas.append({"slug": slug, "nombre": mt.get("nombre", slug), "tipo": mt.get("tipo"),
+                      "equity_pico": equity, "credito_max": credito,
+                      "valor_creado": vc, "crea_valor": crea, "eficiencia": eff})
+        eq_total += equity
+        cr_total += credito
+        if vc is not None:
+            vc_total += vc
+            eq_eval += equity                                   # equity de los proyectos evaluables
+    # Rankear por eficiencia descendente; greenfield (eficiencia None) al final.
+    filas.sort(key=lambda f: (f["eficiencia"] is None, -(f["eficiencia"] or 0.0)))
+    return {"filas": filas, "equity_total": eq_total, "credito_total": cr_total,
+            "valor_creado_total": vc_total,
+            "eficiencia_portafolio": (vc_total / eq_eval) if eq_eval else None,
+            "n": len(filas)}
+
+
 def pipeline(items):
     """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline y las
     tarjetas del Portafolio. Lógica idéntica a `app.pipeline_datos`."""
