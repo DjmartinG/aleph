@@ -62,6 +62,32 @@ def test_tesoreria_consolidada_cuadra_y_es_coherente():
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
+def test_capital_asignacion_rankea_y_es_coherente():
+    items = _items()
+    c = portfolio.capital(items)
+    assert c["n"] == len(items) and len(c["filas"]) == len(items)
+    for f in c["filas"]:
+        assert {"slug", "nombre", "equity_pico", "credito_max", "valor_creado", "crea_valor",
+                "eficiencia"} <= set(f)
+        assert f["equity_pico"] >= 0 and f["credito_max"] >= 0
+        # Greenfield (sin veredicto) → sin valor ni eficiencia; consistente con la app.
+        if f["crea_valor"] is None:
+            assert f["valor_creado"] is None and f["eficiencia"] is None
+        # Eficiencia = valor creado / equity pico (cuando ambos existen).
+        if f["eficiencia"] is not None:
+            assert f["eficiencia"] == pytest.approx(f["valor_creado"] / f["equity_pico"])
+    # Rankeado por eficiencia descendente; greenfield (None) al final.
+    effs = [f["eficiencia"] for f in c["filas"]]
+    con = [e for e in effs if e is not None]
+    assert con == sorted(con, reverse=True)
+    assert all(e is not None for e in effs[: len(con)])      # los None van al final
+    # Totales = suma de picos individuales.
+    assert c["equity_total"] == pytest.approx(sum(f["equity_pico"] for f in c["filas"]))
+    assert c["valor_creado_total"] == pytest.approx(
+        sum(f["valor_creado"] for f in c["filas"] if f["valor_creado"] is not None))
+
+
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
 def test_burbujas_y_pipeline_estructura():
     items = _items()
     pts = portfolio.puntos_burbujas(items)

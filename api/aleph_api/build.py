@@ -270,6 +270,13 @@ def tesoreria(items) -> dict:
     return portfolio.tesoreria(items)
 
 
+def capital(items) -> dict:
+    """Asignación de capital del portafolio (§5 GET /portfolio/capital): equity pico, crédito, valor
+    creado (EVA) y eficiencia de capital por proyecto, rankeado. Expone lo que `portfolio.capital`
+    agrega; no recalcula."""
+    return portfolio.capital(items)
+
+
 def run(par: dict, req: dict) -> dict:
     """Monte Carlo (§5 POST /scenarios/{id}/run): el único cálculo intensivo. No muta `par`."""
     tipo = (req or {}).get("tipo", "tir")

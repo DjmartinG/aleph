@@ -141,6 +141,25 @@ def test_tesoreria_consolidada():
     assert j["credito_maximo"]["valor"] == pytest.approx(t["credito_maximo"]["valor"])
 
 
+def test_asignacion_capital():
+    """Asignación de capital: equity/crédito/EVA/eficiencia por proyecto, rankeado por eficiencia."""
+    from aleph_api import build
+    j = client.get("/v1/portfolio/capital").json()
+    if not j.get("filas"):
+        pytest.skip("sin proyectos")
+    for f in j["filas"]:
+        assert {"slug", "nombre", "equity_pico", "credito_max", "valor_creado", "eficiencia"} <= set(f)
+        assert f["equity_pico"] >= 0
+        if f["crea_valor"] is None:                   # greenfield → sin veredicto de valor
+            assert f["valor_creado"] is None and f["eficiencia"] is None
+    # Rankeado por eficiencia descendente (greenfield al final).
+    con = [f["eficiencia"] for f in j["filas"] if f["eficiencia"] is not None]
+    assert con == sorted(con, reverse=True)
+    # Fidelidad con el motor.
+    c = build.capital(build.items_portafolio())
+    assert j["equity_total"] == pytest.approx(c["equity_total"])
+
+
 def test_404_proyecto_inexistente():
     assert client.get("/v1/projects/no_existe").status_code == 404
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404

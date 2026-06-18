@@ -130,6 +130,38 @@ export async function getTesoreria(): Promise<Tesoreria | null> {
   return res.json() as Promise<Tesoreria>;
 }
 
+// ---------- Asignación de capital del portafolio (Pilar 2) ----------
+
+export interface CapitalFila {
+  slug: string;
+  nombre: string;
+  tipo: string | null;
+  /** Equity pico = necesidad máxima de caja propia tras el crédito (miles COP). */
+  equity_pico: number;
+  credito_max: number;
+  /** Valor creado (EVA @WACC); null si greenfield (sin veredicto). */
+  valor_creado: number | null;
+  crea_valor: boolean | null;
+  /** Eficiencia = valor creado / equity pico; null si greenfield. */
+  eficiencia: number | null;
+}
+
+export interface Capital {
+  filas: CapitalFila[];
+  equity_total: number;
+  credito_total: number;
+  valor_creado_total: number;
+  eficiencia_portafolio: number | null;
+  n: number;
+}
+
+/** GET /v1/portfolio/capital. Degrada a `null` si el API aún no lo expone (sin redeploy). */
+export async function getCapital(): Promise<Capital | null> {
+  const res = await apiFetch(`/v1/portfolio/capital`);
+  if (!res.ok) return null;
+  return res.json() as Promise<Capital>;
+}
+
 // ---------- Ficha de proyecto + resultados ----------
 
 export interface Meta {

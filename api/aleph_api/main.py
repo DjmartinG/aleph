@@ -96,6 +96,14 @@ def get_portfolio_tesoreria():
     return build.tesoreria(build.items_portafolio())
 
 
+@v1.get("/portfolio/capital")
+def get_portfolio_capital():
+    """Asignación de CAPITAL del portafolio: por proyecto, el equity pico requerido, el crédito máximo,
+    el valor creado (EVA) y la EFICIENCIA de capital (valor/equity), rankeado. Responde dónde rinde más
+    cada peso de capital escaso. Aditivo (no recalcula)."""
+    return build.capital(build.items_portafolio())
+
+
 @v1.get("/projects/{slug}")
 def get_project(slug: str):
     par, R = _par_o_404(slug)
