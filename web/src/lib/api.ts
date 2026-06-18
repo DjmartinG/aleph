@@ -195,6 +195,38 @@ export async function getEstres(): Promise<Estres | null> {
   return res.json() as Promise<Estres>;
 }
 
+// ---------- Concentración / diversificación del portafolio (Pilar 2) ----------
+
+export interface ConcentracionCategoria {
+  categoria: string;
+  ventas: number;
+  share: number;
+}
+
+export interface ConcentracionDim {
+  clave: string;
+  nombre: string;
+  categorias: ConcentracionCategoria[];
+  /** Índice de Herfindahl = Σ share² (0 → diversificado, 1 → todo en una). */
+  hhi: number;
+  /** Número EFECTIVO de categorías (1/HHI). */
+  n_efectivo: number | null;
+  n_categorias: number;
+}
+
+export interface Concentracion {
+  total_ventas: number;
+  n: number;
+  dimensiones: ConcentracionDim[];
+}
+
+/** GET /v1/portfolio/concentracion. Degrada a `null` si el API aún no lo expone (sin redeploy). */
+export async function getConcentracion(): Promise<Concentracion | null> {
+  const res = await apiFetch(`/v1/portfolio/concentracion`);
+  if (!res.ok) return null;
+  return res.json() as Promise<Concentracion>;
+}
+
 // ---------- Ficha de proyecto + resultados ----------
 
 export interface Meta {

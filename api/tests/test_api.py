@@ -180,6 +180,22 @@ def test_estres_tesoreria():
     assert j["base"]["exposicion_maxima"]["valor"] == pytest.approx(e["base"]["exposicion_maxima"]["valor"])
 
 
+def test_concentracion():
+    """Concentración por dimensión: shares suman 1, HHI coherente, fidelidad con el motor."""
+    from aleph_api import build
+    j = client.get("/v1/portfolio/concentracion").json()
+    if not j.get("dimensiones"):
+        pytest.skip("sin proyectos")
+    claves = {d["clave"] for d in j["dimensiones"]}
+    assert {"proyecto", "ubicacion", "tipo", "fase"} <= claves
+    for d in j["dimensiones"]:
+        shares = [cat["share"] for cat in d["categorias"]]
+        assert sum(shares) == pytest.approx(1.0)
+        assert d["hhi"] == pytest.approx(sum(s ** 2 for s in shares))
+    c = build.concentracion(build.items_portafolio())
+    assert j["total_ventas"] == pytest.approx(c["total_ventas"])
+
+
 def test_404_proyecto_inexistente():
     assert client.get("/v1/projects/no_existe").status_code == 404
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404

@@ -262,6 +262,57 @@ def capital(items):
             "n": len(filas)}
 
 
+def concentracion(items):
+    """Concentración / DIVERSIFICACIÓN del portafolio por DIMENSIÓN (proyecto, ubicación, tipo VIS/No-VIS,
+    fase del ciclo) medida por VENTAS (exposición de ingresos). Responde la pregunta de riesgo del CEO:
+    ¿está la cartera demasiado expuesta a una ciudad, un segmento o un solo proyecto?
+
+    Por dimensión: el SHARE de cada categoría, el HHI (índice de Herfindahl = Σ share², 0→diversificado,
+    1→todo en una) y el 'número EFECTIVO' de categorías (1/HHI: cuántas categorías iguales equivaldrían
+    a esta concentración). ADITIVO: agrega `meta` + ventas que `calcular()` ya produjo; no recalcula.
+    `items` = [(slug, par, R)]."""
+    def _tipo_canon(t):
+        # El `tipo` viene con casing inconsistente en los JSON ("NO VIS" vs "No VIS") → canonizar para
+        # no partir la misma categoría en dos (inflaría la diversidad). VIS/VIP = subsidiada.
+        u = str(t or "").strip().upper()
+        if not u:
+            return "Sin tipo"
+        if u in ("VIS", "VIP"):
+            return "VIS"
+        if u in ("NO VIS", "NO-VIS", "NOVIS"):
+            return "No VIS"
+        return str(t).strip().title()
+
+    filas = []
+    for slug, par, R in items:
+        mt = R.get("meta") or {}
+        _m = par.get("meta", {}) or {}
+        estado = _m.get("estado") or config.ESTADO_DEFAULT
+        if estado not in config.ESTADOS:
+            estado = config.ESTADO_DEFAULT
+        filas.append({
+            "ventas": (R.get("pyg") or {}).get("ventas", 0) or 0,
+            "proyecto": mt.get("nombre", slug),
+            "ubicacion": _m.get("ubicacion") or "Sin ubicación",
+            "tipo": _tipo_canon(_m.get("tipo")),
+            "fase": config.ESTADO_LABEL.get(estado, estado),
+        })
+    total = sum(f["ventas"] for f in filas)
+    base = total or 1.0
+    dims = []
+    for clave, nombre in [("proyecto", "Proyecto"), ("ubicacion", "Ubicación"),
+                          ("tipo", "Tipo"), ("fase", "Fase del ciclo")]:
+        grupos = {}
+        for f in filas:
+            grupos[f[clave]] = grupos.get(f[clave], 0.0) + f["ventas"]
+        cats = [{"categoria": c, "ventas": v, "share": v / base} for c, v in grupos.items()]
+        cats.sort(key=lambda x: -x["ventas"])
+        hhi = sum(c["share"] ** 2 for c in cats)
+        dims.append({"clave": clave, "nombre": nombre, "categorias": cats, "hhi": hhi,
+                     "n_efectivo": (1.0 / hhi) if hhi else None, "n_categorias": len(cats)})
+    return {"total_ventas": total, "n": len(filas), "dimensiones": dims}
+
+
 def pipeline(items):
     """Un dict por proyecto con su ESTADO del ciclo de vida + métricas, para el embudo/pipeline y las
     tarjetas del Portafolio. Lógica idéntica a `app.pipeline_datos`."""

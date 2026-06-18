@@ -112,6 +112,14 @@ def get_portfolio_tesoreria_estres():
     return build.estres(build.items_portafolio())
 
 
+@v1.get("/portfolio/concentracion")
+def get_portfolio_concentracion():
+    """CONCENTRACIÓN / diversificación del portafolio por dimensión (proyecto, ubicación, tipo, fase):
+    share de cada categoría + HHI (Herfindahl) + número efectivo de categorías. ¿Está la cartera
+    demasiado expuesta a una ciudad/segmento/proyecto? Aditivo (no recalcula)."""
+    return build.concentracion(build.items_portafolio())
+
+
 @v1.get("/projects/{slug}")
 def get_project(slug: str):
     par, R = _par_o_404(slug)
