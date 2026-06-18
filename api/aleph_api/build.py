@@ -292,6 +292,12 @@ def estres(items) -> dict:
     return portfolio.estres_tesoreria(items, ESCENARIOS_ESTRES)
 
 
+def concentracion(items) -> dict:
+    """Concentración/diversificación del portafolio (§5 GET /portfolio/concentracion): share + HHI por
+    dimensión (proyecto, ubicación, tipo, fase). Expone lo que `portfolio.concentracion` agrega."""
+    return portfolio.concentracion(items)
+
+
 def run(par: dict, req: dict) -> dict:
     """Monte Carlo (§5 POST /scenarios/{id}/run): el único cálculo intensivo. No muta `par`."""
     tipo = (req or {}).get("tipo", "tir")

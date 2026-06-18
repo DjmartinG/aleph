@@ -117,6 +117,28 @@ def test_capital_asignacion_rankea_y_es_coherente():
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
+def test_concentracion_dimensiones_y_hhi():
+    items = _items()
+    c = portfolio.concentracion(items)
+    assert c["n"] == len(items)
+    assert c["total_ventas"] == pytest.approx(sum(R["pyg"]["ventas"] for _, _, R in items))
+    claves = {d["clave"] for d in c["dimensiones"]}
+    assert {"proyecto", "ubicacion", "tipo", "fase"} <= claves
+    for d in c["dimensiones"]:
+        shares = [cat["share"] for cat in d["categorias"]]
+        assert sum(shares) == pytest.approx(1.0)                  # los shares suman 100%
+        assert d["hhi"] == pytest.approx(sum(s ** 2 for s in shares))
+        assert 0 < d["hhi"] <= 1.0 + 1e-9
+        assert d["n_efectivo"] == pytest.approx(1.0 / d["hhi"])
+        v = [cat["ventas"] for cat in d["categorias"]]
+        assert v == sorted(v, reverse=True)                      # categorías ordenadas por ventas desc
+    # Tipo canonizado: sin duplicados por casing ("NO VIS" vs "No VIS").
+    tipo = next(d for d in c["dimensiones"] if d["clave"] == "tipo")
+    cats = [cat["categoria"] for cat in tipo["categorias"]]
+    assert len(cats) == len(set(cats))
+
+
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
 def test_burbujas_y_pipeline_estructura():
     items = _items()
     pts = portfolio.puntos_burbujas(items)

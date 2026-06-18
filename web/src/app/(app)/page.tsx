@@ -6,10 +6,12 @@ import {
   getTesoreria,
   getCapital,
   getEstres,
+  getConcentracion,
   type Portfolio,
   type Tesoreria,
   type Capital,
   type Estres,
+  type Concentracion,
 } from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
 import { fmtCop, fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
@@ -23,6 +25,7 @@ import { ValueMap } from "@/components/charts/value-map";
 import { ProjectCompare } from "@/components/charts/project-compare";
 import { CashFlowChart, type CashPoint } from "@/components/charts/cash-flow-chart";
 import { TesoreriaEstres } from "@/components/charts/tesoreria-estres";
+import { ConcentracionPanel } from "@/components/charts/concentracion-panel";
 import { MiniStat } from "@/components/mini-stat";
 import { SectionTitle } from "@/components/section-title";
 
@@ -31,6 +34,7 @@ export default async function Page() {
   let tesoreria: Tesoreria | null = null;
   let capital: Capital | null = null;
   let estres: Estres | null = null;
+  let concentracion: Concentracion | null = null;
   let errMsg: string | null = null;
   try {
     data = await getPortfolio();
@@ -38,14 +42,20 @@ export default async function Page() {
     unstable_rethrow(e); // re-lanza el redirect a /login (401 = sesión expirada) y notFound; deja pasar errores reales
     errMsg = e instanceof Error ? e.message : "Error desconocido";
   }
-  // Tesorería + capital + estrés (opcionales): degradan limpio si el API aún no los expone.
+  // Tesorería + capital + estrés + concentración (opcionales): degradan limpio si el API no los expone.
   try {
-    [tesoreria, capital, estres] = await Promise.all([getTesoreria(), getCapital(), getEstres()]);
+    [tesoreria, capital, estres, concentracion] = await Promise.all([
+      getTesoreria(),
+      getCapital(),
+      getEstres(),
+      getConcentracion(),
+    ]);
   } catch (e) {
     unstable_rethrow(e);
     tesoreria = null;
     capital = null;
     estres = null;
+    concentracion = null;
   }
   const admin = await isAdminUser();
 
@@ -78,7 +88,13 @@ export default async function Page() {
       {errMsg ? (
         <ErrorPanel message={errMsg} />
       ) : data ? (
-        <Dashboard data={data} tesoreria={tesoreria} capital={capital} estres={estres} />
+        <Dashboard
+          data={data}
+          tesoreria={tesoreria}
+          capital={capital}
+          estres={estres}
+          concentracion={concentracion}
+        />
       ) : null}
     </div>
   );
@@ -89,11 +105,13 @@ function Dashboard({
   tesoreria,
   capital,
   estres,
+  concentracion,
 }: {
   data: Portfolio;
   tesoreria: Tesoreria | null;
   capital: Capital | null;
   estres: Estres | null;
+  concentracion: Concentracion | null;
 }) {
   const c = data.consolidado;
   const stats: StatItem[] = [
@@ -184,6 +202,19 @@ function Dashboard({
             <strong className="text-foreground">Eficiencia</strong> = valor creado (EVA) por cada peso
             de <strong className="text-foreground">equity pico</strong> (necesidad máxima de caja propia
             tras el crédito). Rankea dónde priorizar el capital; greenfield aún sin veredicto de valor.
+          </p>
+        </section>
+      ) : null}
+
+      {/* Concentración / diversificación (Pilar 2): exposición por dimensión. */}
+      {concentracion && concentracion.dimensiones.length > 0 ? (
+        <section className="mt-10">
+          <SectionTitle right="exposición por dimensión">Concentración del portafolio</SectionTitle>
+          <ConcentracionPanel data={concentracion} />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Reparto de las ventas por dimensión. El <strong className="text-foreground">número efectivo</strong>{" "}
+            (1/HHI) dice a cuántas categorías iguales equivale la concentración: pocas efectivas o un líder
+            dominante = cartera expuesta a una ciudad, un segmento o un solo proyecto.
           </p>
         </section>
       ) : null}
