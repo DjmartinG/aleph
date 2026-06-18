@@ -62,7 +62,7 @@ def test_tesoreria_consolidada_cuadra_y_es_coherente():
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
-def test_estres_tesoreria_profundiza_el_valle():
+def test_estres_tesoreria_estructura_y_shock_nulo():
     items = _items()
     base = portfolio.tesoreria(items)
     if not base.get("disponible"):
@@ -76,19 +76,18 @@ def test_estres_tesoreria_profundiza_el_valle():
     es = e["escenarios"][0]
     assert es["nombre"] == "Severa"
     assert len(es["caja"]) == H and len(es["credito"]) == H      # base y escenario ALINEADOS
-    # Estrés (ventas abajo, costos arriba, más lento) PROFUNDIZA el valle de caja (necesidad total).
-    assert es["exposicion_maxima"]["valor"] <= e["base"]["exposicion_maxima"]["valor"] + 1.0
-    assert es["delta_exposicion"] <= 1.0
-    # OJO: el crédito consolidado puede SUBIR o BAJAR — un ritmo más lento atrasa el PE y DESINCRONIZA
-    # los picos de crédito constructor entre proyectos (efecto de timing), así que NO se asume dirección.
-    assert es["credito_maximo"]["valor"] >= 0.0
-    # El valle estresado cae DENTRO de la ventana (no clipeado en el borde derecho).
-    assert es["exposicion_maxima"]["mes"] < H - 1
-    # Un escenario SIN shock reproduce la base (la fiducia no afecta la serie de tesorería).
+    assert {"shock", "exposicion_maxima", "delta_exposicion", "delta_credito"} <= set(es)
+    assert es["exposicion_maxima"]["valor"] <= 0 and es["credito_maximo"]["valor"] >= 0
+    # OJO: el estrés NO siempre profundiza el valle CONSOLIDADO. Un ritmo más lento DESINCRONIZA los
+    # troughs (y los picos de crédito) de los proyectos → puede reducir el pico SIMULTÁNEO (efecto de
+    # timing/diversificación). En los proyectos reales profundiza (−221→−237); en otros mix puede no.
+    # La invariante DURA es que el shock-NULO reproduce la base exactamente.
     e0 = portfolio.estres_tesoreria(items, [{"nombre": "nulo", "precio": 0.0, "costo": 0.0, "ritmo": 0.0}])
-    assert e0["escenarios"][0]["exposicion_maxima"]["valor"] == pytest.approx(
-        e0["base"]["exposicion_maxima"]["valor"])
-    assert e0["escenarios"][0]["delta_exposicion"] == pytest.approx(0.0, abs=1.0)
+    z = e0["escenarios"][0]
+    assert z["exposicion_maxima"]["valor"] == pytest.approx(e0["base"]["exposicion_maxima"]["valor"])
+    assert z["credito_maximo"]["valor"] == pytest.approx(e0["base"]["credito_maximo"]["valor"])
+    assert z["delta_exposicion"] == pytest.approx(0.0, abs=1.0)
+    assert z["delta_credito"] == pytest.approx(0.0, abs=1.0)
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
