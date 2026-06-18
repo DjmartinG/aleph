@@ -49,6 +49,23 @@ def _algun_input_par():
     return None
 
 
+@pytest.mark.skipif(_algun_input_par() is None, reason="sin snapshots")
+def test_correr_estresado_fiel_a_mc_trial():
+    """`modelo.correr_estresado` (R completo, para la tesorería estresada) reusa la MISMA maquinaria de
+    shock que `mc_trial` (escalares del Monte Carlo) → sus cifras coinciden. Pin contra drift: si la
+    lógica de shock cambia en una, el test cae."""
+    from aleph_engine import modelo
+    par = _algun_input_par()
+    for dp, dc, dv in [(0.0, 0.0, 0.0), (-0.15, 0.05, -0.30), (0.10, -0.05, 0.20)]:
+        ctx = modelo.mc_contexto(par)
+        tr = modelo.mc_trial(ctx, dp, dc, dv)
+        ap = modelo.correr_estresado(par, dp, dc, dv)["apalancamiento"]
+        assert ap["max_necesidad_caja"] == pytest.approx(tr["exposicion_maxima"])
+        assert ap["vpn_proyecto"] == pytest.approx(tr["vpn_proyecto"])
+        if tr["tir_proyecto"] is not None:
+            assert ap["tir_proyecto"] == pytest.approx(tr["tir_proyecto"])
+
+
 @pytest.mark.skipif(_algun_input_par() is None, reason="sin snapshots para el end-to-end")
 def test_simular_end_to_end_determinista():
     par = _algun_input_par()

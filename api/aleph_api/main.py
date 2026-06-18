@@ -104,6 +104,14 @@ def get_portfolio_capital():
     return build.capital(build.items_portafolio())
 
 
+@v1.get("/portfolio/tesoreria/estres")
+def get_portfolio_tesoreria_estres():
+    """ESTRÉS de la tesorería consolidada: cuánto se profundiza el valle de caja combinado y se mueve el
+    crédito si las ventas caen/se atrasan y suben los costos en TODA la cartera. Recalcula con el shock
+    (reusa la maquinaria del Monte Carlo); el dorado queda intacto."""
+    return build.estres(build.items_portafolio())
+
+
 @v1.get("/projects/{slug}")
 def get_project(slug: str):
     par, R = _par_o_404(slug)

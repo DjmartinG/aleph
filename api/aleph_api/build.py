@@ -277,6 +277,21 @@ def capital(items) -> dict:
     return portfolio.capital(items)
 
 
+# Escenarios de ESTRÉS ofrecidos al usuario (deltas vs el caso base): precio = ventas, costo = directo,
+# ritmo = ventas/mes. Son SUPUESTOS de negocio (no cálculo financiero) — ajustables sin tocar el motor.
+ESCENARIOS_ESTRES = [
+    {"nombre": "Recesión leve", "precio": -0.07, "costo": 0.03, "ritmo": -0.15},
+    {"nombre": "Recesión severa", "precio": -0.15, "costo": 0.05, "ritmo": -0.30},
+]
+
+
+def estres(items) -> dict:
+    """Estrés de la tesorería consolidada (§5 GET /portfolio/tesoreria/estres): cuánto se profundiza el
+    valle de caja y se mueve el crédito si las ventas caen/se atrasan y suben los costos en TODA la
+    cartera. Recalcula cada proyecto con el shock (reusa la maquinaria del Monte Carlo); dorado intacto."""
+    return portfolio.estres_tesoreria(items, ESCENARIOS_ESTRES)
+
+
 def run(par: dict, req: dict) -> dict:
     """Monte Carlo (§5 POST /scenarios/{id}/run): el único cálculo intensivo. No muta `par`."""
     tipo = (req or {}).get("tipo", "tir")

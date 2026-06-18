@@ -162,6 +162,39 @@ export async function getCapital(): Promise<Capital | null> {
   return res.json() as Promise<Capital>;
 }
 
+// ---------- Estrés de la tesorería consolidada (Pilar 2) ----------
+
+export interface EstresResumen {
+  caja: number[];
+  credito: number[];
+  exposicion_maxima: { mes: number; valor: number };
+  credito_maximo: { mes: number; valor: number };
+}
+
+export interface EstresEscenario extends EstresResumen {
+  nombre: string;
+  /** Deltas aplicados: precio = ventas, costo = directo, ritmo = ventas/mes. */
+  shock: { precio: number; costo: number; ritmo: number };
+  /** Cuánto se profundiza el valle (≤ 0) y se mueve el crédito vs la base. */
+  delta_exposicion: number;
+  delta_credito: number;
+}
+
+export interface Estres {
+  disponible: boolean;
+  base_date: string;
+  horizonte: number;
+  base: EstresResumen;
+  escenarios: EstresEscenario[];
+}
+
+/** GET /v1/portfolio/tesoreria/estres. Degrada a `null` si el API aún no lo expone (sin redeploy). */
+export async function getEstres(): Promise<Estres | null> {
+  const res = await apiFetch(`/v1/portfolio/tesoreria/estres`);
+  if (!res.ok) return null;
+  return res.json() as Promise<Estres>;
+}
+
 // ---------- Ficha de proyecto + resultados ----------
 
 export interface Meta {

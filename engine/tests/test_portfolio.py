@@ -62,6 +62,35 @@ def test_tesoreria_consolidada_cuadra_y_es_coherente():
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
+def test_estres_tesoreria_estructura_y_shock_nulo():
+    items = _items()
+    base = portfolio.tesoreria(items)
+    if not base.get("disponible"):
+        pytest.skip("ningún proyecto con cronograma datado")
+    escen = [{"nombre": "Severa", "precio": -0.15, "costo": 0.05, "ritmo": -0.30}]
+    e = portfolio.estres_tesoreria(items, escen)
+    assert e["disponible"]
+    H = e["horizonte"]
+    assert len(e["base"]["caja"]) == H and len(e["base"]["credito"]) == H
+    assert len(e["escenarios"]) == 1
+    es = e["escenarios"][0]
+    assert es["nombre"] == "Severa"
+    assert len(es["caja"]) == H and len(es["credito"]) == H      # base y escenario ALINEADOS
+    assert {"shock", "exposicion_maxima", "delta_exposicion", "delta_credito"} <= set(es)
+    assert es["exposicion_maxima"]["valor"] <= 0 and es["credito_maximo"]["valor"] >= 0
+    # OJO: el estrés NO siempre profundiza el valle CONSOLIDADO. Un ritmo más lento DESINCRONIZA los
+    # troughs (y los picos de crédito) de los proyectos → puede reducir el pico SIMULTÁNEO (efecto de
+    # timing/diversificación). En los proyectos reales profundiza (−221→−237); en otros mix puede no.
+    # La invariante DURA es que el shock-NULO reproduce la base exactamente.
+    e0 = portfolio.estres_tesoreria(items, [{"nombre": "nulo", "precio": 0.0, "costo": 0.0, "ritmo": 0.0}])
+    z = e0["escenarios"][0]
+    assert z["exposicion_maxima"]["valor"] == pytest.approx(e0["base"]["exposicion_maxima"]["valor"])
+    assert z["credito_maximo"]["valor"] == pytest.approx(e0["base"]["credito_maximo"]["valor"])
+    assert z["delta_exposicion"] == pytest.approx(0.0, abs=1.0)
+    assert z["delta_credito"] == pytest.approx(0.0, abs=1.0)
+
+
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
 def test_capital_asignacion_rankea_y_es_coherente():
     items = _items()
     c = portfolio.capital(items)
