@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { Plus } from "lucide-react";
-import { getPortfolio, getTesoreria, getCapital, type Portfolio, type Tesoreria, type Capital } from "@/lib/api";
+import {
+  getPortfolio,
+  getTesoreria,
+  getCapital,
+  getEstres,
+  type Portfolio,
+  type Tesoreria,
+  type Capital,
+  type Estres,
+} from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
 import { fmtCop, fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
 import { monthLabel } from "@/lib/timeline";
@@ -13,6 +22,7 @@ import { CapitalTable } from "@/components/capital-table";
 import { ValueMap } from "@/components/charts/value-map";
 import { ProjectCompare } from "@/components/charts/project-compare";
 import { CashFlowChart, type CashPoint } from "@/components/charts/cash-flow-chart";
+import { TesoreriaEstres } from "@/components/charts/tesoreria-estres";
 import { MiniStat } from "@/components/mini-stat";
 import { SectionTitle } from "@/components/section-title";
 
@@ -20,6 +30,7 @@ export default async function Page() {
   let data: Portfolio | null = null;
   let tesoreria: Tesoreria | null = null;
   let capital: Capital | null = null;
+  let estres: Estres | null = null;
   let errMsg: string | null = null;
   try {
     data = await getPortfolio();
@@ -27,13 +38,14 @@ export default async function Page() {
     unstable_rethrow(e); // re-lanza el redirect a /login (401 = sesión expirada) y notFound; deja pasar errores reales
     errMsg = e instanceof Error ? e.message : "Error desconocido";
   }
-  // Tesorería + asignación de capital (opcionales): degradan limpio si el API aún no los expone.
+  // Tesorería + capital + estrés (opcionales): degradan limpio si el API aún no los expone.
   try {
-    [tesoreria, capital] = await Promise.all([getTesoreria(), getCapital()]);
+    [tesoreria, capital, estres] = await Promise.all([getTesoreria(), getCapital(), getEstres()]);
   } catch (e) {
     unstable_rethrow(e);
     tesoreria = null;
     capital = null;
+    estres = null;
   }
   const admin = await isAdminUser();
 
@@ -63,7 +75,11 @@ export default async function Page() {
         </div>
       </header>
 
-      {errMsg ? <ErrorPanel message={errMsg} /> : data ? <Dashboard data={data} tesoreria={tesoreria} capital={capital} /> : null}
+      {errMsg ? (
+        <ErrorPanel message={errMsg} />
+      ) : data ? (
+        <Dashboard data={data} tesoreria={tesoreria} capital={capital} estres={estres} />
+      ) : null}
     </div>
   );
 }
@@ -72,10 +88,12 @@ function Dashboard({
   data,
   tesoreria,
   capital,
+  estres,
 }: {
   data: Portfolio;
   tesoreria: Tesoreria | null;
   capital: Capital | null;
+  estres: Estres | null;
 }) {
   const c = data.consolidado;
   const stats: StatItem[] = [
@@ -146,6 +164,14 @@ function Dashboard({
               coinciden en el tiempo.
             </p>
           </div>
+        </section>
+      ) : null}
+
+      {/* Estrés de tesorería (Pilar 2): cuánto se profundiza el valle si el mercado se enfría. */}
+      {estres?.disponible && estres.escenarios.length > 0 ? (
+        <section className="mt-10">
+          <SectionTitle right="resistencia ante una desaceleración">Estrés de tesorería</SectionTitle>
+          <TesoreriaEstres data={estres} />
         </section>
       ) : null}
 

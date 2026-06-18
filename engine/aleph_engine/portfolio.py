@@ -88,18 +88,15 @@ def puntos_burbujas(items):
     return pts
 
 
-def tesoreria(items):
-    """Tesorería CONSOLIDADA del portafolio: la posición de CAJA y la FINANCIACIÓN (crédito) de TODOS
-    los proyectos, alineados en el eje GLOBAL (epoch ene-2022, igual que `consolidar`) y sumadas mes a
-    mes. Responde la pregunta de tesorería del CEO: ¿cuánta caja necesita la EMPRESA a la vez (sumando
-    proyectos) y cuándo, y cuánto crédito carga en el tiempo?
+_EPOCH, _N = 2022, 240    # eje global de tesorería (ene-2022, 20 años)
 
-    ADITIVO: agrega las series mensuales que cada `calcular()` ya produjo (`operativo`, `saldo_credito`);
-    NO recalcula nada. La caja por proyecto en el eje global es la suma acumulada del `operativo`
-    desplazado por el offset de su `base` (IV más temprano): 0 antes de arrancar, su valor final tras
-    terminar. `items` = [(slug, par, R)]. Solo proyectos con cronograma datado (hitos)."""
-    EPOCH, N = 2022, 240
-    saldo = [0.0] * N
+
+def _consolidar_caja_credito(items):
+    """Consolida en el eje GLOBAL (epoch ene-2022, N=240, SIN recortar) la posición de CAJA (suma
+    acumulada del `operativo` desplazado por el offset de la `base`=IV más temprano de cada proyecto;
+    0 antes de arrancar, valor final tras terminar) y el saldo de CRÉDITO. Base de `tesoreria` y de
+    `estres_tesoreria` (que necesitan el MISMO eje para alinear escenarios). Devuelve (caja, saldo, por)."""
+    saldo = [0.0] * _N
     por = []
     for slug, _par, R in items:
         ap = R.get("apalancamiento") or {}
@@ -109,10 +106,10 @@ def tesoreria(items):
         if not h or not o:
             continue
         base = min(h[c]["IV"] for c in h)
-        off = (base.year - EPOCH) * 12 + (base.month - 1)
-        caja_p = [0.0] * N
+        off = (base.year - _EPOCH) * 12 + (base.month - 1)
+        caja_p = [0.0] * _N
         acc = 0.0
-        for g in range(N):
+        for g in range(_N):
             if g < off:
                 caja_p[g] = 0.0
             elif g - off < len(o):
@@ -121,38 +118,109 @@ def tesoreria(items):
             else:
                 caja_p[g] = acc                                   # terminado → queda en el valor final
         for m in range(len(s)):
-            if 0 <= off + m < N:
+            if 0 <= off + m < _N:
                 saldo[off + m] += s[m]
-        nombre = (R.get("meta") or {}).get("nombre", slug)
-        por.append({"nombre": nombre, "caja": caja_p})
+        por.append({"nombre": (R.get("meta") or {}).get("nombre", slug), "caja": caja_p})
+    caja = [sum(p["caja"][g] for p in por) for g in range(_N)] if por else []
+    return caja, saldo, por
+
+
+def _ventana_tesoreria(caja, saldo):
+    """Ventana de tesorería = la fase de DÉFICIT/FINANCIACIÓN (la pregunta del CEO), no la cola de
+    escrituración tardía. Inicio: primer mes con déficit de caja o financiación material; fin: hasta
+    que la caja SALE del déficit + buffer. Devuelve (ini, fin). Series en miles COP."""
+    UMB = 1e6  # 1 mil M COP
+    arranque = [g for g in range(_N) if (caja and caja[g] < -UMB) or saldo[g] > UMB]
+    deficit = [g for g in range(_N) if caja and caja[g] < -UMB]
+    ini = min(arranque) if arranque else 0
+    fin = max(ini + 1, min(_N, (max(deficit) + 8) if deficit else ini + 12))
+    return ini, fin
+
+
+def _fecha_global(g):
+    return f"{_EPOCH + g // 12:04d}-{g % 12 + 1:02d}-01"
+
+
+def _resumen_ventana(caja, saldo, ini, fin):
+    """Recorta caja/crédito a [ini,fin) y calcula el valle de caja (exposición) y el pico de crédito."""
+    cw, sw = caja[ini:fin], saldo[ini:fin]
+    trough = min(range(len(cw)), key=lambda t: cw[t]) if cw else 0
+    peak = max(range(len(sw)), key=lambda t: sw[t]) if sw else 0
+    return {
+        "caja": cw, "credito": sw,
+        "exposicion_maxima": {"mes": trough, "valor": cw[trough] if cw else 0.0},
+        "credito_maximo": {"mes": peak, "valor": sw[peak] if sw else 0.0},
+    }
+
+
+def tesoreria(items):
+    """Tesorería CONSOLIDADA del portafolio: la posición de CAJA y la FINANCIACIÓN (crédito) de TODOS
+    los proyectos, alineados en el eje GLOBAL (epoch ene-2022) y sumadas mes a mes. Responde: ¿cuánta
+    caja necesita la EMPRESA a la vez (sumando proyectos) y cuándo, y cuánto crédito carga? ADITIVO:
+    agrega las series que cada `calcular()` ya produjo; NO recalcula. `items` = [(slug, par, R)]."""
+    caja, saldo, por = _consolidar_caja_credito(items)
     if not por:
         return {"disponible": False}
-
-    caja = [sum(p["caja"][g] for p in por) for g in range(N)]
-    # Ventana de tesorería = la fase de DÉFICIT/FINANCIACIÓN (la pregunta del CEO), no la cola de
-    # escrituración tardía de un proyecto. Inicio: primer mes con déficit de caja o financiación
-    # material; fin: hasta que la caja SALE del déficit (se recupera) + buffer. Series en miles COP.
-    UMB = 1e6  # 1 mil M COP
-    arranque = [g for g in range(N) if caja[g] < -UMB or saldo[g] > UMB]
-    deficit = [g for g in range(N) if caja[g] < -UMB]
-    ini = min(arranque) if arranque else 0
-    fin = max(ini + 1, min(N, (max(deficit) + 8) if deficit else ini + 12))
-
-    def _fecha(g):
-        return f"{EPOCH + g // 12:04d}-{g % 12 + 1:02d}-01"
-
-    caja_w, cred_w = caja[ini:fin], saldo[ini:fin]
-    trough = min(range(len(caja_w)), key=lambda t: caja_w[t]) if caja_w else 0
-    peak = max(range(len(cred_w)), key=lambda t: cred_w[t]) if cred_w else 0
+    ini, fin = _ventana_tesoreria(caja, saldo)
+    r = _resumen_ventana(caja, saldo, ini, fin)
     return {
         "disponible": True,
-        "base_date": _fecha(ini),               # mes 0 de las series recortadas (calendario)
+        "base_date": _fecha_global(ini),
         "horizonte": fin - ini,
         "n": len(por),
-        "caja": caja_w, "credito": cred_w,
-        "exposicion_maxima": {"mes": trough, "valor": caja_w[trough] if caja_w else 0.0},
-        "credito_maximo": {"mes": peak, "valor": cred_w[peak] if cred_w else 0.0},
+        "caja": r["caja"], "credito": r["credito"],
+        "exposicion_maxima": r["exposicion_maxima"],
+        "credito_maximo": r["credito_maximo"],
         "por_proyecto": [{"nombre": p["nombre"], "caja": p["caja"][ini:fin]} for p in por],
+    }
+
+
+def estres_tesoreria(items, escenarios):
+    """Estrés de la tesorería consolidada: la pregunta de RIESGO del CEO — si las ventas caen / se
+    atrasan y suben los costos en TODA la cartera, ¿cuánto se profundiza el valle de caja y sube el
+    crédito? ¿se acerca al techo? Recalcula cada proyecto con el shock (reusando la maquinaria del
+    Monte Carlo, `modelo.correr_estresado`: deltas precio/costo/ritmo, fix de escrituración) y
+    re-consolida. La BASE y cada escenario se alinean a una VENTANA COMÚN (mismo `base_date` y largo)
+    → la web los superpone directo. ADITIVO: no toca `calcular()` ni el dorado.
+
+    `items` = [(slug, par, R)]. `escenarios` = [{"nombre", "precio", "costo", "ritmo"}] (deltas, p.ej.
+    precio=-0.15 = ventas −15%, ritmo=-0.30 = 30% más lento, costo=+0.05 = sobrecosto 5%)."""
+    from . import modelo                                   # local: evita cualquier ciclo de import
+
+    caja_b, saldo_b, _por = _consolidar_caja_credito(items)
+    if not _por:
+        return {"disponible": False}
+    series = []
+    for esc in escenarios:
+        dp, dc, dv = esc.get("precio", 0.0), esc.get("costo", 0.0), esc.get("ritmo", 0.0)
+        shocked = [(slug, par, modelo.correr_estresado(par, dp, dc, dv)) for slug, par, _R in items]
+        cs, ss, _ = _consolidar_caja_credito(shocked)
+        series.append((cs, ss))
+    # Ventana = la de la BASE (la fase de financiación/exposición). Superponer el estrés sobre ESTA
+    # ventana cuenta la historia de riesgo: el valle se PROFUNDIZA y, al borde derecho, bajo estrés la
+    # caja SIGUE negativa cuando la base ya recuperó. El valle estresado (necesidad máx.) ocurre en la
+    # fase de obra (temprano), dentro de la ventana; la cola de recuperación lenta se omite a propósito.
+    ini, fin = _ventana_tesoreria(caja_b, saldo_b)
+    base = _resumen_ventana(caja_b, saldo_b, ini, fin)
+    out = []
+    for esc, (cs, ss) in zip(escenarios, series):
+        r = _resumen_ventana(cs, ss, ini, fin)
+        out.append({
+            "nombre": esc.get("nombre", "Escenario"),
+            "shock": {"precio": esc.get("precio", 0.0), "costo": esc.get("costo", 0.0),
+                      "ritmo": esc.get("ritmo", 0.0)},
+            **r,
+            "delta_exposicion": r["exposicion_maxima"]["valor"] - base["exposicion_maxima"]["valor"],
+            "delta_credito": r["credito_maximo"]["valor"] - base["credito_maximo"]["valor"],
+        })
+    return {
+        "disponible": True,
+        "base_date": _fecha_global(ini),
+        "horizonte": fin - ini,
+        "base": {"caja": base["caja"], "credito": base["credito"],
+                 "exposicion_maxima": base["exposicion_maxima"],
+                 "credito_maximo": base["credito_maximo"]},
+        "escenarios": out,
     }
 
 

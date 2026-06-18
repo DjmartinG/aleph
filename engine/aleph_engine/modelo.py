@@ -422,10 +422,14 @@ def mc_contexto(par, *, escrituracion_sigue_obra=True):
     return {"base": base, "etapas": base_etapas, "tip": base_tip, "pe": base_pe, "esc": base_esc}
 
 
-def mc_trial(ctx, dp, dc, dv):
-    """UN trial del Monte Carlo de TIR/VPN dado `ctx` (mc_contexto) y deltas de precio/costo/ritmo.
-    Misma logica por-trial que `montecarlo_tir` (verificada por test de consistencia). Devuelve las
-    cifras de decision del escenario."""
+def _correr_trial(ctx, dp, dc, dv):
+    """Construye y CORRE el escenario estresado (deltas precio/costo/ritmo) con el fix de escrituración
+    que sigue a la obra. FUENTE ÚNICA del shock, usada por `mc_trial` (escalares) y por
+    `correr_estresado` (serie completa). Devuelve (p, pg, hitos, recaudo, ap).
+
+    OJO: el precio se aplica escalando `ventas_miles` DESPUÉS de `normalizar_tipologias` (no la tabla de
+    tipologías) y NO se vuelve a normalizar — por eso `calcular()` NO sirve para estresar un proyecto con
+    tipologías (su `normalizar_tipologias` re-derivaría las ventas SIN shock). Esta es la vía correcta."""
     base = ctx["base"]
     base_etapas = ctx["etapas"]
     base_tip = ctx["tip"]
@@ -458,11 +462,30 @@ def mc_trial(ctx, dp, dc, dv):
                 e["escrituracion"] = max(1, base_esc[cod] + delta)
     recaudo = _recaudo(p, hitos)
     ap = apalancamiento.flujo_apalancado(p, pg, hitos, recaudo)
+    return p, pg, hitos, recaudo, ap
+
+
+def mc_trial(ctx, dp, dc, dv):
+    """UN trial del Monte Carlo de TIR/VPN dado `ctx` (mc_contexto) y deltas de precio/costo/ritmo.
+    Misma logica por-trial que `montecarlo_tir` (verificada por test de consistencia). Devuelve las
+    cifras de decision del escenario."""
+    _p, pg, _hitos, _recaudo, ap = _correr_trial(ctx, dp, dc, dv)
     return {
         "tir_proyecto": ap.get("tir_proyecto"), "tir_equity": ap.get("tir_equity"),
         "vpn_proyecto": ap.get("vpn_proyecto"), "margen": pg.get("margen_oper"),
         "exposicion_maxima": ap.get("max_necesidad_caja"), "breakeven_mes": ap.get("payback_mes"),
     }
+
+
+def correr_estresado(par, dp=0.0, dc=0.0, dv=0.0, *, escrituracion_sigue_obra=True):
+    """Corre el proyecto con un SHOCK uniforme (deltas precio/costo/ritmo) y devuelve un `R` compatible
+    con `portfolio.tesoreria` (apalancamiento + hitos + meta). Reusa la MISMA maquinaria de shock que el
+    Monte Carlo (`_correr_trial`), incl. el fix de escrituración e ignorando el override de fiducia.
+    ADITIVO: no toca `calcular()`."""
+    ctx = mc_contexto(par, escrituracion_sigue_obra=escrituracion_sigue_obra)
+    p, pg, hitos, recaudo, ap = _correr_trial(ctx, dp, dc, dv)
+    return {"meta": p.get("meta", {}), "pyg": pg, "hitos": hitos, "recaudo": recaudo,
+            "apalancamiento": ap}
 
 
 # ----------------------------- tipologías (ingresos por producto) -----------------------------
