@@ -120,6 +120,14 @@ def get_portfolio_concentracion():
     return build.concentracion(build.items_portafolio())
 
 
+@v1.get("/portfolio/salud")
+def get_portfolio_salud():
+    """CABINA DEL CEO: la salud del portafolio + ALERTAS accionables (valor, concentración, resiliencia
+    ante estrés, capital), priorizadas por nivel. Síntesis de las otras vistas; alertas estructuradas
+    (nivel + tipo + datos), el texto lo pone la web. Aditivo (no recalcula cifras de decisión)."""
+    return build.salud(build.items_portafolio())
+
+
 @v1.get("/projects/{slug}")
 def get_project(slug: str):
     par, R = _par_o_404(slug)

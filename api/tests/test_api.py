@@ -196,6 +196,21 @@ def test_concentracion():
     assert j["total_ventas"] == pytest.approx(c["total_ventas"])
 
 
+def test_salud_cabina():
+    """Cabina del CEO: salud + alertas estructuradas, resumen consistente, fidelidad con el motor."""
+    from aleph_api import build
+    j = client.get("/v1/portfolio/salud").json()
+    if "alertas" not in j:
+        pytest.skip("sin proyectos")
+    assert set(j["resumen"]) == {"critico", "alerta", "info"}
+    assert sum(j["resumen"].values()) == len(j["alertas"])
+    for a in j["alertas"]:
+        assert a["nivel"] in ("critico", "alerta", "info")
+        assert a["tipo"] and isinstance(a["datos"], dict)
+    s = build.salud(build.items_portafolio())
+    assert j["valor_creado"] == pytest.approx(s["valor_creado"])
+
+
 def test_404_proyecto_inexistente():
     assert client.get("/v1/projects/no_existe").status_code == 404
     assert client.get("/v1/scenarios/no_existe:base/results").status_code == 404

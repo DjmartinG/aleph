@@ -139,6 +139,24 @@ def test_concentracion_dimensiones_y_hhi():
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
+def test_salud_cabina_alertas():
+    items = _items()
+    s = portfolio.salud(items)
+    assert s["n_proyectos"] == len(items)
+    assert set(s["resumen"]) == {"critico", "alerta", "info"}
+    assert sum(s["resumen"].values()) == len(s["alertas"])
+    for a in s["alertas"]:
+        assert a["nivel"] in ("critico", "alerta", "info")
+        assert a["tipo"] and isinstance(a["datos"], dict)
+    if s["crea_valor"] is not None:
+        assert s["crea_valor"] == (s["valor_creado"] > 0)
+    # Si algún proyecto destruye valor → alerta CRÍTICA de tipo destruye_valor.
+    cap = portfolio.capital(items)
+    if any(f["crea_valor"] is False for f in cap["filas"]):
+        assert any(a["tipo"] == "destruye_valor" and a["nivel"] == "critico" for a in s["alertas"])
+
+
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
 def test_burbujas_y_pipeline_estructura():
     items = _items()
     pts = portfolio.puntos_burbujas(items)

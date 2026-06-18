@@ -7,11 +7,13 @@ import {
   getCapital,
   getEstres,
   getConcentracion,
+  getSalud,
   type Portfolio,
   type Tesoreria,
   type Capital,
   type Estres,
   type Concentracion,
+  type Salud,
 } from "@/lib/api";
 import { isAdminUser } from "@/lib/session";
 import { fmtCop, fmtInt, fmtPct, splitCop, splitPct } from "@/lib/format";
@@ -26,6 +28,7 @@ import { ProjectCompare } from "@/components/charts/project-compare";
 import { CashFlowChart, type CashPoint } from "@/components/charts/cash-flow-chart";
 import { TesoreriaEstres } from "@/components/charts/tesoreria-estres";
 import { ConcentracionPanel } from "@/components/charts/concentracion-panel";
+import { CabinaCeo } from "@/components/cabina-ceo";
 import { MiniStat } from "@/components/mini-stat";
 import { SectionTitle } from "@/components/section-title";
 
@@ -35,6 +38,7 @@ export default async function Page() {
   let capital: Capital | null = null;
   let estres: Estres | null = null;
   let concentracion: Concentracion | null = null;
+  let salud: Salud | null = null;
   let errMsg: string | null = null;
   try {
     data = await getPortfolio();
@@ -42,13 +46,14 @@ export default async function Page() {
     unstable_rethrow(e); // re-lanza el redirect a /login (401 = sesión expirada) y notFound; deja pasar errores reales
     errMsg = e instanceof Error ? e.message : "Error desconocido";
   }
-  // Tesorería + capital + estrés + concentración (opcionales): degradan limpio si el API no los expone.
+  // Vistas de portafolio (opcionales): degradan limpio si el API no las expone aún (sin redeploy).
   try {
-    [tesoreria, capital, estres, concentracion] = await Promise.all([
+    [tesoreria, capital, estres, concentracion, salud] = await Promise.all([
       getTesoreria(),
       getCapital(),
       getEstres(),
       getConcentracion(),
+      getSalud(),
     ]);
   } catch (e) {
     unstable_rethrow(e);
@@ -56,6 +61,7 @@ export default async function Page() {
     capital = null;
     estres = null;
     concentracion = null;
+    salud = null;
   }
   const admin = await isAdminUser();
 
@@ -94,6 +100,7 @@ export default async function Page() {
           capital={capital}
           estres={estres}
           concentracion={concentracion}
+          salud={salud}
         />
       ) : null}
     </div>
@@ -106,12 +113,14 @@ function Dashboard({
   capital,
   estres,
   concentracion,
+  salud,
 }: {
   data: Portfolio;
   tesoreria: Tesoreria | null;
   capital: Capital | null;
   estres: Estres | null;
   concentracion: Concentracion | null;
+  salud: Salud | null;
 }) {
   const c = data.consolidado;
   const stats: StatItem[] = [
@@ -150,6 +159,14 @@ function Dashboard({
             extra={`${c.n_genera}/${c.n_evaluados}`}
           />
         </div>
+      ) : null}
+
+      {/* Cabina del CEO (Pilar 2): alertas accionables, el briefing de "lee esto primero". */}
+      {salud && salud.alertas.length > 0 ? (
+        <section className="mt-9">
+          <SectionTitle right="señales a vigilar">Cabina del CEO</SectionTitle>
+          <CabinaCeo data={salud} />
+        </section>
       ) : null}
 
       {/* Tesorería consolidada (Pilar 2): la caja y la financiación de TODOS los proyectos en el
