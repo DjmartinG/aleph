@@ -65,6 +65,11 @@ REGISTRO: dict[str, Metric] = {
         "tio", "TIO", "tasa de descuento CG",
         "Tasa interna de oportunidad usada para descontar.",
         PCT, ("apalancamiento", "tio"), "rentabilidad"),
+    "costo_oportunidad": Metric(
+        "costo_oportunidad", "Costo de oportunidad", "tasa de descuento (TIO)",
+        "Rendimiento mínimo exigido al capital (costo de oportunidad de CG); es la tasa que descuenta "
+        "el VPN de decisión. Coincide con la TIO.",
+        PCT, ("apalancamiento", "tio"), "rentabilidad"),
     "payback_mes": Metric(
         "payback_mes", "Payback", "mes desde inicio",
         "Mes en que el flujo acumulado del proyecto se vuelve positivo.",
@@ -125,6 +130,10 @@ REGISTRO: dict[str, Metric] = {
         "margen_oper", "Margen operacional", "sobre ventas",
         "Utilidad operativa dividida por las ventas.",
         PCT, ("pyg", "margen_oper"), "pyg"),
+    "incidencia_lote": Metric(
+        "incidencia_lote", "Incidencia del lote", "lote / ventas",
+        "Costo de adquisición del lote como fracción de las ventas (peso del suelo en el proyecto).",
+        PCT, ("pyg", "incidencia_lote"), "pyg"),
     "utilidad_cg": Metric(
         "utilidad_cg", "Utilidad CG", "reparto CG",
         "Parte de la utilidad operativa que corresponde a CG.",

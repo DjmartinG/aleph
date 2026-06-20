@@ -158,6 +158,7 @@ def pyg(par):
         "directos": directos, "indirectos": indirectos, "honorarios": honorarios,
         "gastos_fijos": gastos_fijos, "indirectos_otros": indirectos_otros,
         "util_lote": util_lote, "costo_lote": costo_lote, "lote_bruto": par["lote_bruto_miles"],
+        "incidencia_lote": par["lote_bruto_miles"]/V if V else 0,   # costo del lote sobre ventas (Camacol)
         "util_oper": util_oper, "margen_oper": util_oper/V if V else 0,
         "renta": renta, "udi": udi,
         "cg": cg, "socio": socio, "resultados": cg+socio,

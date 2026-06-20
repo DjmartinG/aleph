@@ -41,6 +41,9 @@ def indicadores(R: dict) -> dict:
         "credito_max": ap.get("credito_max"), "credito_prom": ap.get("credito_prom"),
         "intereses_total": ap.get("intereses_total"), "max_necesidad_caja": ap.get("max_necesidad_caja"),
         "valor_financiable": ap.get("valor_financiable"), "margen_oper": pg.get("margen_oper"),
+        # --- A2 (curso Camacol): incidencia del lote + costo de oportunidad explícito ---
+        "incidencia_lote": pg.get("incidencia_lote"), "incidencia_lote_label": metrics.etiqueta("incidencia_lote"),
+        "costo_oportunidad": ap.get("tio"), "costo_oportunidad_label": metrics.etiqueta("costo_oportunidad"),
         # --- Veredicto de Valor (EVA del proyecto) — ADITIVO: ¿genera o destruye valor sobre el WACC? ---
         "crea_valor": ap.get("crea_valor"), "crea_valor_label": metrics.etiqueta("crea_valor"),
         "valor_creado": ap.get("valor_creado"), "valor_creado_label": metrics.etiqueta("valor_creado"),
