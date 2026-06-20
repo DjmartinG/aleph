@@ -374,6 +374,26 @@ export interface Flujo {
   simple: Record<string, unknown>;
 }
 
+/** Cierre financiero (Fuentes y Usos) — curso Camacol §M6. Estructura cifras que el motor ya produce. */
+export interface CierreLinea {
+  concepto: string;
+  valor: number;
+}
+export interface Cierre {
+  usos: CierreLinea[];
+  usos_total: number;
+  fuentes: CierreLinea[];
+  fuentes_total: number;
+  utilidad_operativa: number;
+  financiacion: {
+    equity_pico: number | null;
+    credito_max: number | null;
+    exposicion_maxima: number | null;
+    intereses: number;
+  };
+  cuadre: { clave: string; nombre: string; ok: boolean; detalle: string };
+}
+
 export interface Results {
   scenario_id: string;
   project_id: string;
@@ -381,6 +401,8 @@ export interface Results {
   indicadores: Indicadores;
   pyg: Pyg;
   flujo: Flujo;
+  /** Cierre financiero (Fuentes=Usos). null si el API aún no lo expone (degrada limpio). */
+  cierre?: Cierre | null;
   checks: Check[];
 }
 
