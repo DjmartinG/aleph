@@ -405,6 +405,28 @@ export interface Cierre {
   cuadre: { clave: string; nombre: string; ok: boolean; detalle: string };
 }
 
+/** Due diligence / registro de riesgos → viabilidad cualitativa (curso Camacol M4/M5 · B1). */
+export interface DueDiligenceItem {
+  frente: string;
+  item: string;
+  estado: "ok" | "alerta" | "pendiente" | string;
+  impacto: "alto" | "medio" | "bajo" | string;
+  mitigacion: string;
+  nota: string;
+  del_analista: boolean;
+}
+export interface DueDiligence {
+  frentes: { clave: string; nombre: string }[];
+  items: DueDiligenceItem[];
+  veredicto: {
+    nivel: "verde" | "ambar" | "rojo" | string;
+    n_items: number;
+    n_ok: number;
+    n_alertas: number;
+    n_pendientes: number;
+  };
+}
+
 export interface Results {
   scenario_id: string;
   project_id: string;
@@ -414,6 +436,8 @@ export interface Results {
   flujo: Flujo;
   /** Cierre financiero (Fuentes=Usos). null si el API aún no lo expone (degrada limpio). */
   cierre?: Cierre | null;
+  /** Due diligence + viabilidad cualitativa (B1). null si el API aún no lo expone. */
+  due_diligence?: DueDiligence | null;
   checks: Check[];
 }
 
