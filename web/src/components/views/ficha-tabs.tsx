@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import type { ProjectDetail, Results, Sensitivity, Schedule, Wacc, Vehiculos } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { FichaResumen } from "@/components/views/ficha-resumen";
+import { CierreView } from "@/components/views/ficha-cierre";
 import { FlujoView } from "@/components/views/ficha-flujo";
 import { CronogramaView } from "@/components/views/ficha-cronograma";
 import { WaccView } from "@/components/views/ficha-wacc";
@@ -11,10 +12,11 @@ import { SensibilidadView } from "@/components/views/ficha-sensibilidad";
 import { VehiculosView } from "@/components/views/ficha-vehiculos";
 import { PanelControl } from "@/components/views/panel-control";
 
-type Tab = "resumen" | "flujo" | "cronograma" | "capital" | "sensibilidad" | "vehiculos" | "control";
+type Tab = "resumen" | "cierre" | "flujo" | "cronograma" | "capital" | "sensibilidad" | "vehiculos" | "control";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "resumen", label: "Resumen" },
+  { key: "cierre", label: "Cierre" },
   { key: "flujo", label: "Flujo" },
   { key: "cronograma", label: "Cronograma" },
   { key: "capital", label: "Costo de capital" },
@@ -72,6 +74,15 @@ export function FichaTabs({
       </div>
 
       {tab === "resumen" ? <FichaResumen project={project} results={results} /> : null}
+      {tab === "cierre" ? (
+        results.cierre ? (
+          <CierreView cierre={results.cierre} />
+        ) : (
+          <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+            Cierre financiero no disponible.
+          </div>
+        )
+      ) : null}
       {tab === "flujo" ? <FlujoView flujo={results.flujo.apalancado} baseDate={schedule?.base_date ?? null} /> : null}
       {tab === "cronograma" ? (
         schedule ? (

@@ -70,6 +70,10 @@ def test_project_y_results_fieles_al_motor():
     assert ind["vpn_proyecto"] == R["apalancamiento"]["vpn_proyecto"]
     # Checks de cuadre presentes y todos OK.
     assert res["checks"] and all(c["ok"] for c in res["checks"])
+    # Cierre financiero (Fuentes=Usos) presente y cuadra (fuentes = usos operativos + utilidad).
+    ci = res["cierre"]
+    assert ci and ci["cuadre"]["ok"]
+    assert ci["fuentes_total"] == pytest.approx(ci["usos_total"] + ci["utilidad_operativa"], rel=1e-6)
 
 
 @pytest.mark.skipif(not repo.es_real(NAV), reason="datos REALES de Navarra no presentes (p.ej. CI)")
