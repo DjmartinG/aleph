@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from aleph_engine import calcular, checks, cierre, config, due_diligence, finanzas, goal_seek as gs, metrics, modelo, portfolio, simulacion, tributario
+from aleph_engine import calcular, checks, cierre, config, due_diligence, finanzas, goal_seek as gs, metrics, modelo, portfolio, simulacion, tributario, urbanismo
 
 from . import repo
 
@@ -90,6 +90,7 @@ def results(slug: str, par: dict, R: dict) -> dict:
         "distribucion": R.get("distribucion"),
         "cierre": cierre.cierre_financiero(R),   # Fuentes y Usos (curso Camacol §M6)
         "due_diligence": due_diligence.evaluar(par),   # registro de riesgos + viabilidad cualitativa (B1)
+        "urbanismo": urbanismo.evaluar(R.get("urbanistico"), par.get("pot")),   # cumplimiento POT (B2)
         "checks": _checks(R),
     }
 
