@@ -87,7 +87,7 @@ export function FichaTabs({
       ) : null}
       {tab === "viabilidad" ? (
         results.due_diligence ? (
-          <ViabilidadView dd={results.due_diligence} />
+          <ViabilidadView dd={results.due_diligence} urb={results.urbanismo} />
         ) : (
           <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
             Viabilidad cualitativa no disponible.

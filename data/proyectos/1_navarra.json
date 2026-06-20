@@ -18,6 +18,13 @@
     { "frente": "bancario", "item": "Crédito constructor (aprobación)", "estado": "ok", "impacto": "alto", "nota": "Carta de aprobación banco; cupo 80% del costo de obra." },
     { "frente": "bancario", "item": "Estructura fiduciaria / patrimonio autónomo", "estado": "ok", "impacto": "medio" }
   ],
+  "pot": {
+    "indice_construccion_max": 3.0,
+    "densidad_max_und_ha": 350,
+    "aprovechamiento_max": 0.9,
+    "altura_max_pisos": 12,
+    "cesion_min_pct": 0.17
+  },
   "meta": {
     "nombre": "Navarra Apartamentos",
     "ubicacion": "Bogotá",

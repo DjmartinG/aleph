@@ -79,6 +79,9 @@ def test_project_y_results_fieles_al_motor():
     assert ddv and ddv["veredicto"]["nivel"] in ("verde", "ambar", "rojo")
     assert ddv["veredicto"]["n_items"] >= 16
     assert {f["clave"] for f in ddv["frentes"]} == {"legal", "ambiental", "urbanistico", "tecnico", "bancario"}
+    # Viabilidad urbanística (B2): cumplimiento POT.
+    urv = res["urbanismo"]
+    assert urv and urv["veredicto"]["nivel"] in ("cumple", "al_limite", "excede", "sin_pot")
 
 
 @pytest.mark.skipif(not repo.es_real(NAV), reason="datos REALES de Navarra no presentes (p.ej. CI)")

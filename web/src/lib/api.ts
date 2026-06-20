@@ -427,6 +427,21 @@ export interface DueDiligence {
   };
 }
 
+/** Viabilidad urbanística (POT) — índices calculados vs límites del POT (B2). */
+export interface UrbanismoItem {
+  concepto: string;
+  real: number;
+  limite: number;
+  cumple: boolean;
+  uso_pct: number | null;
+}
+export interface Urbanismo {
+  disponible: boolean;
+  items: UrbanismoItem[];
+  veredicto: { nivel: "cumple" | "al_limite" | "excede" | "sin_pot" | string; n: number; n_excede: number };
+  referencia: Record<string, number | string>;
+}
+
 export interface Results {
   scenario_id: string;
   project_id: string;
@@ -438,6 +453,8 @@ export interface Results {
   cierre?: Cierre | null;
   /** Due diligence + viabilidad cualitativa (B1). null si el API aún no lo expone. */
   due_diligence?: DueDiligence | null;
+  /** Viabilidad urbanística — cumplimiento POT (B2). null si el API aún no lo expone. */
+  urbanismo?: Urbanismo | null;
   checks: Check[];
 }
 
