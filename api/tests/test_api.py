@@ -74,6 +74,11 @@ def test_project_y_results_fieles_al_motor():
     ci = res["cierre"]
     assert ci and ci["cuadre"]["ok"]
     assert ci["fuentes_total"] == pytest.approx(ci["usos_total"] + ci["utilidad_operativa"], rel=1e-6)
+    # Due diligence (B1): veredicto cualitativo + checklist de los 5 frentes.
+    ddv = res["due_diligence"]
+    assert ddv and ddv["veredicto"]["nivel"] in ("verde", "ambar", "rojo")
+    assert ddv["veredicto"]["n_items"] >= 16
+    assert {f["clave"] for f in ddv["frentes"]} == {"legal", "ambiental", "urbanistico", "tecnico", "bancario"}
 
 
 @pytest.mark.skipif(not repo.es_real(NAV), reason="datos REALES de Navarra no presentes (p.ej. CI)")

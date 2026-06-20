@@ -1,5 +1,23 @@
 {
   "_nota": "Proyecto activo CG (plantilla). Cifras ilustrativas — ingresa los datos reales en la plataforma.",
+  "due_diligence": [
+    { "frente": "legal", "item": "Estudio de títulos y tradición", "estado": "ok", "impacto": "alto", "nota": "Tradición limpia de 20 años; sin gravámenes vigentes." },
+    { "frente": "legal", "item": "Saneamiento jurídico del predio", "estado": "ok", "impacto": "alto" },
+    { "frente": "legal", "item": "Contratos típicos (promesa, fiducia, encargo)", "estado": "ok", "impacto": "medio" },
+    { "frente": "legal", "item": "Riesgos legales / litigios / servidumbres", "estado": "ok", "impacto": "alto" },
+    { "frente": "ambiental", "item": "Licencia y permisos ambientales", "estado": "ok", "impacto": "alto" },
+    { "frente": "ambiental", "item": "Impactos ambientales y mitigación", "estado": "ok", "impacto": "medio" },
+    { "frente": "ambiental", "item": "Sostenibilidad / ESG", "estado": "alerta", "impacto": "bajo", "mitigacion": "Pendiente certificación EDGE; evaluar sobrecosto vs. valorización." },
+    { "frente": "ambiental", "item": "Normativa ambiental aplicable", "estado": "ok", "impacto": "medio" },
+    { "frente": "urbanistico", "item": "Uso del suelo permitido (POT)", "estado": "ok", "impacto": "alto" },
+    { "frente": "urbanistico", "item": "Índice de construcción / aprovechamiento", "estado": "ok", "impacto": "alto" },
+    { "frente": "urbanistico", "item": "Cesiones y obligaciones urbanísticas", "estado": "alerta", "impacto": "medio", "mitigacion": "Cesión tipo A por definir con Planeación; reservar área." },
+    { "frente": "tecnico", "item": "Estudio de suelos / geotecnia", "estado": "ok", "impacto": "alto" },
+    { "frente": "tecnico", "item": "Disponibilidad de servicios públicos", "estado": "ok", "impacto": "medio" },
+    { "frente": "tecnico", "item": "Licencia de construcción / diseños", "estado": "pendiente", "impacto": "medio" },
+    { "frente": "bancario", "item": "Crédito constructor (aprobación)", "estado": "ok", "impacto": "alto", "nota": "Carta de aprobación banco; cupo 80% del costo de obra." },
+    { "frente": "bancario", "item": "Estructura fiduciaria / patrimonio autónomo", "estado": "ok", "impacto": "medio" }
+  ],
   "meta": {
     "nombre": "Navarra Apartamentos",
     "ubicacion": "Bogotá",

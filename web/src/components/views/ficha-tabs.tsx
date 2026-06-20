@@ -5,6 +5,7 @@ import type { ProjectDetail, Results, Sensitivity, Schedule, Wacc, Vehiculos } f
 import { cn } from "@/lib/utils";
 import { FichaResumen } from "@/components/views/ficha-resumen";
 import { CierreView } from "@/components/views/ficha-cierre";
+import { ViabilidadView } from "@/components/views/ficha-viabilidad";
 import { FlujoView } from "@/components/views/ficha-flujo";
 import { CronogramaView } from "@/components/views/ficha-cronograma";
 import { WaccView } from "@/components/views/ficha-wacc";
@@ -12,11 +13,12 @@ import { SensibilidadView } from "@/components/views/ficha-sensibilidad";
 import { VehiculosView } from "@/components/views/ficha-vehiculos";
 import { PanelControl } from "@/components/views/panel-control";
 
-type Tab = "resumen" | "cierre" | "flujo" | "cronograma" | "capital" | "sensibilidad" | "vehiculos" | "control";
+type Tab = "resumen" | "cierre" | "viabilidad" | "flujo" | "cronograma" | "capital" | "sensibilidad" | "vehiculos" | "control";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "resumen", label: "Resumen" },
   { key: "cierre", label: "Cierre" },
+  { key: "viabilidad", label: "Viabilidad" },
   { key: "flujo", label: "Flujo" },
   { key: "cronograma", label: "Cronograma" },
   { key: "capital", label: "Costo de capital" },
@@ -80,6 +82,15 @@ export function FichaTabs({
         ) : (
           <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
             Cierre financiero no disponible.
+          </div>
+        )
+      ) : null}
+      {tab === "viabilidad" ? (
+        results.due_diligence ? (
+          <ViabilidadView dd={results.due_diligence} />
+        ) : (
+          <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+            Viabilidad cualitativa no disponible.
           </div>
         )
       ) : null}
