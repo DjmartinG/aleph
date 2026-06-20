@@ -5,8 +5,14 @@ import { getProject, getResults, getSensitivity, getSchedule, getWacc, getVehicu
 import { isAdminUser } from "@/lib/session";
 import { fmtInt } from "@/lib/format";
 import { PhaseBadge } from "@/components/phase-badge";
+import { SetProjectHeader } from "@/components/project-context";
 import { FichaTabs } from "@/components/views/ficha-tabs";
 import { AdminMenu } from "@/components/admin/admin-menu";
+
+/** Base del escenario (honesta, del motor): cifras auditadas (fiducia) vs modelo aprobado. */
+function escenarioLabel(baseLabel: string): string {
+  return baseLabel === "auditado_fiducia" ? "base auditada (fiducia)" : "base · modelo aprobado";
+}
 
 export default async function ProyectoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -22,9 +28,19 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
   if (!project || !results) notFound();
 
   const { meta, estado, es_real } = project;
+  const checksFail = results.checks.filter((c) => !c.ok).length;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-9 sm:px-6 lg:px-8">
+      {/* Publica el contexto del proyecto al header permanente (Topbar): Fase · Escenario · Cuadres. */}
+      <SetProjectHeader
+        nombre={meta.nombre}
+        estado={estado}
+        escenario={escenarioLabel(results.base_label)}
+        checksAllOk={checksFail === 0}
+        checksTotal={results.checks.length}
+        checksFail={checksFail}
+      />
       <Link
         href="/"
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
