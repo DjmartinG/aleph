@@ -6184,7 +6184,12 @@
       "fiducia_real": false,
       "valor_creado": 6718573.181380185,
       "crea_valor": null,
-      "spread_valor": null
+      "spread_valor": null,
+      "inflacion": 0.051,
+      "tir_proyecto_real": null,
+      "tir_equity_real": -0.32077554496961347,
+      "tio_real": 0.0941960038058991,
+      "wacc_real": 0.11951819652258555
     }
   }
 }

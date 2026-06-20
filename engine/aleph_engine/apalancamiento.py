@@ -16,6 +16,7 @@ from . import config
 from . import vehiculos
 from . import tributario
 from . import valor
+from . import reales
 from .flujo import aplicar_gastos_fijos, acumular
 
 
@@ -219,4 +220,10 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
     # VPN del MISMO flujo de decisión pero descontado al WACC (no a la TIO). Greenfield → None.
     out["valor_creado"] = valor.vpn_al_wacc(_flujo_vpn, wacc, anual=_vpn_anual) if wacc else None
     out["crea_valor"], out["spread_valor"] = valor.veredicto_binario(out["tir_proyecto"], wacc)
+
+    # ---- Precios CONSTANTES (reales) — ADITIVO (curso Camacol §M6): tasas deflactadas por inflación ----
+    # Inflación de largo plazo del build-up del WACC (inf_col, en %). Sin ella → reales None (no se inventa).
+    _wp = fin.get("wacc") or {}
+    _infl = (_wp["inf_col"] / 100.0) if _wp.get("inf_col") is not None else None
+    out.update(reales.tasas_reales(out["tir_proyecto"], out["tir_equity"], tio, wacc, _infl))
     return out
