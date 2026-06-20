@@ -17,6 +17,7 @@ import {
   TooltipComponent,
   MarkPointComponent,
   MarkLineComponent,
+  MarkAreaComponent,
   VisualMapComponent,
   LegendComponent,
   DataZoomComponent,
@@ -35,6 +36,7 @@ echarts.use([
   TooltipComponent,
   MarkPointComponent,
   MarkLineComponent,
+  MarkAreaComponent, // banda de certeza sombreada (histograma Monte Carlo)
   VisualMapComponent,
   LegendComponent,
   DataZoomComponent,
