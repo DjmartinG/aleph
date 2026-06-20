@@ -69,15 +69,18 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
       </section>
 
       {/* Costo de capital y financiación — soporte */}
-      <div className="mt-9 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
+      <div className="mt-9 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-3 lg:grid-cols-5">
         <MiniStat label="WACC" value={fmtPct(ind.wacc)} note="Damodaran" />
-        <MiniStat label="TIO" value={fmtPct(ind.tio)} note="tasa objetivo" />
+        <MiniStat label="TIO" value={fmtPct(ind.tio)} note="costo de oportunidad" />
         <MiniStat label="Crédito máx" value={fmtCop(ind.credito_max)} note="pico" />
         <MiniStat
           label="Payback"
           value={ind.payback_mes != null ? `${fmtInt(ind.payback_mes)} m` : "n/d"}
           note="meses"
         />
+        {ind.incidencia_lote != null ? (
+          <MiniStat label="Incidencia lote" value={fmtPct(ind.incidencia_lote)} note="lote / ventas" />
+        ) : null}
       </div>
 
       <section className="mt-9">

@@ -320,6 +320,11 @@ export interface Indicadores {
   max_necesidad_caja: number | null;
   valor_financiable: number | null;
   margen_oper: number | null;
+  // A2 (curso Camacol): incidencia del lote (lote/ventas) + costo de oportunidad explícito (= TIO).
+  incidencia_lote?: number | null;
+  incidencia_lote_label?: string;
+  costo_oportunidad?: number | null;
+  costo_oportunidad_label?: string;
   // Veredicto de Valor (EVA del proyecto): ¿genera o destruye valor sobre el WACC?
   crea_valor: boolean | null;       // null = greenfield (TIR degenerada) → "— greenfield"
   crea_valor_label: string;

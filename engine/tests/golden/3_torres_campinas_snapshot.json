@@ -146,6 +146,7 @@
       "util_lote": 8545329.0,
       "costo_lote": 24545329.0,
       "lote_bruto": 16000000,
+      "incidencia_lote": 0.08425655700324704,
       "util_oper": 11914741.399999991,
       "margen_oper": 0.06274344299675291,
       "renta": 5317093.6,

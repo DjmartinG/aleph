@@ -35,6 +35,17 @@ def test_doble_tir_presente_y_distinta():
 
 
 @pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
+def test_incidencia_lote_y_costo_oportunidad():
+    """Métricas A2 (curso Camacol): incidencia del lote = lote_bruto/ventas; costo de oportunidad = TIO."""
+    snap = json.load(open(SNAPS[0], encoding="utf-8"))
+    R = calcular(copy.deepcopy(snap["input_par"]))
+    pg = R["pyg"]
+    assert "incidencia_lote" in metrics.REGISTRO and "costo_oportunidad" in metrics.REGISTRO
+    assert metrics.valor(R, "incidencia_lote") == pytest.approx(pg["lote_bruto"] / pg["ventas"], rel=1e-9)
+    assert metrics.valor(R, "costo_oportunidad") == R["apalancamiento"]["tio"]
+
+
+@pytest.mark.skipif(not SNAPS, reason="No hay snapshots dorados")
 def test_cada_ruta_resuelve_en_el_resultado():
     snap = json.load(open(SNAPS[0], encoding="utf-8"))
     R = calcular(copy.deepcopy(snap["input_par"]))
