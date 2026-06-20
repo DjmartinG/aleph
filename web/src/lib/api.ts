@@ -325,6 +325,12 @@ export interface Indicadores {
   incidencia_lote_label?: string;
   costo_oportunidad?: number | null;
   costo_oportunidad_label?: string;
+  // A3 (curso Camacol): precios constantes — TIR reales deflactadas por inflación (Fisher).
+  inflacion?: number | null;
+  tir_proyecto_real?: number | null;
+  tir_proyecto_real_label?: string;
+  tir_socio_real?: number | null;
+  tir_socio_real_label?: string;
   // Veredicto de Valor (EVA del proyecto): ¿genera o destruye valor sobre el WACC?
   crea_valor: boolean | null;       // null = greenfield (TIR degenerada) → "— greenfield"
   crea_valor_label: string;

@@ -44,6 +44,10 @@ def indicadores(R: dict) -> dict:
         # --- A2 (curso Camacol): incidencia del lote + costo de oportunidad explícito ---
         "incidencia_lote": pg.get("incidencia_lote"), "incidencia_lote_label": metrics.etiqueta("incidencia_lote"),
         "costo_oportunidad": ap.get("tio"), "costo_oportunidad_label": metrics.etiqueta("costo_oportunidad"),
+        # --- A3 (curso Camacol): precios constantes (tasas REALES deflactadas por inflación, Fisher) ---
+        "inflacion": ap.get("inflacion"),
+        "tir_proyecto_real": ap.get("tir_proyecto_real"), "tir_proyecto_real_label": metrics.etiqueta("tir_proyecto_real"),
+        "tir_socio_real": ap.get("tir_equity_real"), "tir_socio_real_label": metrics.etiqueta("tir_socio_real"),
         # --- Veredicto de Valor (EVA del proyecto) — ADITIVO: ¿genera o destruye valor sobre el WACC? ---
         "crea_valor": ap.get("crea_valor"), "crea_valor_label": metrics.etiqueta("crea_valor"),
         "valor_creado": ap.get("valor_creado"), "valor_creado_label": metrics.etiqueta("valor_creado"),

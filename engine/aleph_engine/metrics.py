@@ -53,6 +53,16 @@ REGISTRO: dict[str, Metric] = {
         "tir_apalancada_ref", "TIR apalancada", "ref · modelo aprobado",
         "TIR apalancada de referencia tomada del modelo aprobado.",
         PCT, ("apalancamiento", "tir_apalancada_ref"), "rentabilidad"),
+    # --- A3: precios constantes (reales) — TIR deflactada por inflación (Fisher). Camacol §M6 ---
+    "tir_proyecto_real": Metric(
+        "tir_proyecto_real", "TIR proyecto real", "precios constantes (deflactada)",
+        "TIR del proyecto en términos REALES (poder adquisitivo), deflactada por la inflación "
+        "(Fisher). Greenfield / sin inflación → sin dato.",
+        PCT, ("apalancamiento", "tir_proyecto_real"), "rentabilidad"),
+    "tir_socio_real": Metric(
+        "tir_socio_real", "TIR socio real", "precios constantes (deflactada)",
+        "TIR del socio (equity) en términos REALES, deflactada por la inflación (Fisher).",
+        PCT, ("apalancamiento", "tir_equity_real"), "rentabilidad"),
     "vpn_proyecto": Metric(
         "vpn_proyecto", "VPN", "@TIO",
         "Valor presente neto del flujo del proyecto descontado a la TIO.",

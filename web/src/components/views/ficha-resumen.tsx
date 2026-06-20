@@ -14,6 +14,11 @@ function splitLabel(s: string): [string, string] {
   return i >= 0 ? [s.slice(0, i), s.slice(i + 3)] : [s, ""];
 }
 
+/** TIR real (precios constantes); greenfield/None → "— greenfield" (jamás −99%). */
+function realTir(v: number | null | undefined): string {
+  return v == null ? "— greenfield" : fmtPct(v);
+}
+
 export function FichaResumen({ project, results }: { project: ProjectDetail; results: Results }) {
   const ind = results.indicadores;
   const pyg = results.pyg;
@@ -37,6 +42,16 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
   return (
     <div>
       <StatPanel items={stats} />
+
+      {/* Precios constantes (real): TIR deflactada por inflación (Fisher) — curso Camacol §M6.
+          Degrada limpio si el API aún no expone `inflacion`. */}
+      {ind.inflacion != null ? (
+        <p className="mt-2 text-[0.7rem] text-muted-foreground">
+          Precios constantes (real · deflactado por inflación {fmtPct(ind.inflacion)}):{" "}
+          TIR proyecto <span className="num text-foreground/80">{realTir(ind.tir_proyecto_real)}</span> ·{" "}
+          TIR socio <span className="num text-foreground/80">{realTir(ind.tir_socio_real)}</span>
+        </p>
+      ) : null}
 
       {/* Veredicto de Valor (EVA): ¿genera o destruye valor sobre el WACC? — junto al héroe.
           Solo si el API ya expone EVA (campo `valor_metodo`): así degrada limpio si el API está atrás. */}
