@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Play, Loader2 } from "lucide-react";
+import { Play, Loader2, RotateCcw } from "lucide-react";
 import type { MonteCarloCBResult } from "@/lib/api";
 import { runMonteCarloCB } from "@/lib/actions";
 import { fmtCop, fmtPct } from "@/lib/format";
@@ -31,6 +31,7 @@ const VAR_LABEL: Record<string, string> = {
   costo: "Costo directo",
   ritmo: "Ritmo de ventas",
 };
+type Modo = "frecuencia" | "acumulada";
 
 export function MonteCarlo({ slug }: { slug: string }) {
   const [fc, setFc] = useState<string>("tir_proyecto");
@@ -38,6 +39,8 @@ export function MonteCarlo({ slug }: { slug: string }) {
   const [res, setRes] = useState<MonteCarloCBResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [modo, setModo] = useState<Modo>("frecuencia");
+  const [umbral, setUmbral] = useState<number | null>(null); // umbral de certeza interactivo
 
   function run() {
     setErr(null);
@@ -58,20 +61,39 @@ export function MonteCarlo({ slug }: { slug: string }) {
     return { f, fmt };
   }, [res, fc]);
 
+  // Meta del motor + dirección; reinicia el umbral interactivo al cambiar de indicador (patrón oficial
+  // de "ajustar estado en render", no en un efecto: evita el render en cascada).
+  const baseUmbral = view?.f.certeza?.umbral ?? null;
+  const signoMayor = view?.f.certeza ? view.f.certeza.signo.includes(">") : true;
+  const resetKey = `${fc}:${baseUmbral}`;
+  const [prevKey, setPrevKey] = useState(resetKey);
+  if (prevKey !== resetKey) {
+    setPrevKey(resetKey);
+    setUmbral(baseUmbral);
+  }
+
+  // Certeza EN VIVO: cuenta corridas que cumplen el umbral interactivo (descriptivo, no recálculo).
+  const certezaLive = useMemo(() => {
+    const vals = view?.f.valores;
+    if (umbral == null || !vals || vals.length === 0) return null;
+    const k = vals.filter((v) => (signoMayor ? v >= umbral : v <= umbral)).length;
+    return k / vals.length;
+  }, [umbral, signoMayor, view]);
+
   const markers: HistMarker[] = view
     ? [
         { label: "P10", value: view.f.stats.p10, tone: "muted", dash: true },
         { label: "P50", value: view.f.stats.p50, tone: "strong" },
+        { label: "media", value: view.f.stats.media, tone: "mean", dash: true },
         { label: "P90", value: view.f.stats.p90, tone: "muted", dash: true },
-        ...(view.f.certeza
-          ? [{ label: "meta", value: view.f.certeza.umbral, tone: "danger" as const }]
-          : []),
       ]
     : [];
 
   const tornado = view
     ? Object.entries(view.f.tornado).sort((a, b) => b[1].contribucion_pct - a[1].contribucion_pct)
     : [];
+
+  const desviado = umbral != null && baseUmbral != null && umbral !== baseUmbral;
 
   return (
     <div>
@@ -128,30 +150,92 @@ export function MonteCarlo({ slug }: { slug: string }) {
 
       {view ? (
         <>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-[var(--radius-data)] border bg-card p-4 sm:grid-cols-4">
+          {/* KPIs en cards — media y desviación siempre visibles */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Stat label="P10" value={view.fmt(view.f.stats.p10)} note="pesimista" />
-            <Stat label="Mediana" value={view.fmt(view.f.stats.p50)} note="P50" strong />
+            <Stat label="Mediana" value={view.fmt(view.f.stats.p50)} note="P50" strong accent />
             <Stat label="P90" value={view.fmt(view.f.stats.p90)} note="optimista" />
+            <Stat label="Media" value={view.fmt(view.f.stats.media)} note="promedio" />
+            <Stat label="Desv. est." value={view.fmt(view.f.stats.std)} note="dispersión" />
             {view.f.certeza ? (
               <Stat
                 label="Certeza"
-                value={fmtPct(view.f.certeza.prob, 0)}
-                note={`prob. ${view.f.certeza.signo} ${view.fmt(view.f.certeza.umbral)}`}
-                good={view.f.certeza.prob >= 0.5}
+                value={fmtPct(certezaLive ?? view.f.certeza.prob, 0)}
+                note={`prob. ${view.f.certeza.signo} ${view.fmt(umbral ?? view.f.certeza.umbral)}`}
+                good={(certezaLive ?? view.f.certeza.prob) >= 0.5}
+                accent
               />
             ) : (
-              <Stat label="Desv. est." value={view.fmt(view.f.stats.std)} note="dispersión" />
+              <Stat label="Rango" value={`${view.fmt(view.f.stats.min)} – ${view.fmt(view.f.stats.max)}`} note="mín – máx" />
             )}
           </div>
 
           {view.f.valores && view.f.valores.length > 0 ? (
             <div className="mt-4 rounded-[var(--radius-data)] border bg-card p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Distribución de {view.f.nombre}
+                </div>
+                <div className="inline-flex rounded-[var(--radius-data)] border bg-card p-0.5 text-xs">
+                  {(["frecuencia", "acumulada"] as const).map((mo) => (
+                    <button
+                      key={mo}
+                      type="button"
+                      onClick={() => setModo(mo)}
+                      className={cn(
+                        "rounded-[3px] px-2.5 py-1 font-medium capitalize transition-colors [transition-timing-function:var(--ease-out)]",
+                        modo === mo ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {mo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <DistributionHistogram
                 values={view.f.valores}
                 markers={markers}
-                hurdle={view.f.certeza ? view.f.certeza.umbral : undefined}
+                umbral={umbral ?? undefined}
+                signoMayor={signoMayor}
+                showCumulative={modo === "acumulada"}
                 format={view.fmt}
               />
+
+              {/* Certeza interactiva: mover el umbral y ver el % en vivo (descriptivo, no recálculo) */}
+              {view.f.certeza && umbral != null ? (
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-rule pt-3 text-sm">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Certeza
+                  </span>
+                  <input
+                    type="range"
+                    min={view.f.stats.min}
+                    max={view.f.stats.max}
+                    step={Math.max((view.f.stats.max - view.f.stats.min) / 200, 1e-9)}
+                    value={umbral}
+                    onChange={(e) => setUmbral(Number(e.target.value))}
+                    className="h-1 min-w-[140px] flex-1 cursor-pointer accent-[var(--primary)]"
+                    aria-label="Umbral de certeza"
+                  />
+                  <span className="num tabular-nums">
+                    <span className="text-base font-semibold">{fmtPct(certezaLive ?? 0, 0)}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      prob. {view.f.certeza.signo} {view.fmt(umbral)}
+                    </span>
+                  </span>
+                  {desviado ? (
+                    <button
+                      type="button"
+                      onClick={() => setUmbral(baseUmbral)}
+                      className="inline-flex items-center gap-1 rounded-[3px] border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <RotateCcw className="size-3" aria-hidden /> base {fmtPct(view.f.certeza.prob, 0)}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">
@@ -208,19 +292,26 @@ function Stat({
   note,
   strong,
   good,
+  accent,
 }: {
   label: string;
   value: string;
   note?: string;
   strong?: boolean;
   good?: boolean;
+  accent?: boolean;
 }) {
   return (
-    <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div
+      className={cn(
+        "rounded-[var(--radius-data)] border bg-card px-3 py-2.5",
+        accent && "border-l-2 border-l-primary/40",
+      )}
+    >
+      <div className="text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div
         className={cn(
-          "num mt-0.5 font-semibold",
+          "num mt-0.5 font-semibold tabular-nums",
           strong ? "text-lg" : "text-base",
           good === true ? "text-success" : good === false ? "text-danger" : "",
         )}
