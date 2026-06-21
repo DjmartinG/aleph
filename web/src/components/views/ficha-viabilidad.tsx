@@ -1,11 +1,11 @@
 import { Check, AlertTriangle, Circle, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
-import type { DueDiligence, DueDiligenceItem, Urbanismo } from "@/lib/api";
+import type { DueDiligence, DueDiligenceItem, Urbanismo, Mercado } from "@/lib/api";
 import { fmtPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-/** Viabilidad cualitativa — due diligence (B1) + cumplimiento urbanístico POT (B2). Camacol M1/M4/M5.
- *  Solo presenta lo que el motor agrega; la captura de estados/límites se hace en el Ingreso de datos. */
-export function ViabilidadView({ dd, urb }: { dd: DueDiligence; urb?: Urbanismo | null }) {
+/** Viabilidad cualitativa — due diligence (B1) + POT (B2) + contraste de mercado (B3). Camacol M1/M3/M4/M5.
+ *  Solo presenta lo que el motor agrega; la captura de estados/límites/comparables va en el Ingreso. */
+export function ViabilidadView({ dd, urb, mkt }: { dd: DueDiligence; urb?: Urbanismo | null; mkt?: Mercado | null }) {
   const v = dd.veredicto;
   return (
     <div className="space-y-5">
@@ -29,6 +29,7 @@ export function ViabilidadView({ dd, urb }: { dd: DueDiligence; urb?: Urbanismo 
       </div>
 
       {urb ? <UrbanismoSection urb={urb} /> : null}
+      {mkt ? <MercadoSection mkt={mkt} /> : null}
 
       <p className="text-[0.7rem] text-muted-foreground">
         Due diligence del prefacto (curso Camacol · legal, ambiental/ESG, urbanístico, técnico y bancario).
@@ -170,6 +171,69 @@ function UrbanismoSection({ urb }: { urb: Urbanismo }) {
         <p className="mt-2 text-[0.7rem] text-muted-foreground">
           Referencia POT (no comparable por el motor):{" "}
           {Object.entries(urb.referencia).map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`).join(" · ")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Contraste de mercado — supuestos del proyecto (precio, ritmo) vs comparables de la zona (B3). */
+function MercadoSection({ mkt }: { mkt: Mercado }) {
+  const nivel = mkt.veredicto.nivel;
+  const map: Record<string, { txt: string; cls: string }> = {
+    en_mercado: { txt: "Supuestos en línea con el mercado", cls: "bg-success/10 text-success" },
+    revisar: { txt: "Supuestos a revisar vs mercado", cls: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" },
+    sin_datos: { txt: "Sin comparables de mercado", cls: "bg-muted text-muted-foreground" },
+  };
+  const f = map[nivel] ?? map.sin_datos;
+  // precio en millones COP/m²; ritmo en und/mes (1 decimal).
+  const fmtVal = (v: number, sentido: string) => (sentido === "precio" ? `$${(v / 1_000_000).toFixed(2)}M` : v.toFixed(1));
+  const hint = (sentido: string, desv: number, estado: string) => {
+    if (estado === "ok") return sentido === "ritmo" && desv < 0 ? "conservador" : "en mercado";
+    if (sentido === "precio") return desv > 0 ? "sobre el comparable (riesgo de venta lenta)" : "bajo el comparable (valor en la mesa)";
+    return "más rápido que la absorción de la zona (optimista)";
+  };
+  return (
+    <div className="rounded-[var(--radius-data)] border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="text-sm font-medium text-foreground">Contraste de mercado</div>
+        <span className={cn("rounded-full px-2 py-0.5 text-[0.7rem] font-medium", f.cls)}>{f.txt}</span>
+      </div>
+      {mkt.disponible ? (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3 text-[0.7rem] uppercase tracking-wide text-muted-foreground">
+            <span className="flex-1">Supuesto</span>
+            <span className="num w-20 text-right">Proyecto</span>
+            <span className="num w-20 text-right">Mercado</span>
+            <span className="num w-16 text-right">Desv.</span>
+          </div>
+          {mkt.items.map((it) => (
+            <div key={it.dimension} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
+              <span className="flex-1 text-muted-foreground">{it.dimension}</span>
+              <span className="num w-20 text-right tabular-nums">{fmtVal(it.proyecto, it.sentido)}</span>
+              <span className="num w-20 text-right tabular-nums text-muted-foreground">{fmtVal(it.mercado, it.sentido)}</span>
+              <span
+                className={cn(
+                  "num w-16 text-right tabular-nums",
+                  it.estado === "alerta" ? "text-amber-700 dark:text-amber-300" : "text-success",
+                )}
+              >
+                {it.desviacion > 0 ? "+" : ""}{fmtPct(it.desviacion, 0)}
+              </span>
+              <span className="w-full text-right text-[0.7rem] text-muted-foreground">{hint(it.sentido, it.desviacion, it.estado)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Captura los comparables de la zona (precio /m² de la competencia, absorción esperada) para
+          contrastar el precio y el ritmo de ventas del proyecto.
+        </p>
+      )}
+      {Object.keys(mkt.referencia).length > 0 ? (
+        <p className="mt-2 text-[0.7rem] text-muted-foreground">
+          Contexto de mercado:{" "}
+          {Object.entries(mkt.referencia).map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`).join(" · ")}
         </p>
       ) : null}
     </div>

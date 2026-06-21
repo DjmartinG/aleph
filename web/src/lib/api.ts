@@ -442,6 +442,22 @@ export interface Urbanismo {
   referencia: Record<string, number | string>;
 }
 
+/** Estudio de mercado — supuestos del proyecto vs comparables de la zona (B3). */
+export interface MercadoItem {
+  dimension: string;
+  sentido: "precio" | "ritmo" | string;
+  proyecto: number;
+  mercado: number;
+  desviacion: number;
+  estado: "ok" | "alerta" | string;
+}
+export interface Mercado {
+  disponible: boolean;
+  items: MercadoItem[];
+  veredicto: { nivel: "en_mercado" | "revisar" | "sin_datos" | string; n: number; n_alerta: number };
+  referencia: Record<string, number | string>;
+}
+
 export interface Results {
   scenario_id: string;
   project_id: string;
@@ -455,6 +471,8 @@ export interface Results {
   due_diligence?: DueDiligence | null;
   /** Viabilidad urbanística — cumplimiento POT (B2). null si el API aún no lo expone. */
   urbanismo?: Urbanismo | null;
+  /** Estudio de mercado — contraste de supuestos (B3). null si el API aún no lo expone. */
+  mercado?: Mercado | null;
   checks: Check[];
 }
 
