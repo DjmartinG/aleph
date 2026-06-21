@@ -24,7 +24,7 @@ import re
 import unicodedata
 
 from aleph_engine import __version__ as ENGINE_V
-from aleph_engine import calcular, checks, config, schema
+from aleph_engine import calcular, checks, config, schema, tipologias
 from fastapi import HTTPException
 
 from . import repo
@@ -60,6 +60,12 @@ def _validar(par: dict) -> None:
         schema.parse(par)
     except Exception as e:  # pydantic.ValidationError u otros
         raise HTTPException(status_code=422, detail=f"Proyecto inválido: {e}") from e
+    # Tabla de tipologías: `schema` la deja pasar (extra=allow) y el motor la deriva SIN avisar de datos
+    # malformados (etapa inexistente, clase inválida, precio en miles → ventas 10x abajo). Se valida aquí,
+    # en el camino de escritura, para que ningún cliente (UI o API directo) persista una tabla corrupta.
+    errs = tipologias.validar_tipologias(par)
+    if errs:
+        raise HTTPException(status_code=422, detail="Tipologías inválidas: " + " · ".join(errs))
 
 
 def _audit(sb, entity_type: str, entity_id, action: str, actor: str | None, diff=None) -> None:

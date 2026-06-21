@@ -819,6 +819,17 @@ export interface ProjectSource {
   par: Record<string, unknown>;
 }
 
+/** Una fila de la tabla de tipologías (mezcla de unidades por clase/etapa) — editor de tipologías. */
+export interface Tipologia {
+  etapa: number;
+  nombre?: string;
+  clase: "apartamento" | "comercio" | "parqueadero" | "deposito" | string;
+  und: number;
+  metodo: "$/und" | "$/m²" | string;
+  precio: number;
+  area_und?: number;
+}
+
 /** GET /v1/projects/{slug}/source — el `par` crudo del escenario vigente (admin). null si no existe. */
 export async function getProjectSource(slug: string): Promise<ProjectSource | null> {
   const res = await apiFetch(`/v1/projects/${encodeURIComponent(slug)}/source`);

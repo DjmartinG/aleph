@@ -213,6 +213,45 @@ export async function editarViabilidadYAprobar(
   return editarYAprobarProyecto({ projectId: source.project_id, slug: input.slug, par });
 }
 
+// ---------- Editar tipologías (C·tipologías): edita la mezcla sin corromper cifras ----------
+
+export interface EditarTipologiasInput {
+  slug: string;
+  tipologias: Record<string, unknown>[];
+}
+
+/**
+ * Edita la TABLA de tipologías (mezcla de unidades por clase/etapa) creando una versión nueva. Lee el
+ * `par` crudo del escenario vigente SERVER-SIDE y reemplaza SOLO la clave `tipologias`. CLAVE anti-bug
+ * (2026-06-13): borra los DERIVADOS stale de cada etapa (ventas_miles / ventas_vivienda_miles /
+ * ventas_adicional_miles / und) para que el motor (`normalizar_tipologias`) los re-derive de la tabla
+ * nueva y no sobrevivan valores viejos. El resto del par viaja bit a bit; el motor es la única fuente de
+ * derivación → las cifras las recalcula `aprobar()`. NO pasa por buildPar (origen de los bugs del CRUD).
+ */
+export async function editarTipologiasYAprobar(
+  input: EditarTipologiasInput,
+): Promise<CrearProyectoResult> {
+  let source;
+  try {
+    source = await getProjectSource(input.slug);
+  } catch (e) {
+    if (e instanceof WriteError) return { ok: false, status: e.status, message: e.message };
+    throw e; // redirect() de 401 debe propagarse
+  }
+  if (!source) return { ok: false, status: 404, message: "No se encontró el proyecto." };
+
+  const par: Record<string, unknown> = { ...source.par, tipologias: input.tipologias };
+  // Borrar derivados stale por etapa → el motor manda (re-deriva de la tabla nueva).
+  const etapas = Array.isArray(par.etapas) ? (par.etapas as Record<string, unknown>[]) : [];
+  for (const e of etapas) {
+    delete e.ventas_miles;
+    delete e.ventas_vivienda_miles;
+    delete e.ventas_adicional_miles;
+    delete e.und;
+  }
+  return editarYAprobarProyecto({ projectId: source.project_id, slug: input.slug, par });
+}
+
 // ---------- Administración: marcar real / eliminar proyecto (solo admin) ----------
 
 export type MarcarRealResult =
