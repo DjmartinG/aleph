@@ -215,6 +215,25 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
         out["tir_equity"] = _tir(_ov["flujo_equity_at"])
         out["nota_vehiculo"] = _ov["nota_timing"]
 
+    # ---- Capa after-tax de DECISIÓN (C1, Camacol M4/M6) — ADITIVA: no toca las cifras pre-impuesto ----
+    # Sobre la serie mensual del modelo aplica renta + GMF (+ dividendos si el vehículo es opaco) y, en
+    # VIS, suma la devolución del IVA. NO modela retención (anticipo de renta → doble conteo) ni ICA.
+    # Preliminar [VALIDAR asesor]. La oficial pre-impuesto (auditada de fiducia) se conserva intacta.
+    _es_vis = str((par.get("meta") or {}).get("tipo", "")).strip().upper() in ("VIS", "VIP")
+    _atd = tributario.decision_after_tax(retorno, flujo_equity, vehiculo=_veh.clave,
+                                         renta_total=pg.get("renta", 0.0),
+                                         es_vis=_es_vis, ventas=pg.get("ventas", 0.0))
+    out["tir_proyecto_at"] = _tir(_atd["retorno_at"])
+    out["tir_equity_at"] = _tir(_atd["flujo_equity_at"])
+    out["vpn_at"] = sum(f / (1 + tio_m) ** t for t, f in enumerate(_atd["retorno_at"]))
+    # Base mensual PRE-impuesto (para que el delta tributario sea apples-to-apples; la oficial es anual).
+    out["tir_proyecto_pre_mensual"] = _tir(retorno)
+    out["impuesto_renta_at"] = _atd["renta"]
+    out["gmf_at"] = _atd["gmf"]
+    out["iva_vis_devolucion"] = _atd["iva_vis"]
+    out["carga_tributaria_neta_at"] = _atd["carga_neta"]
+    out["after_tax_metodo"] = _atd["metodo"]
+
     # ---- Veredicto de Valor (EVA del proyecto) — ADITIVO: no mueve TIR/VPN@TIO/flujo ----
     # crea_valor = TIR proyecto > WACC (ambas anuales); spread_valor = TIR − WACC; valor_creado =
     # VPN del MISMO flujo de decisión pero descontado al WACC (no a la TIO). Greenfield → None.

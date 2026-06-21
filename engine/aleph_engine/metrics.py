@@ -67,6 +67,24 @@ REGISTRO: dict[str, Metric] = {
         "vpn_proyecto", "VPN", "@TIO",
         "Valor presente neto del flujo del proyecto descontado a la TIO.",
         COP_MILES, ("apalancamiento", "vpn_proyecto"), "rentabilidad"),
+    # --- C1: capa after-tax de DECISIÓN (preliminar) — Camacol M4/M6. NO reemplaza la pre-impuesto. ---
+    "tir_proyecto_at": Metric(
+        "tir_proyecto_at", "TIR proyecto (desp. imp.)", "después de imp. · preliminar [VALIDAR]",
+        "TIR del proyecto después de impuestos (renta + GMF − devolución IVA VIS) sobre el modelo "
+        "mensual. Preliminar; tasas pendientes de ratificación del asesor fiscal. No incluye retención "
+        "(anticipo de renta) ni ICA.",
+        PCT, ("apalancamiento", "tir_proyecto_at"), "rentabilidad",
+        estado_validacion="por_validar", fuente_normativa="ET 235-2; Art. 871 ET; Ley 1607/2012 Art. 850"),
+    "tir_socio_at": Metric(
+        "tir_socio_at", "TIR socio (desp. imp.)", "después de imp. · preliminar [VALIDAR]",
+        "TIR del socio (equity) después de impuestos del vehículo, sobre el modelo mensual. Preliminar.",
+        PCT, ("apalancamiento", "tir_equity_at"), "rentabilidad",
+        estado_validacion="por_validar", fuente_normativa="ET 235-2; Ley 2277/2022"),
+    "vpn_at": Metric(
+        "vpn_at", "VPN (desp. imp.)", "@TIO · después de imp. · preliminar [VALIDAR]",
+        "VPN del flujo after-tax del proyecto descontado a la TIO. Preliminar.",
+        COP_MILES, ("apalancamiento", "vpn_at"), "rentabilidad",
+        estado_validacion="por_validar"),
     "wacc": Metric(
         "wacc", "WACC", "build-up CAPM (Damodaran)",
         "Costo promedio ponderado de capital.",

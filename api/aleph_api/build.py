@@ -48,6 +48,15 @@ def indicadores(R: dict) -> dict:
         "inflacion": ap.get("inflacion"),
         "tir_proyecto_real": ap.get("tir_proyecto_real"), "tir_proyecto_real_label": metrics.etiqueta("tir_proyecto_real"),
         "tir_socio_real": ap.get("tir_equity_real"), "tir_socio_real_label": metrics.etiqueta("tir_socio_real"),
+        # --- C1 (curso Camacol M4/M6): capa after-tax de DECISIÓN (preliminar [VALIDAR asesor]) ---
+        "tir_proyecto_at": ap.get("tir_proyecto_at"), "tir_proyecto_at_label": metrics.etiqueta("tir_proyecto_at"),
+        "tir_socio_at": ap.get("tir_equity_at"), "tir_socio_at_label": metrics.etiqueta("tir_socio_at"),
+        "vpn_at": ap.get("vpn_at"), "vpn_at_label": metrics.etiqueta("vpn_at"),
+        "tir_proyecto_pre_mensual": ap.get("tir_proyecto_pre_mensual"),   # base mensual pre-imp. (delta limpio)
+        "impuesto_renta_at": ap.get("impuesto_renta_at"), "gmf_at": ap.get("gmf_at"),
+        "iva_vis_devolucion": ap.get("iva_vis_devolucion"),
+        "carga_tributaria_neta_at": ap.get("carga_tributaria_neta_at"),
+        "after_tax_metodo": ap.get("after_tax_metodo"),
         # --- Veredicto de Valor (EVA del proyecto) — ADITIVO: ¿genera o destruye valor sobre el WACC? ---
         "crea_valor": ap.get("crea_valor"), "crea_valor_label": metrics.etiqueta("crea_valor"),
         "valor_creado": ap.get("valor_creado"), "valor_creado_label": metrics.etiqueta("valor_creado"),

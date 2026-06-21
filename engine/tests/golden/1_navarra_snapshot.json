@@ -2,6 +2,121 @@
   "engine_version": "2.39.0",
   "input_par": {
     "_nota": "Proyecto activo CG (plantilla). Cifras ilustrativas — ingresa los datos reales en la plataforma.",
+    "due_diligence": [
+      {
+        "frente": "legal",
+        "item": "Estudio de títulos y tradición",
+        "estado": "ok",
+        "impacto": "alto",
+        "nota": "Tradición limpia de 20 años; sin gravámenes vigentes."
+      },
+      {
+        "frente": "legal",
+        "item": "Saneamiento jurídico del predio",
+        "estado": "ok",
+        "impacto": "alto"
+      },
+      {
+        "frente": "legal",
+        "item": "Contratos típicos (promesa, fiducia, encargo)",
+        "estado": "ok",
+        "impacto": "medio"
+      },
+      {
+        "frente": "legal",
+        "item": "Riesgos legales / litigios / servidumbres",
+        "estado": "ok",
+        "impacto": "alto"
+      },
+      {
+        "frente": "ambiental",
+        "item": "Licencia y permisos ambientales",
+        "estado": "ok",
+        "impacto": "alto"
+      },
+      {
+        "frente": "ambiental",
+        "item": "Impactos ambientales y mitigación",
+        "estado": "ok",
+        "impacto": "medio"
+      },
+      {
+        "frente": "ambiental",
+        "item": "Sostenibilidad / ESG",
+        "estado": "alerta",
+        "impacto": "bajo",
+        "mitigacion": "Pendiente certificación EDGE; evaluar sobrecosto vs. valorización."
+      },
+      {
+        "frente": "ambiental",
+        "item": "Normativa ambiental aplicable",
+        "estado": "ok",
+        "impacto": "medio"
+      },
+      {
+        "frente": "urbanistico",
+        "item": "Uso del suelo permitido (POT)",
+        "estado": "ok",
+        "impacto": "alto"
+      },
+      {
+        "frente": "urbanistico",
+        "item": "Índice de construcción / aprovechamiento",
+        "estado": "ok",
+        "impacto": "alto"
+      },
+      {
+        "frente": "urbanistico",
+        "item": "Cesiones y obligaciones urbanísticas",
+        "estado": "alerta",
+        "impacto": "medio",
+        "mitigacion": "Cesión tipo A por definir con Planeación; reservar área."
+      },
+      {
+        "frente": "tecnico",
+        "item": "Estudio de suelos / geotecnia",
+        "estado": "ok",
+        "impacto": "alto"
+      },
+      {
+        "frente": "tecnico",
+        "item": "Disponibilidad de servicios públicos",
+        "estado": "ok",
+        "impacto": "medio"
+      },
+      {
+        "frente": "tecnico",
+        "item": "Licencia de construcción / diseños",
+        "estado": "pendiente",
+        "impacto": "medio"
+      },
+      {
+        "frente": "bancario",
+        "item": "Crédito constructor (aprobación)",
+        "estado": "ok",
+        "impacto": "alto",
+        "nota": "Carta de aprobación banco; cupo 80% del costo de obra."
+      },
+      {
+        "frente": "bancario",
+        "item": "Estructura fiduciaria / patrimonio autónomo",
+        "estado": "ok",
+        "impacto": "medio"
+      }
+    ],
+    "pot": {
+      "indice_construccion_max": 3.0,
+      "densidad_max_und_ha": 350,
+      "aprovechamiento_max": 0.9,
+      "altura_max_pisos": 12,
+      "cesion_min_pct": 0.17
+    },
+    "mercado": {
+      "precio_m2_mercado": 3850000,
+      "absorcion_mercado_und_mes": 12,
+      "oferta_competencia": "media (3 proyectos VIS en la zona)",
+      "fuente": "Galería Inmobiliaria · corte 2026-T1"
+    },
     "meta": {
       "nombre": "Navarra Apartamentos",
       "ubicacion": "Bogotá",
@@ -6182,6 +6297,15 @@
       "anio0": 2026,
       "payback_mes": 58,
       "fiducia_real": false,
+      "tir_proyecto_at": -0.9999754567839969,
+      "tir_equity_at": -0.3504672437161839,
+      "vpn_at": 8569403.864897424,
+      "tir_proyecto_pre_mensual": -0.9999742508268662,
+      "impuesto_renta_at": 5538638.0,
+      "gmf_at": 745520.0637214035,
+      "iva_vis_devolucion": 7516723.0,
+      "carga_tributaria_neta_at": -1232564.9362785965,
+      "after_tax_metodo": "modelo mensual · preliminar [VALIDAR asesor fiscal]",
       "valor_creado": 4713382.727156099,
       "crea_valor": null,
       "spread_valor": null,
