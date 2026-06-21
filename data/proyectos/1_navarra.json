@@ -25,6 +25,12 @@
     "altura_max_pisos": 12,
     "cesion_min_pct": 0.17
   },
+  "mercado": {
+    "precio_m2_mercado": 3850000,
+    "absorcion_mercado_und_mes": 12,
+    "oferta_competencia": "media (3 proyectos VIS en la zona)",
+    "fuente": "Galería Inmobiliaria · corte 2026-T1"
+  },
   "meta": {
     "nombre": "Navarra Apartamentos",
     "ubicacion": "Bogotá",

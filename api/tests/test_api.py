@@ -82,6 +82,9 @@ def test_project_y_results_fieles_al_motor():
     # Viabilidad urbanística (B2): cumplimiento POT.
     urv = res["urbanismo"]
     assert urv and urv["veredicto"]["nivel"] in ("cumple", "al_limite", "excede", "sin_pot")
+    # Estudio de mercado (B3): contraste de supuestos.
+    mkv = res["mercado"]
+    assert mkv and mkv["veredicto"]["nivel"] in ("en_mercado", "revisar", "sin_datos")
 
 
 @pytest.mark.skipif(not repo.es_real(NAV), reason="datos REALES de Navarra no presentes (p.ej. CI)")
