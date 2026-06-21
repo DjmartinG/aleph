@@ -331,6 +331,19 @@ export interface Indicadores {
   tir_proyecto_real_label?: string;
   tir_socio_real?: number | null;
   tir_socio_real_label?: string;
+  // C1 (curso Camacol M4/M6): capa after-tax de DECISIÓN (preliminar [VALIDAR asesor]).
+  tir_proyecto_at?: number | null;
+  tir_proyecto_at_label?: string;
+  tir_socio_at?: number | null;
+  tir_socio_at_label?: string;
+  vpn_at?: number | null;
+  vpn_at_label?: string;
+  tir_proyecto_pre_mensual?: number | null;
+  impuesto_renta_at?: number | null;
+  gmf_at?: number | null;
+  iva_vis_devolucion?: number | null;
+  carga_tributaria_neta_at?: number | null;
+  after_tax_metodo?: string | null;
   // Veredicto de Valor (EVA del proyecto): ¿genera o destruye valor sobre el WACC?
   crea_valor: boolean | null;       // null = greenfield (TIR degenerada) → "— greenfield"
   crea_valor_label: string;

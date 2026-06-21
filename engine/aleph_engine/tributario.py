@@ -144,6 +144,46 @@ def comparar(par: dict, claves: list[str] | None = None) -> dict:
 
 GMF_TASA = 0.004          # 4x1000 sobre movimientos de caja [VALIDAR Art. 871 ET; exenciones de fiducia]
 DIVIDENDOS_TASA = 0.10    # impuesto a dividendos al socio en vehículos OPACOS (SAS/SPV) [VALIDAR Ley 2277/2022, tarifa marginal]
+IVA_VIS_DEVOLUCION = 0.038  # devolución del IVA en VIS sobre el valor de escrituración (entrada de caja).
+                            # Tasa indicada por Martín (3,8%); base = ventas VIS. [VALIDAR Ley 1607/2012 Art. 850 par.2; base y timing del reintegro]
+
+
+def decision_after_tax(retorno: list, flujo_equity: list, *, vehiculo: str | None,
+                       renta_total: float, es_vis: bool, ventas: float) -> dict:
+    """Capa after-tax de DECISIÓN (C1) — ADITIVA: NO sobreescribe las cifras pre-impuesto.
+
+    Sobre las MISMAS series mensuales pre-impuesto del proyecto, aplica:
+      • renta + GMF + dividendos (vía `overlay_after_tax`, según el vehículo), y
+      • si es VIS, SUMA la devolución del IVA (3,8% de las ventas) como ENTRADA de caja,
+        prorrateada a los flujos positivos (cuando entra la caja de escrituración).
+    NO modela retención en la fuente (es un ANTICIPO de renta, se acredita → meterla como costo
+    DOBLE-contaría la renta) ni ICA (parámetro municipal pendiente). Tasas [VALIDAR asesor fiscal].
+    Devuelve las series after-tax + el desglose de carga; la TIR/VPN las calcula `apalancamiento`
+    con su misma convención (serie mensual), para que el delta vs la pre-impuesto mensual sea limpio.
+    """
+    ov = overlay_after_tax(retorno, flujo_equity, vehiculo=vehiculo, renta_total=renta_total)
+    ret_at = list(ov["retorno_at"])
+    eq_at = list(ov["flujo_equity_at"])
+
+    iva = IVA_VIS_DEVOLUCION * ventas if (es_vis and ventas and ventas > 0) else 0.0
+    if iva:
+        pr = sum(x for x in ret_at if x > 0) or 1.0
+        ret_at = [(x + iva * (x / pr)) if x > 0 else x for x in ret_at]
+        pe = sum(x for x in eq_at if x > 0) or 1.0
+        eq_at = [(x + iva * (x / pe)) if x > 0 else x for x in eq_at]
+
+    return {
+        "retorno_at": ret_at,
+        "flujo_equity_at": eq_at,
+        "renta": ov["renta"],
+        "gmf": ov["gmf"],
+        "dividendos": ov["dividendos"],
+        "iva_vis": iva,
+        # carga NETA = impuestos (renta+gmf+dividendos) − beneficio (devolución IVA VIS)
+        "carga_neta": ov["carga_total"] - iva,
+        "carga_bruta": ov["carga_total"],
+        "metodo": "modelo mensual · preliminar [VALIDAR asesor fiscal]",
+    }
 
 
 def overlay_after_tax(retorno: list, flujo_equity: list, *, vehiculo: str | None,

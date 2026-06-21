@@ -1,5 +1,5 @@
 import type { ProjectDetail, Pyg, Results, Urbanistico } from "@/lib/api";
-import { fmtCop, fmtInt, fmtPct, splitCop, splitPct, splitTir } from "@/lib/format";
+import { fmtCop, fmtInt, fmtPct, splitCop, splitPct, splitTir, tirEsDegenerada } from "@/lib/format";
 import { StatPanel, type StatItem } from "@/components/stat";
 import { Figure } from "@/components/figure";
 import { ValorBanner } from "@/components/valor-banner";
@@ -17,6 +17,11 @@ function splitLabel(s: string): [string, string] {
 /** TIR real (precios constantes); greenfield/None → "— greenfield" (jamás −99%). */
 function realTir(v: number | null | undefined): string {
   return v == null ? "— greenfield" : fmtPct(v);
+}
+
+/** TIR (después de imp.); greenfield/degenerada → "— greenfield" (jamás −99%). */
+function tirAt(v: number | null | undefined): string {
+  return v == null || tirEsDegenerada(v) ? "— greenfield" : fmtPct(v);
 }
 
 export function FichaResumen({ project, results }: { project: ProjectDetail; results: Results }) {
@@ -51,6 +56,35 @@ export function FichaResumen({ project, results }: { project: ProjectDetail; res
           TIR proyecto <span className="num text-foreground/80">{realTir(ind.tir_proyecto_real)}</span> ·{" "}
           TIR socio <span className="num text-foreground/80">{realTir(ind.tir_socio_real)}</span>
         </p>
+      ) : null}
+
+      {/* Impacto tributario (after-tax · preliminar) — C1 (Camacol M4/M6). Lente adicional; la cifra
+          oficial sigue siendo la pre-impuesto. Degrada limpio si el API aún no expone `after_tax_metodo`. */}
+      {ind.after_tax_metodo ? (
+        <div className="mt-4 rounded-[var(--radius-data)] border border-dashed bg-card p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-sm font-medium text-foreground">Impacto tributario (después de imp.)</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.7rem] font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+              preliminar · pendiente asesor
+            </span>
+          </div>
+          <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-4">
+            <MiniStat label="TIR proyecto desp. imp." value={tirAt(ind.tir_proyecto_at)} note="modelo mensual" />
+            <MiniStat label="TIR socio desp. imp." value={tirAt(ind.tir_socio_at)} note="modelo mensual" />
+            {ind.iva_vis_devolucion ? (
+              <MiniStat label="Devolución IVA VIS" value={`+${fmtCop(ind.iva_vis_devolucion)}`} note="3,8% · entrada" />
+            ) : null}
+            {ind.carga_tributaria_neta_at != null ? (
+              <MiniStat label="Carga tributaria neta" value={fmtCop(ind.carga_tributaria_neta_at)} note="renta + GMF − IVA" />
+            ) : null}
+          </div>
+          <p className="mt-2 text-[0.7rem] text-muted-foreground">
+            Renta (exención VIS sobre utilidad; honorarios gravados) + GMF − devolución de IVA VIS, sobre el
+            modelo mensual. <strong>No</strong> incluye retención (anticipo de renta, no costo) ni ICA. Tasas{" "}
+            <em>preliminares, pendientes de ratificación del asesor fiscal</em>; la cifra oficial sigue siendo
+            la pre-impuesto.
+          </p>
+        </div>
       ) : null}
 
       {/* Veredicto de Valor (EVA): ¿genera o destruye valor sobre el WACC? — junto al héroe.
