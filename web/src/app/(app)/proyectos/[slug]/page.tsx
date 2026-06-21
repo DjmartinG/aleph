@@ -81,7 +81,7 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
         </div>
       </header>
 
-      <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} vehiculos={vehiculos} />
+      <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} vehiculos={vehiculos} isAdmin={admin} />
     </div>
   );
 }

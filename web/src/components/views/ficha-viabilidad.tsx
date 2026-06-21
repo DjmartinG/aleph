@@ -1,14 +1,37 @@
-import { Check, AlertTriangle, Circle, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
+import Link from "next/link";
+import { Check, AlertTriangle, Circle, ShieldCheck, ShieldAlert, ShieldX, Pencil } from "lucide-react";
 import type { DueDiligence, DueDiligenceItem, Urbanismo, Mercado } from "@/lib/api";
 import { fmtPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** Viabilidad cualitativa — due diligence (B1) + POT (B2) + contraste de mercado (B3). Camacol M1/M3/M4/M5.
- *  Solo presenta lo que el motor agrega; la captura de estados/límites/comparables va en el Ingreso. */
-export function ViabilidadView({ dd, urb, mkt }: { dd: DueDiligence; urb?: Urbanismo | null; mkt?: Mercado | null }) {
+ *  Solo presenta lo que el motor agrega; la captura (C2) vive en /proyectos/{slug}/viabilidad (admin). */
+export function ViabilidadView({
+  dd,
+  urb,
+  mkt,
+  slug,
+  isAdmin = false,
+}: {
+  dd: DueDiligence;
+  urb?: Urbanismo | null;
+  mkt?: Mercado | null;
+  slug?: string;
+  isAdmin?: boolean;
+}) {
   const v = dd.veredicto;
   return (
     <div className="space-y-5">
+      {isAdmin && slug ? (
+        <div className="flex justify-end">
+          <Link
+            href={`/proyectos/${slug}/viabilidad`}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] border border-primary/40 px-3 py-1.5 text-sm font-medium text-primary transition-[color,background-color,transform] [transition-timing-function:var(--ease-out)] hover:bg-primary/10 active:scale-[0.98]"
+          >
+            <Pencil className="size-3.5" aria-hidden /> Editar viabilidad
+          </Link>
+        </div>
+      ) : null}
       <VeredictoBanner nivel={v.nivel} n_items={v.n_items} n_ok={v.n_ok} n_alertas={v.n_alertas} n_pendientes={v.n_pendientes} />
 
       <div className="grid gap-4 md:grid-cols-2">

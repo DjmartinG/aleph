@@ -34,6 +34,7 @@ export function FichaTabs({
   schedule,
   wacc,
   vehiculos,
+  isAdmin = false,
 }: {
   project: ProjectDetail;
   results: Results;
@@ -41,6 +42,7 @@ export function FichaTabs({
   schedule: Schedule | null;
   wacc: Wacc | null;
   vehiculos: Vehiculos | null;
+  isAdmin?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("resumen");
 
@@ -87,7 +89,7 @@ export function FichaTabs({
       ) : null}
       {tab === "viabilidad" ? (
         results.due_diligence ? (
-          <ViabilidadView dd={results.due_diligence} urb={results.urbanismo} mkt={results.mercado} />
+          <ViabilidadView dd={results.due_diligence} urb={results.urbanismo} mkt={results.mercado} slug={project.id} isAdmin={isAdmin} />
         ) : (
           <div className="rounded-[var(--radius-data)] border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
             Viabilidad cualitativa no disponible.

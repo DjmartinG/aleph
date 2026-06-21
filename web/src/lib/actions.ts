@@ -5,6 +5,7 @@ import {
   approveScenario,
   createProject,
   deleteProject,
+  getProjectSource,
   nuevoEscenario,
   postRun,
   postMonteCarloCB,
@@ -172,6 +173,44 @@ export async function editarYAprobarProyecto(
     }
     throw e;
   }
+}
+
+// ---------- Editar viabilidad (C2): captura DD / POT / mercado sin tocar las cifras ----------
+
+export interface EditarViabilidadInput {
+  slug: string;
+  dueDiligence: unknown[];
+  pot: Record<string, unknown>;
+  mercado: Record<string, unknown>;
+}
+
+/**
+ * Edita los registros CUALITATIVOS del proyecto (due diligence, límites POT, comparables de mercado)
+ * creando una versión nueva. Lee el `par` crudo del escenario vigente SERVER-SIDE (no se pasa por el
+ * cliente → a prueba de manipulación) y reemplaza SOLO esas tres claves: el resto del par (etapas,
+ * costos, WACC, tipologías…) viaja bit a bit. El motor financiero ignora estos campos → las cifras de
+ * decisión NO cambian (dorado intacto). Por eso esquiva el bloqueo de tipologías del formulario simple.
+ */
+export async function editarViabilidadYAprobar(
+  input: EditarViabilidadInput,
+): Promise<CrearProyectoResult> {
+  let source;
+  try {
+    source = await getProjectSource(input.slug);
+  } catch (e) {
+    if (e instanceof WriteError) return { ok: false, status: e.status, message: e.message };
+    throw e; // redirect() de 401 debe propagarse
+  }
+  if (!source) return { ok: false, status: 404, message: "No se encontró el proyecto." };
+
+  const par = {
+    ...source.par,
+    due_diligence: input.dueDiligence,
+    pot: input.pot,
+    mercado: input.mercado,
+  };
+  // Reusa el flujo probado de edición (nueva versión → aprobar → revalidar), que recalcula con el motor.
+  return editarYAprobarProyecto({ projectId: source.project_id, slug: input.slug, par });
 }
 
 // ---------- Administración: marcar real / eliminar proyecto (solo admin) ----------
