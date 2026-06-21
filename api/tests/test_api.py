@@ -343,6 +343,17 @@ def test_write_par_invalido_422(monkeypatch):
     assert ei.value.status_code == 422
 
 
+def test_write_tipologias_malformadas_422(monkeypatch):
+    """La compuerta de tipologías rechaza la tabla malformada (precio en miles → gotcha 10x)."""
+    _fake_write(monkeypatch, {"projects": [], "companies": [{"id": "c1"}]})
+    par = _par_min()
+    par["tipologias"] = [{"etapa": 1, "nombre": "A", "clase": "apartamento", "und": 5,
+                          "metodo": "$/und", "precio": 200_000}]   # precio en MILES, no PESOS
+    with pytest.raises(HTTPException) as ei:
+        write.crear_proyecto(par, slug="t", nombre="T", es_real=False, actor="me")
+    assert ei.value.status_code == 422 and "Tipolog" in str(ei.value.detail)
+
+
 def test_write_editar_solo_draft_409(monkeypatch):
     _fake_write(monkeypatch, {"scenarios": [
         {"id": "s1", "project_id": "p1", "version": 1, "status": "approved", "snapshot": {}}]})

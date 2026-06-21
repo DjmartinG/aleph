@@ -26,9 +26,15 @@ export default async function EditarProyectoPage({ params }: { params: Promise<{
   const etapasArr = (source.par.etapas as { sucesora?: unknown }[] | undefined) ?? [];
   const tieneCadena = etapasArr.some((e) => e.sucesora != null);
   const bloqueado = tieneTipologias || tieneCadena;
-  const razonBloqueo = tieneTipologias
-    ? "Sus unidades y precios vienen de una mezcla de tipologías (por torre/clase) que el motor re-deriva de ese bloque."
-    : "Sus etapas están encadenadas (cada una arranca en el hito de la anterior, sin fecha propia); este formulario simple usa fechas explícitas por etapa.";
+  // Mostrar TODAS las causas (no solo la primera): un proyecto puede tener AMBas a la vez.
+  const razones: string[] = [];
+  if (tieneTipologias)
+    razones.push("sus unidades y precios vienen de una mezcla de tipologías (por torre/clase) que el motor re-deriva de ese bloque");
+  if (tieneCadena)
+    razones.push("sus etapas están encadenadas (cada una arranca en el hito de la anterior, sin fecha propia) y este formulario usa fechas explícitas");
+  const razonBloqueo = razones.join("; ") + ".";
+  // La mezcla de tipologías SÍ es editable en su propio editor seguro (mientras no haya cadena de etapas).
+  const puedeEditarTipologias = tieneTipologias && !tieneCadena;
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-9 sm:px-6 lg:px-8">
@@ -53,13 +59,20 @@ export default async function EditarProyectoPage({ params }: { params: Promise<{
           <div className="space-y-2">
             <p className="font-medium text-foreground">Este proyecto aún no es editable aquí.</p>
             <p className="text-muted-foreground">
-              {razonBloqueo} Editarlo en este formulario simple <strong>movería sus cifras sin querer</strong>,
-              así que se bloquea honestamente hasta soportar esa estructura. Mientras tanto, los datos de este
-              proyecto se conservan intactos.
+              Este formulario simple no aplica porque {razonBloqueo} Editarlo aquí <strong>movería sus cifras
+              sin querer</strong>, así que se bloquea honestamente; los datos se conservan intactos.
             </p>
+            {puedeEditarTipologias ? (
+              <Link
+                href={`/proyectos/${slug}/tipologias`}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-data)] border border-primary/40 px-3 py-1.5 text-sm font-medium text-primary transition-[color,background-color] [transition-timing-function:var(--ease-out)] hover:bg-primary/10"
+              >
+                Editar la mezcla de tipologías →
+              </Link>
+            ) : null}
             <Link
               href={`/proyectos/${slug}`}
-              className="inline-flex items-center gap-1.5 pt-1 text-sm font-medium text-primary hover:underline"
+              className="inline-flex items-center gap-1.5 pt-1 text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="size-4" aria-hidden /> Volver a la ficha
             </Link>
