@@ -18,6 +18,11 @@ dependencies = [
     # supabase>=2.6 se usa SOLO si hay SUPABASE_URL/KEY (en dev se leen JSON locales).
 ]
 
+[project.optional-dependencies]
+# Driver SQL Server del conector SINCO (conectores/sinco.py). OPCIONAL: solo donde se conecta en vivo.
+# El import es perezoso -> el módulo importa y los tests corren SIN este extra (CI no lo instala).
+sinco = ["pymssql>=2.3"]
+
 [tool.setuptools]
 packages = ["aleph_api"]
 
