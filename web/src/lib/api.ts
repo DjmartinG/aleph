@@ -299,6 +299,8 @@ export interface ProjectDetail {
   estado_label: string;
   urbanistico?: Urbanistico | null;
   kpis_cabecera: KpisCabecera;
+  /** Aviso de gobernanza opcional (p.ej. escenario PROVISIONAL): se muestra como banner en la ficha. */
+  disclaimer?: string | null;
 }
 
 export interface Indicadores {

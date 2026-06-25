@@ -78,6 +78,7 @@ def project(slug: str, par: dict, R: dict) -> dict:
     return {
         "id": slug, "es_real": repo.es_real(slug), "fuente": repo.fuente(),
         "meta": R.get("meta"), "estado": estado, "estado_label": config.ESTADO_LABEL.get(estado, estado),
+        "disclaimer": par.get("disclaimer"),   # aviso de gobernanza opcional (escenario PROVISIONAL → banner)
         "urbanistico": R.get("urbanistico"),
         "kpis_cabecera": {
             "ventas": pg.get("ventas"), "util_oper": pg.get("util_oper"), "udi": pg.get("udi"),
