@@ -16,7 +16,10 @@ const FORECASTS: { key: string; label: string }[] = [
   { key: "exposicion_maxima", label: "Exposición máx." },
   { key: "breakeven_mes", label: "Breakeven" },
 ];
-const N_OPTS = [500, 1000, 3000];
+// Tope 2.000: el motor re-corre por cada corrida y el API vive en un App Service B1 (1 core); 2.000
+// caben holgado en el timeout de la función serverless (~30s), 3.000 quedaba al borde de 60s. 2.000
+// corridas ya dan percentiles estables. (Se aceleró ~1.35x con el modo `lite` del motor.)
+const N_OPTS = [500, 1000, 2000];
 const mesFmt = (v: number) => `${v.toFixed(0)} m`;
 const FMT: Record<string, (v: number) => string> = {
   tir_proyecto: (v) => fmtPct(v),

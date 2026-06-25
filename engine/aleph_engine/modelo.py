@@ -423,7 +423,7 @@ def mc_contexto(par, *, escrituracion_sigue_obra=True):
     return {"base": base, "etapas": base_etapas, "tip": base_tip, "pe": base_pe, "esc": base_esc}
 
 
-def _correr_trial(ctx, dp, dc, dv):
+def _correr_trial(ctx, dp, dc, dv, lite=False):
     """Construye y CORRE el escenario estresado (deltas precio/costo/ritmo) con el fix de escrituración
     que sigue a la obra. FUENTE ÚNICA del shock, usada por `mc_trial` (escalares) y por
     `correr_estresado` (serie completa). Devuelve (p, pg, hitos, recaudo, ap).
@@ -462,7 +462,7 @@ def _correr_trial(ctx, dp, dc, dv):
                 delta = hitos[cod].get("pe_idx", 0) - base_pe[cod]
                 e["escrituracion"] = max(1, base_esc[cod] + delta)
     recaudo = _recaudo(p, hitos)
-    ap = apalancamiento.flujo_apalancado(p, pg, hitos, recaudo)
+    ap = apalancamiento.flujo_apalancado(p, pg, hitos, recaudo, lite=lite)
     return p, pg, hitos, recaudo, ap
 
 
@@ -470,7 +470,7 @@ def mc_trial(ctx, dp, dc, dv):
     """UN trial del Monte Carlo de TIR/VPN dado `ctx` (mc_contexto) y deltas de precio/costo/ritmo.
     Misma logica por-trial que `montecarlo_tir` (verificada por test de consistencia). Devuelve las
     cifras de decision del escenario."""
-    _p, pg, _hitos, _recaudo, ap = _correr_trial(ctx, dp, dc, dv)
+    _p, pg, _hitos, _recaudo, ap = _correr_trial(ctx, dp, dc, dv, lite=True)
     return {
         "tir_proyecto": ap.get("tir_proyecto"), "tir_equity": ap.get("tir_equity"),
         "vpn_proyecto": ap.get("vpn_proyecto"), "margen": pg.get("margen_oper"),
