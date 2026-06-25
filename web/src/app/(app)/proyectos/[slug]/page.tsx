@@ -82,9 +82,9 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
         </div>
       </header>
 
-      {project.disclaimer ? (
+      {(project.disclaimer ?? project.params?.disclaimer) ? (
         <Banner tone="warning" label="Provisional" className="mb-6">
-          {project.disclaimer}
+          {project.disclaimer ?? project.params?.disclaimer}
         </Banner>
       ) : null}
 
