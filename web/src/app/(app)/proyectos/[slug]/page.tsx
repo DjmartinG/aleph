@@ -8,6 +8,7 @@ import { PhaseBadge } from "@/components/phase-badge";
 import { SetProjectHeader } from "@/components/project-context";
 import { FichaTabs } from "@/components/views/ficha-tabs";
 import { AdminMenu } from "@/components/admin/admin-menu";
+import { Banner } from "@/components/banner";
 
 /** Base del escenario (honesta, del motor): cifras auditadas (fiducia) vs modelo aprobado. */
 function escenarioLabel(baseLabel: string): string {
@@ -80,6 +81,12 @@ export default async function ProyectoPage({ params }: { params: Promise<{ slug:
           {admin ? <AdminMenu slug={slug} nombre={meta.nombre} esReal={es_real} /> : null}
         </div>
       </header>
+
+      {(project.disclaimer ?? project.params?.disclaimer) ? (
+        <Banner tone="warning" label="Provisional" className="mb-6">
+          {project.disclaimer ?? project.params?.disclaimer}
+        </Banner>
+      ) : null}
 
       <FichaTabs project={project} results={results} sensitivity={sensitivity} schedule={schedule} wacc={wacc} vehiculos={vehiculos} isAdmin={admin} />
     </div>

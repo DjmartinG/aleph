@@ -299,6 +299,11 @@ export interface ProjectDetail {
   estado_label: string;
   urbanistico?: Urbanistico | null;
   kpis_cabecera: KpisCabecera;
+  /** Aviso de gobernanza opcional (p.ej. escenario PROVISIONAL): se muestra como banner en la ficha. */
+  disclaimer?: string | null;
+  /** Snapshot del par (el API lo expone como `params`). Respaldo para leer el disclaimer si el API
+   * aún no expone el campo dedicado (evita depender del redeploy del API para mostrar el aviso). */
+  params?: { disclaimer?: string | null } & Record<string, unknown>;
 }
 
 export interface Indicadores {
