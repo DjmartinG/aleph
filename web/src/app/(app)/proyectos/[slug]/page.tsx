@@ -10,6 +10,11 @@ import { FichaTabs } from "@/components/views/ficha-tabs";
 import { AdminMenu } from "@/components/admin/admin-menu";
 import { Banner } from "@/components/banner";
 
+// El Monte Carlo (Server Action en esta ruta) re-corre el motor miles de veces: ~25s a 3.000 corridas
+// (más en proyectos grandes). Supera el timeout por defecto de la función serverless → el Server Action
+// fallaba con "error en el render de Server Components". Subimos el límite (Vercel Hobby admite hasta 60s).
+export const maxDuration = 60;
+
 /** Base del escenario (honesta, del motor): cifras auditadas (fiducia) vs modelo aprobado. */
 function escenarioLabel(baseLabel: string): string {
   return baseLabel === "auditado_fiducia" ? "base auditada (fiducia)" : "base · modelo aprobado";
