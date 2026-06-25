@@ -16,10 +16,12 @@ const FORECASTS: { key: string; label: string }[] = [
   { key: "exposicion_maxima", label: "Exposición máx." },
   { key: "breakeven_mes", label: "Breakeven" },
 ];
-// Tope 2.000: el motor re-corre por cada corrida y el API vive en un App Service B1 (1 core); 2.000
-// caben holgado en el timeout de la función serverless (~30s), 3.000 quedaba al borde de 60s. 2.000
-// corridas ya dan percentiles estables. (Se aceleró ~1.35x con el modo `lite` del motor.)
-const N_OPTS = [500, 1000, 2000];
+// Tope 500: el MC re-corre el motor por cada corrida y el API vive en un App Service B1 (1 core, CPU
+// muy limitada → ~8-10x más lento que una máquina normal). Medido en prod: incluso 1.000 corridas
+// pasan de 60s (timeout serverless de Vercel → 504). 500 entran (~20-30s) y ya dan percentiles
+// suficientes para una sensibilidad. Para 2.000+ corridas hace falta un tier de App Service más rápido
+// (P0v3/P1v2, CPU dedicada) o un MC asíncrono. (El motor ya corre en modo `lite`, ~1.35x.)
+const N_OPTS = [200, 300, 500];
 const mesFmt = (v: number) => `${v.toFixed(0)} m`;
 const FMT: Record<string, (v: number) => string> = {
   tir_proyecto: (v) => fmtPct(v),
@@ -38,7 +40,7 @@ type Modo = "frecuencia" | "acumulada";
 
 export function MonteCarlo({ slug }: { slug: string }) {
   const [fc, setFc] = useState<string>("tir_proyecto");
-  const [n, setN] = useState(1000);
+  const [n, setN] = useState(300);
   const [res, setRes] = useState<MonteCarloCBResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
