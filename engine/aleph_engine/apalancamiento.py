@@ -34,7 +34,11 @@ _tir_periodo = finanzas.irr_biseccion   # bisección robusta (serie anual audita
 _vpn = finanzas.vpn
 
 
-def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO):
+def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO, lite=False):
+    # `lite=True`: devuelve SOLO el core de decisión (TIR proyecto/socio, VPN@TIO, exposición de caja,
+    # crédito, payback) y SALTA las capas Camacol que no se usan ahí (after-tax C1, veredicto EVA, tasas
+    # reales). Lo usa el Monte Carlo (miles de trials) → evita pagar esas capas ×N. `calcular()` NO pasa
+    # `lite` → camino completo intacto (dorado verde).
     if not hitos or not recaudo or not recaudo.get("total"):
         return {}
     fin = par.get("financiero", {})
@@ -214,6 +218,9 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
         _flujo_vpn, _vpn_anual = _ov["retorno_at"], False   # after-tax: serie MENSUAL → WACC mensual-equiv
         out["tir_equity"] = _tir(_ov["flujo_equity_at"])
         out["nota_vehiculo"] = _ov["nota_timing"]
+
+    if lite:
+        return out   # Monte Carlo: el core ya trae TIR/VPN/exposición/payback; salta las capas Camacol.
 
     # ---- Capa after-tax de DECISIÓN (C1, Camacol M4/M6) — ADITIVA: no toca las cifras pre-impuesto ----
     # Sobre la serie mensual del modelo aplica renta + GMF (+ dividendos si el vehículo es opaco) y, en
