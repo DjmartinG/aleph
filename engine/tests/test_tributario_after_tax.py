@@ -25,6 +25,16 @@ def test_iva_solo_si_hay_ventas():
     assert r["iva_vis"] == 0.0
 
 
+def test_iva_en_operativo_no_duplica():
+    """Si la devolución de IVA YA está contada en los ingresos operativos del P&G, la capa after-tax
+    NO la vuelve a sumar (evita el doble conteo). ET 850 par.2: el beneficio es uno solo."""
+    con = tributario.decision_after_tax(RET, EQ, vehiculo="fiducia", renta_total=0.0, es_vis=True, ventas=1000.0)
+    op = tributario.decision_after_tax(RET, EQ, vehiculo="fiducia", renta_total=0.0, es_vis=True, ventas=1000.0,
+                                       iva_en_operativo=True)
+    assert con["iva_vis"] > 0.0 and op["iva_vis"] == 0.0          # con flag → no se suma de nuevo
+    assert sum(op["retorno_at"]) < sum(con["retorno_at"])         # sin el IVA duplicado, el flujo es menor
+
+
 def test_carga_neta_descuenta_iva():
     r = tributario.decision_after_tax(RET, EQ, vehiculo="fiducia", renta_total=20.0, es_vis=True, ventas=1000.0)
     assert r["carga_neta"] == pytest.approx(r["carga_bruta"] - r["iva_vis"])

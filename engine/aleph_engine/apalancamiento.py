@@ -220,19 +220,39 @@ def flujo_apalancado(par, pg, hitos, recaudo, horizonte=config.HORIZONTE_RECAUDO
     # VIS, suma la devolución del IVA. NO modela retención (anticipo de renta → doble conteo) ni ICA.
     # Preliminar [VALIDAR asesor]. La oficial pre-impuesto (auditada de fiducia) se conserva intacta.
     _es_vis = str((par.get("meta") or {}).get("tipo", "")).strip().upper() in ("VIS", "VIP")
+    _fin = par.get("financiero") or {}
+    _iva_op = bool(_fin.get("iva_en_operativo"))   # IVA devolución YA contada en el P&G operativo
+    _renta_pg = pg.get("renta", 0.0)
     _atd = tributario.decision_after_tax(retorno, flujo_equity, vehiculo=_veh.clave,
-                                         renta_total=pg.get("renta", 0.0),
-                                         es_vis=_es_vis, ventas=pg.get("ventas", 0.0))
-    out["tir_proyecto_at"] = _tir(_atd["retorno_at"])
-    out["tir_equity_at"] = _tir(_atd["flujo_equity_at"])
-    out["vpn_at"] = sum(f / (1 + tio_m) ** t for t, f in enumerate(_atd["retorno_at"]))
+                                         renta_total=_renta_pg,
+                                         es_vis=_es_vis, ventas=pg.get("ventas", 0.0),
+                                         iva_en_operativo=_iva_op)
     # Base mensual PRE-impuesto (para que el delta tributario sea apples-to-apples; la oficial es anual).
     out["tir_proyecto_pre_mensual"] = _tir(retorno)
-    out["impuesto_renta_at"] = _atd["renta"]
-    out["gmf_at"] = _atd["gmf"]
-    out["iva_vis_devolucion"] = _atd["iva_vis"]
-    out["carga_tributaria_neta_at"] = _atd["carga_neta"]
-    out["after_tax_metodo"] = _atd["metodo"]
+    if _iva_op and _renta_pg == 0.0:
+        # VIS exento de renta (ET 235-2 num.4) + devolución de IVA YA contada en ingresos operativos
+        # (una sola vez) + GMF exento en fiducia de vivienda (ET 879) → SIN impacto tributario neto
+        # adicional: el after-tax IGUALA al titular (la cifra auditada), no se recalcula sobre la serie
+        # interna del modelo (que diverge del FCL auditado de fiducia).
+        out["tir_proyecto_at"] = out.get("tir_proyecto")
+        out["tir_equity_at"] = out.get("tir_equity")
+        out["vpn_at"] = out.get("vpn_proyecto")
+        out["impuesto_renta_at"] = 0.0
+        out["gmf_at"] = 0.0
+        out["iva_vis_devolucion"] = 0.0        # ya en operativo (no se duplica)
+        out["carga_tributaria_neta_at"] = 0.0
+        out["after_tax_metodo"] = ("VIS exento de renta (ET 235-2 num.4); devolución de IVA contada una vez "
+                                   "en ingresos operativos; GMF exento (fiducia de vivienda, ET 879). Sin "
+                                   "impacto tributario neto adicional. [VALIDAR asesor fiscal]")
+    else:
+        out["tir_proyecto_at"] = _tir(_atd["retorno_at"])
+        out["tir_equity_at"] = _tir(_atd["flujo_equity_at"])
+        out["vpn_at"] = sum(f / (1 + tio_m) ** t for t, f in enumerate(_atd["retorno_at"]))
+        out["impuesto_renta_at"] = _atd["renta"]
+        out["gmf_at"] = _atd["gmf"]
+        out["iva_vis_devolucion"] = _atd["iva_vis"]
+        out["carga_tributaria_neta_at"] = _atd["carga_neta"]
+        out["after_tax_metodo"] = _atd["metodo"]
 
     # ---- Veredicto de Valor (EVA del proyecto) — ADITIVO: no mueve TIR/VPN@TIO/flujo ----
     # crea_valor = TIR proyecto > WACC (ambas anuales); spread_valor = TIR − WACC; valor_creado =

@@ -149,7 +149,8 @@ IVA_VIS_DEVOLUCION = 0.038  # devolución del IVA en VIS sobre el valor de escri
 
 
 def decision_after_tax(retorno: list, flujo_equity: list, *, vehiculo: str | None,
-                       renta_total: float, es_vis: bool, ventas: float) -> dict:
+                       renta_total: float, es_vis: bool, ventas: float,
+                       iva_en_operativo: bool = False) -> dict:
     """Capa after-tax de DECISIÓN (C1) — ADITIVA: NO sobreescribe las cifras pre-impuesto.
 
     Sobre las MISMAS series mensuales pre-impuesto del proyecto, aplica:
@@ -160,12 +161,16 @@ def decision_after_tax(retorno: list, flujo_equity: list, *, vehiculo: str | Non
     DOBLE-contaría la renta) ni ICA (parámetro municipal pendiente). Tasas [VALIDAR asesor fiscal].
     Devuelve las series after-tax + el desglose de carga; la TIR/VPN las calcula `apalancamiento`
     con su misma convención (serie mensual), para que el delta vs la pre-impuesto mensual sea limpio.
+
+    `iva_en_operativo=True`: la devolución del IVA YA está contada en los ingresos operativos del P&G
+    (p.ej. el proyecto la registra como "otros ingresos"). En ese caso NO se vuelve a sumar aquí, para
+    no DOBLE-CONTAR el IVA (ET 850 par.2: el beneficio es uno solo).
     """
     ov = overlay_after_tax(retorno, flujo_equity, vehiculo=vehiculo, renta_total=renta_total)
     ret_at = list(ov["retorno_at"])
     eq_at = list(ov["flujo_equity_at"])
 
-    iva = IVA_VIS_DEVOLUCION * ventas if (es_vis and ventas and ventas > 0) else 0.0
+    iva = 0.0 if iva_en_operativo else (IVA_VIS_DEVOLUCION * ventas if (es_vis and ventas and ventas > 0) else 0.0)
     if iva:
         pr = sum(x for x in ret_at if x > 0) or 1.0
         ret_at = [(x + iva * (x / pr)) if x > 0 else x for x in ret_at]
