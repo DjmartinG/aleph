@@ -614,6 +614,15 @@ export interface FuentesLive {
   rating?: string | null;
   /** Valor vivo (fracción) por clave de input del WACC: { rp: {...}, pm: {...} }. */
   datos?: Record<string, { valor: number }>;
+  /** TRM oficial del dólar (COP/USD) en vivo de Banrep — dato de mercado de REFERENCIA (no entra al WACC). */
+  trm?: {
+    disponible: boolean;
+    fuente: string;
+    url: string;
+    valor?: number;
+    unidad?: string;
+    periodo?: string | null;
+  } | null;
 }
 
 /** Valores macro EN VIVO de la fuente (Damodaran), para la pestaña Fuentes. Degrada a `null` si el API

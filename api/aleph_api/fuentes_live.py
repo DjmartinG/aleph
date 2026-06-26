@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 """Valores macro EN VIVO de las fuentes externas, para CONTRASTAR con la calibración del modelo en la
-pestaña "Fuentes" (Fase 2). Hoy: Damodaran (CRP → `rp`, ERP de mercado maduro → `pm`) de Colombia.
+pestaña "Fuentes" (Fase 2). Hoy: Damodaran (CRP → `rp`, ERP de mercado maduro → `pm`) de Colombia, y la
+TRM oficial del Banco de la República (dato de mercado de REFERENCIA, no entra al WACC).
 
 SOLO REFERENCIA — NO alimenta el WACC ni mueve cifras (eso sería Fase 3, con re-baseline y aprobación).
-Cacheado por DÍA (la tabla de Damodaran se actualiza ~anual; evita pegarle a la fuente en cada request).
-Tolerante a fallos: si la fuente no responde, `disponible=False` y la web degrada a "solo modelo".
+Cacheado por DÍA (Damodaran se actualiza ~anual; la TRM, a diario; evita pegarle a la fuente en cada
+request). Tolerante a fallos: si la fuente no responde, `disponible=False` y la web degrada limpio.
 """
 from __future__ import annotations
 
 import datetime
 
-from .conectores import damodaran
+from .conectores import banrep, damodaran
 
 _cache: dict[str, dict] = {}
+
+# Página oficial de la TRM (Banco de la República). El VALOR se lee en vivo del conector SDMX.
+URL_TRM = "https://www.banrep.gov.co/es/estadisticas/trm"
 
 
 def _hoy() -> str:
@@ -52,4 +56,31 @@ def damodaran_colombia(*, fetch=damodaran.fetch_damodaran) -> dict:
         pass
 
     _cache[hoy] = payload
+    return payload
+
+
+def banrep_trm(*, fetch=banrep.fetch_serie) -> dict:
+    """TRM oficial (COP/USD) en vivo del Banco de la República, cacheada por día. `fetch` inyectable
+    para pruebas. Dato de mercado de REFERENCIA — no alimenta el WACC. Degrada a `disponible=False` si
+    Banrep no responde."""
+    clave = f"trm:{_hoy()}"
+    if clave in _cache:
+        return _cache[clave]
+
+    payload = {"disponible": False, "fuente": "Banco de la República", "url": URL_TRM}
+    try:
+        v = fetch("trm")
+        if v is not None:
+            payload = {
+                "disponible": True,
+                "fuente": v.fuente,
+                "url": URL_TRM,
+                "valor": v.valor,
+                "unidad": v.unidad,
+                "periodo": (v.detalle or {}).get("periodo"),
+            }
+    except Exception:  # noqa: BLE001 — cualquier fallo de red/parseo → degrada a no-disponible
+        pass
+
+    _cache[clave] = payload
     return payload
