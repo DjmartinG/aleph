@@ -312,10 +312,10 @@ def get_macro():
 
 @v1.get("/fuentes/live")
 def get_fuentes_live():
-    """Valores macro EN VIVO de las fuentes (hoy Damodaran: CRP→rp, ERP madura→pm), cacheado por día.
-    SOLO referencia para contrastar con la calibración del modelo en la pestaña Fuentes; NO alimenta el
-    WACC ni mueve cifras. Degrada a `disponible=False` si la fuente externa no responde."""
-    return fuentes_live.damodaran_colombia()
+    """Valores macro EN VIVO de las fuentes (Damodaran: CRP→rp, ERP madura→pm; Banrep: TRM del dólar),
+    cacheado por día. SOLO referencia para contrastar con la calibración del modelo en la pestaña
+    Fuentes; NO alimenta el WACC ni mueve cifras. Degrada a `disponible=False` si la fuente no responde."""
+    return {**fuentes_live.damodaran_colombia(), "trm": fuentes_live.banrep_trm()}
 
 
 @v1.get("/macro/pendientes")

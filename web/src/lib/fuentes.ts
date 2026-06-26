@@ -76,3 +76,16 @@ export const FUENTES: FuenteGrupo[] = [
     ],
   },
 ];
+
+/**
+ * Datos de mercado de REFERENCIA (no entran al WACC). El texto/enlace se cura aquí; el VALOR se lee EN
+ * VIVO del API (conector Banrep). El dólar (TRM) no alimenta el costo de capital —el build-up se lleva a
+ * pesos por paridad de inflación, no por la tasa de cambio del día—, pero es una referencia macro útil.
+ */
+export const MERCADO_TRM = {
+  fuente: "Banco de la República",
+  url: "https://www.banrep.gov.co/es/estadisticas/trm",
+  nombre: "Dólar · TRM (COP/USD)",
+  descripcion: "Tasa Representativa del Mercado, último dato oficial publicado por el Banco de la República.",
+  nota: "Tasa Representativa del Mercado (COP/USD) oficial del Banco de la República. Dato de mercado de referencia — no entra en el cálculo del WACC (el costo de capital se lleva a pesos por paridad de inflación, no por la tasa de cambio del día).",
+};
