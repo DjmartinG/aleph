@@ -209,29 +209,37 @@ function TechRow({ label, value }: { label: string; value: string }) {
 
 
 function Ledger({ pyg, margen }: { pyg: Pyg; margen: number | null }) {
+  const v = pyg.ventas; // base de los porcentajes: todo el P&G se lee como % de las ventas
   return (
     <div className="overflow-hidden rounded-[var(--radius-data)] border bg-card">
       <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-rule text-[0.7rem] font-medium uppercase tracking-wider text-muted-foreground">
+            <th className="px-4 py-1.5 text-left"></th>
+            <th className="px-4 py-1.5 text-right">% ventas</th>
+            <th className="px-4 py-1.5 text-right">Valor</th>
+          </tr>
+        </thead>
         <tbody>
           <Group>Ingresos</Group>
-          <Row label="Ventas" value={pyg.ventas} />
-          {pyg.recon_codensa ? <Row label="Reconocimiento" value={pyg.recon_codensa} /> : null}
-          <Row label="Total ingresos" value={pyg.total_ingresos} strong />
+          <Row label="Ventas" value={pyg.ventas} ventas={v} />
+          {pyg.recon_codensa ? <Row label="Reconocimiento" value={pyg.recon_codensa} ventas={v} /> : null}
+          <Row label="Total ingresos" value={pyg.total_ingresos} ventas={v} strong />
 
           <Group>Costos</Group>
-          <Row label="Costo directo" value={pyg.directos} muted />
-          <Row label="Indirectos" value={pyg.indirectos} muted />
-          <Row label="Honorarios" value={pyg.honorarios} muted />
-          {pyg.gastos_fijos ? <Row label="Gastos fijos" value={pyg.gastos_fijos} muted /> : null}
-          <Row label="Lote" value={pyg.costo_lote} muted />
+          <Row label="Costo directo" value={pyg.directos} ventas={v} muted />
+          <Row label="Indirectos" value={pyg.indirectos} ventas={v} muted />
+          <Row label="Honorarios" value={pyg.honorarios} ventas={v} muted />
+          {pyg.gastos_fijos ? <Row label="Gastos fijos" value={pyg.gastos_fijos} ventas={v} muted /> : null}
+          <Row label="Lote" value={pyg.costo_lote} ventas={v} muted />
 
           <Group>Resultado</Group>
-          <Row label="Utilidad operativa" value={pyg.util_oper} strong />
+          <Row label="Utilidad operativa" value={pyg.util_oper} ventas={v} strong />
           <RowText label="Margen operativo" text={fmtPct(margen)} />
 
           <Group>Reparto</Group>
-          <Row label="CG Constructora" value={pyg.cg} />
-          <Row label="Socio" value={pyg.socio} />
+          <Row label="CG Constructora" value={pyg.cg} ventas={v} />
+          <Row label="Socio" value={pyg.socio} ventas={v} />
         </tbody>
       </table>
     </div>
@@ -242,7 +250,7 @@ function Group({ children }: { children: React.ReactNode }) {
   return (
     <tr className="border-b border-rule bg-muted/30">
       <th
-        colSpan={2}
+        colSpan={3}
         className="px-4 py-1.5 text-left text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground"
       >
         {children}
@@ -254,17 +262,26 @@ function Group({ children }: { children: React.ReactNode }) {
 function Row({
   label,
   value,
+  ventas,
   strong,
   muted,
 }: {
   label: string;
   value: number;
+  /** Base para el % de la fila (ventas). Si se da y > 0, muestra value/ventas en la columna de %. */
+  ventas?: number;
   strong?: boolean;
   muted?: boolean;
 }) {
+  const pct = ventas && ventas > 0 ? value / ventas : null;
   return (
     <tr className="border-b border-rule last:border-0">
       <td className={`px-4 py-2.5 ${strong ? "font-semibold" : ""}`}>{label}</td>
+      <td
+        className={`num px-4 py-2.5 text-right tabular-nums ${strong ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+      >
+        {pct != null ? fmtPct(pct) : ""}
+      </td>
       <td className="px-4 py-2.5 text-right">
         <Figure
           parts={splitCop(value)}
@@ -279,6 +296,7 @@ function RowText({ label, text }: { label: string; text: string }) {
   return (
     <tr className="border-b border-rule last:border-0">
       <td className="px-4 py-2.5">{label}</td>
+      <td></td>
       <td className="num px-4 py-2.5 text-right">{text}</td>
     </tr>
   );

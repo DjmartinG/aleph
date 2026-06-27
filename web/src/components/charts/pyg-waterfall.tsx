@@ -26,8 +26,8 @@ interface Bar {
 /**
  * Cascada (waterfall) del P&G (ECharts custom series): cómo cada peso de venta se erosiona (lote →
  * obra → indirectos → honorarios → impuestos) hasta la utilidad neta. RECONCILIA por construcción con
- * `util_oper` y `udi` del motor (mismos términos de la fórmula de modelo.pyg) → es exhibición, no
- * recálculo. Cero cifras nuevas: todo sale de `Results.pyg`.
+ * `util_oper` del motor (mismos términos de la fórmula de modelo.pyg); el impuesto = `renta` (0 en VIS,
+ * exento) y util. neta = util_oper − renta. → es exhibición, no recálculo. Todo sale de `Results.pyg`.
  */
 export function PygWaterfall({ pyg, height = 300 }: { pyg: Pyg; height?: number }) {
   const buildOption = useCallback(
@@ -38,8 +38,8 @@ export function PygWaterfall({ pyg, height = 300 }: { pyg: Pyg; height?: number 
       const indir = pyg.indirectos_otros + pyg.gastos_fijos; // términos REALES de la fórmula del motor
       const hon = pyg.honorarios;
       const uo = pyg.util_oper;
-      const udi = pyg.udi;
-      const imp = uo - udi; // impuesto (renta) derivado: udi es after-tax
+      const renta = pyg.renta ?? 0; // impuesto de RENTA del P&G — 0 en VIS (exento). NO usar `udi`
+      const un = uo - renta;        // utilidad neta = util_oper − renta (después de impuestos)
 
       // Guard de fidelidad: la cadena de restas DEBE cerrar en util_oper (si no, falta una línea).
       const reUO = ti - lote - dir - indir - hon;
@@ -59,8 +59,8 @@ export function PygWaterfall({ pyg, height = 300 }: { pyg: Pyg; height?: number 
         { name: "Indirectos", top: t3, base: t4, amount: indir, color: t.cgAmber, total: false },
         { name: "Honorarios", top: t4, base: uo, amount: hon, color: t.cgAmber, total: false },
         { name: "Util. oper.", top: uo, base: 0, amount: uo, color: t.primary, total: true },
-        { name: "Impuestos", top: uo, base: udi, amount: imp, color: t.cgAmber, total: false },
-        { name: "Util. neta", top: udi, base: 0, amount: udi, color: udi >= 0 ? t.exito : t.peligro, total: true },
+        { name: "Impuestos", top: uo, base: un, amount: renta, color: t.cgAmber, total: false },
+        { name: "Util. neta", top: un, base: 0, amount: un, color: un >= 0 ? t.exito : t.peligro, total: true },
       ];
 
       const renderItem = (params: CustomSeriesRenderItemParams, api: CustomSeriesRenderItemAPI) => {
@@ -87,7 +87,7 @@ export function PygWaterfall({ pyg, height = 300 }: { pyg: Pyg; height?: number 
               style: {
                 x: pTop[0],
                 y: y - 5,
-                text: `${b.total ? "" : "−"}${fmtCop(b.amount)}`,
+                text: `${b.total || Math.abs(b.amount) < 1 ? "" : "−"}${fmtCop(b.amount)}`,
                 textAlign: "center",
                 textVerticalAlign: "bottom",
                 fontSize: 10,

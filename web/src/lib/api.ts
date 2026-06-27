@@ -371,6 +371,8 @@ export interface Pyg {
   costo_lote: number;
   util_oper: number;
   margen_oper: number;
+  /** Impuesto de renta del P&G (0 en proyectos VIS, exentos). */
+  renta: number;
   udi: number;
   cg: number;
   socio: number;
