@@ -3,7 +3,7 @@
 **Fecha:** 2026-06-27
 **Proyecto:** Argos (CVP/RenoBo) · slug `4_argos_cvp_REAL` · VIS · prefactibilidad
 **Alcance:** mueve cifras de **UN** proyecto (Argos). **NO toca el dorado** de Navarra/Dominica/Torres (verificado).
-**Estado de gobernanza:** ⚠️ **NO APROBADA.** Requiere el OK explícito de Martín ANTES de `--apply` a prod.
+**Estado de gobernanza:** ✅ **APROBADA por Martín y APLICADA** (2026-06-27). `scenarios v4 approved` en prod (verificado: la DRY-RUN reporta SKIP idempotente — el par vigente coincide en hash con el verificado).
 
 ---
 
